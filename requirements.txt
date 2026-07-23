@@ -1,0 +1,11 @@
+# Project M.O.N.D.A.Y — classical ML layer
+# Course 24CSE0316 (AI & Machine Learning). Python 3.11+ recommended.
+
+numpy>=1.26
+pandas>=2.1
+scikit-learn>=1.4
+matplotlib>=3.8
+seaborn>=0.13
+mlxtend>=0.23          # Apriori / FP-Growth (component 2.4)
+shap>=0.44             # XAI bonus (2.6)
+jupyter>=1.0           # notebooks are the graded comparison artifacts
