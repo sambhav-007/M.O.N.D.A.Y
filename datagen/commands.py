@@ -97,26 +97,46 @@ TEMPLATES = {
 }
 
 
+# Domain-neutral filler that real users sprinkle across EVERY intent. Shared
+# tokens like these deliberately blur the class boundaries so TF-IDF can't split
+# the intents on trivially disjoint vocabulary — that's what makes the 5-model
+# comparison meaningful instead of everyone scoring ~100%.
+_PREFIX = ["", "", "", "please ", "can you ", "hey monday ", "i need to ",
+           "could you ", "quick ", "i want to "]
+_SUFFIX = ["", "", "", " please", " for me", " asap", " when you get a sec",
+           " thanks", " now"]
+
+
 def _fill(template: str, rng: random.Random) -> str:
-    return template.format(
+    text = template.format(
         doc=rng.choice(_DOCS),
         person=rng.choice(_PEOPLE),
         app=rng.choice(_APPS),
         site=rng.choice(_SITES),
         topic=rng.choice(_TOPICS),
     )
+    return (rng.choice(_PREFIX) + text + rng.choice(_SUFFIX)).strip()
 
 
-def generate_commands(n: int = 3000, seed: int = RANDOM_SEED) -> pd.DataFrame:
+def generate_commands(
+    n: int = 3000, seed: int = RANDOM_SEED, label_noise: float = 0.06
+) -> pd.DataFrame:
     """Return a shuffled DataFrame of unique ``(text, intent)`` rows.
 
     Balanced by class: each of the 6 intents targets ``n // 6`` *unique*
     commands. For each class we sample template+filler+noise combinations until
     the target is met (or the combinatorial space is exhausted), so the final
     dataset is both class-balanced and free of exact duplicates.
+
+    ``label_noise`` is the fraction of rows whose label is flipped to a random
+    *other* intent. This simulates real annotation ambiguity (many commands
+    genuinely straddle two intents) and, together with the shared filler
+    vocabulary, keeps the task learnable-but-not-trivial so the model comparison
+    is informative. The flipped rows are documented, not hidden.
     """
     rng = random.Random(seed)
     per_class = n // len(TEMPLATES)
+    intents = list(TEMPLATES.keys())
     rows = []
     for intent, templates in TEMPLATES.items():
         seen: set[str] = set()
@@ -128,6 +148,14 @@ def generate_commands(n: int = 3000, seed: int = RANDOM_SEED) -> pd.DataFrame:
             if text not in seen:
                 seen.add(text)
                 rows.append({"text": text, "intent": intent})
+
+    # Inject label noise on a random subset.
+    if label_noise > 0:
+        k = int(len(rows) * label_noise)
+        for i in rng.sample(range(len(rows)), k):
+            true = rows[i]["intent"]
+            rows[i]["intent"] = rng.choice([c for c in intents if c != true])
+
     df = pd.DataFrame(rows)
     return df.sample(frac=1, random_state=seed).reset_index(drop=True)
 
