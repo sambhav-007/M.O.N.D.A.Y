@@ -1,11 +1,42 @@
-# Project M.O.N.D.A.Y — classical ML layer
-# Course 24CSE0316 (AI & Machine Learning). Python 3.11+ recommended.
+# ─────────────────────────────────────────────────────────────────────────────
+#  Project M.O.N.D.A.Y. — Full Multi-Agent Execution Engine Requirements
+#  Course: Artificial Intelligence and Machine Learning (24CSE0316)
+# ─────────────────────────────────────────────────────────────────────────────
 
-numpy>=1.26
-pandas>=2.1
-scikit-learn>=1.4
-matplotlib>=3.8
-seaborn>=0.13
-mlxtend>=0.23          # Apriori / FP-Growth (component 2.4)
-shap>=0.44             # XAI bonus (2.6)
-jupyter>=1.0           # notebooks are the graded comparison artifacts
+# ── Core ML / Data Science ───────────────────────────────────────────────────
+scikit-learn>=1.4.0
+pandas>=2.1.0
+numpy>=1.26.0
+
+# ── Association Rule Mining (Apriori & FP-Growth) ────────────────────────────
+mlxtend>=0.23.0
+
+# ── Explainable AI (XAI Bonus — CLO02/CLO06) ─────────────────────────────────
+shap>=0.44.0
+
+# ── Visualisation & Console UI ───────────────────────────────────────────────
+matplotlib>=3.8.0
+seaborn>=0.13.0
+rich>=13.7.0          # Pretty console output for demo runs & interactive CLI
+
+# ── Real Desktop & OS Automation ────────────────────────────────────────────
+pillow>=10.2.0        # Screenshots & vision element processing
+psutil>=5.9.0         # OS process & hardware health monitoring
+
+# ── Real Document Intelligence & RAG ─────────────────────────────────────────
+pypdf>=4.0.0          # PDF text extraction
+
+# ── Real Web Research & Scraping ─────────────────────────────────────────────
+requests>=2.31.0      # Web HTTP client
+beautifulsoup4>=4.12.0 # Web HTML parsing & text extraction
+httpx>=0.27.0         # Async HTTP client
+
+# ── FastAPI Demo Server & API ────────────────────────────────────────────────
+fastapi>=0.111.0
+uvicorn[standard]>=0.29.0
+pydantic>=2.7.0
+
+# ── Utilities ────────────────────────────────────────────────────────────────
+python-dotenv>=1.0.0
+joblib>=1.4.0         # Model persistence
+pygame>=2.5.0         # Voice audio playback engine

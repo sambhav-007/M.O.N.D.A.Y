@@ -1,23 +1,33 @@
-# Python
+# M.O.N.D.A.Y. — Git Ignore Rules for Security & Environment Confidentiality
+
+# 🔒 Google Cloud OAuth Credentials & Auth Tokens
+data/credentials.json*
+data/google_token.json*
+
+# 🔒 Databases & Local Memories
+data/memories.db
+data/memory.db
+data/*.db
+data/staging/
+
+# Python runtime & byte-code
 __pycache__/
 *.py[cod]
-.venv/
+*$py.class
+*.so
+.Python
+env/
 venv/
-.ipynb_checkpoints/
+ENV/
+env.bak/
+venv.bak/
 
-# Data — regenerate with `python -m datagen.generate`; don't commit large artifacts
-data/synthetic/*.csv
-data/processed/*
-!data/**/.gitkeep
+# Environment files
+.env
+.env.local
 
-# Models / outputs (regenerable via train.py / notebooks)
-*.joblib
-*.pkl
-reports/figures/*.png
-reports/*_comparison.csv
-reports/*_report.md
-
-# OS / IDE
-.DS_Store
-.idea/
+# IDE & OS files
 .vscode/
+.idea/
+.DS_Store
+Thumbs.db
