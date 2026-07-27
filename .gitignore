@@ -31,3 +31,7 @@ venv.bak/
 .idea/
 .DS_Store
 Thumbs.db
+
+# Private Local Documentation Suite
+docs/
+
