@@ -138,3 +138,95 @@ class MemoryAgent:
             "matches": results,
             "message": msg,
         }
+
+    def auto_extract_and_remember(self, user_prompt: str) -> List[Dict[str, Any]]:
+        """
+        Scans user_prompt for personal facts, preferences, names, and emails,
+        automatically persisting them into SQLite memory.db.
+        """
+        import re
+        extracted = []
+        p_clean = user_prompt.strip()
+
+        # Pattern 1: My name is X / I am X
+        name_match = re.search(r'\bmy name is\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)', p_clean, re.IGNORECASE)
+        if name_match:
+            val = name_match.group(1).strip()
+            self.remember("user_name", val, topic="identity")
+            extracted.append({"key": "user_name", "value": val})
+
+        # Pattern 2: My email is X
+        email_match = re.search(r'\bmy email is\s+([^\s,]+@[^\s,]+\.[^\s,]+)', p_clean, re.IGNORECASE)
+        if email_match:
+            val = email_match.group(1).strip()
+            self.remember("user_email", val, topic="contacts")
+            extracted.append({"key": "user_email", "value": val})
+
+        # Pattern 3: My favorite/preferred X is Y
+        fav_match = re.search(r'\bmy (favorite|preferred)\s+([a-z0-9_]+)\s+is\s+([^\.\,]+)', p_clean, re.IGNORECASE)
+        if fav_match:
+            prop = fav_match.group(2).strip().lower()
+            val = fav_match.group(3).strip()
+            self.remember(f"preferred_{prop}", val, topic="user_preferences")
+            extracted.append({"key": f"preferred_{prop}", "value": val})
+
+        # Pattern 5: Location (I live in X / My location is X)
+        loc_match = re.search(r'\b(?:i live in|my location is)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)', p_clean, re.IGNORECASE)
+        if loc_match:
+            val = loc_match.group(1).strip()
+            self.remember("user_location", val, topic="identity")
+            extracted.append({"key": "user_location", "value": val})
+
+        # Pattern 6: Profession (I work as a X / My job is X)
+        prof_match = re.search(r'\b(?:i work as a|i work as an|my job is|i am a|i am an)\s+([a-z0-9_\s]+)', p_clean, re.IGNORECASE)
+        if prof_match and not any(w in p_clean.lower() for w in ["user", "fan", "student"]):
+            val = prof_match.group(1).strip()
+            if len(val.split()) <= 4:
+                self.remember("user_profession", val, topic="identity")
+                extracted.append({"key": "user_profession", "value": val})
+
+        # Pattern 7: Goals (My goal is X / My main objective is X)
+        goal_match = re.search(r'\bmy (?:main\s+)?(?:goal|objective)\s+is\s+([^\.\,]+)', p_clean, re.IGNORECASE)
+        if goal_match:
+            val = goal_match.group(1).strip()
+            self.remember("user_goal", val, topic="goals")
+            extracted.append({"key": "user_goal", "value": val})
+
+        # Pattern 8: Tech Stack (I use X / I build with X)
+        tech_match = re.search(r'\b(?:i use|i build with|my tech stack is)\s+([^\.\,]+)', p_clean, re.IGNORECASE)
+        if tech_match and not any(w in p_clean.lower() for w in ["windows", "mac", "computer"]):
+            val = tech_match.group(1).strip()
+            self.remember("tech_stack", val, topic="user_preferences")
+            extracted.append({"key": "tech_stack", "value": val})
+
+        return extracted
+
+    def auto_store_conversation_turn(self, user_prompt: str, assistant_response: str) -> None:
+        """Logs conversation turn to SQLite memory for multi-turn history retention."""
+        if not user_prompt or not assistant_response:
+            return
+        turn_key = f"turn_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+        turn_val = f"User: {user_prompt[:200]} | Assistant: {assistant_response[:200]}"
+        self.remember(turn_key, turn_val, topic="conversation_history")
+
+    def get_contextual_memories(self, user_prompt: str, limit: int = 3) -> List[Dict[str, Any]]:
+        """Pre-fetches memories relevant to the current user prompt."""
+        recall_res = self.recall(user_prompt, limit=limit)
+        return recall_res.get("matches", [])
+
+    def get_proactive_suggestions(self) -> Dict[str, Any]:
+        """Component 2.3 Memory Clustering integration for proactive user suggestions."""
+        with sqlite3.connect(MEMORIES_DB_PATH) as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT key, value, topic FROM memories ORDER BY last_accessed DESC LIMIT 10")
+            rows = cursor.fetchall()
+
+        sug = []
+        for r in rows:
+            if r[2] != "conversation_history":
+                sug.append({"prompt": f"💡 Memory Recall: {r[0].replace('_', ' ').capitalize()} → '{r[1]}'"})
+
+        if not sug:
+            sug = [{"prompt": "💡 Memory Recall: Ask M.O.N.D.A.Y. to remember your notes or preferences!"}]
+
+        return {"success": True, "suggestions": sug}
