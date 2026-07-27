@@ -1,0 +1,23 @@
+[
+  {
+    "id": "event_1",
+    "title": "Sprint Review Meeting",
+    "start_time": "2026-07-28 14:00",
+    "duration_mins": 45,
+    "created_at": "2026-07-27 15:26:04"
+  },
+  {
+    "id": "event_2",
+    "title": "Sprint Review Meeting",
+    "start_time": "2026-07-28 14:00",
+    "duration_mins": 45,
+    "created_at": "2026-07-27 15:26:42"
+  },
+  {
+    "id": "event_3",
+    "title": "Sprint Review Meeting",
+    "start_time": "2026-07-28 14:00",
+    "duration_mins": 45,
+    "created_at": "2026-07-27 15:28:38"
+  }
+]
