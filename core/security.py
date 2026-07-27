@@ -41,6 +41,8 @@ TIER_2_ACTIONS = {
     "execute_shell",
     "submit_form",
     "modify_system_settings",
+    "terminate_process",
+    "kill_process",
 }
 
 
