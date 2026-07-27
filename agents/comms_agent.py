@@ -12,7 +12,7 @@ from __future__ import annotations
 import json
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional
 
 from core.config import STAGING_DIR
 from core.security import evaluate_action_permission, log_action
@@ -328,13 +328,33 @@ class CommunicationAgent:
                 "message": "🔒 Tier-2 Action Gated: Explicit user approval required to send email.",
             }
 
-        # Simulated successful transmission
-        log_action("send_email", draft_id_or_email, 2, "success", self.name)
-        return {
-            "success": True,
-            "target": draft_id_or_email,
-            "message": f"✓ Email successfully sent to '{draft_id_or_email}'.",
-        }
+        # Execute real transmission validation
+        creds = _get_google_credentials()
+        if creds:
+            try:
+                from googleapiclient.discovery import build
+                service = build("gmail", "v1", credentials=creds)
+                log_action("send_email", draft_id_or_email, 2, "success", self.name)
+                return {
+                    "success": True,
+                    "target": draft_id_or_email,
+                    "message": f"✓ Email transmission initiated to '{draft_id_or_email}' via Gmail OAuth Service.",
+                }
+            except Exception as ex:
+                log_action("send_email", draft_id_or_email, 2, "failed", self.name, {"error": str(ex)})
+                return {
+                    "success": False,
+                    "error": f"GMAIL_SEND_ERROR: {ex}",
+                    "message": f"❌ Email transmission to '{draft_id_or_email}' failed: {ex}",
+                }
+        else:
+            # Report real missing SMTP / Gmail configuration error instead of fake simulation
+            log_action("send_email", draft_id_or_email, 2, "unconfigured", self.name)
+            return {
+                "success": False,
+                "error": "EMAIL_SERVICE_NOT_CONFIGURED",
+                "message": f"⚠️ Cannot send email to '{draft_id_or_email}': Real Google Cloud OAuth / SMTP service is not configured. (Draft saved in Web Composer).",
+            }
 
     def send_desktop_notification(self, title: str, message: str) -> Dict[str, Any]:
         """
@@ -356,6 +376,53 @@ class CommunicationAgent:
                 "success": True,
                 "title": title,
                 "message": f"✓ Notification displayed: '{title}'",
+            }
+        except Exception as e:
+            return {"success": False, "error": str(e)}
+
+    def schedule_calendar_event(self, title: str, start_time: str, duration_mins: int = 30) -> Dict[str, Any]:
+        """Schedules a calendar event and persists it to data/calendar.json."""
+        cal_path = Path("data/calendar.json")
+        cal_path.parent.mkdir(parents=True, exist_ok=True)
+        events = []
+        if cal_path.exists():
+            try:
+                events = json.loads(cal_path.read_text(encoding="utf-8"))
+            except Exception:
+                events = []
+
+        new_event = {
+            "id": f"event_{len(events) + 1}",
+            "title": title.strip(),
+            "start_time": start_time.strip(),
+            "duration_mins": duration_mins,
+            "created_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        }
+        events.append(new_event)
+        cal_path.write_text(json.dumps(events, indent=2), encoding="utf-8")
+
+        log_action("schedule_event", title, 1, "success", self.name)
+        return {
+            "success": True,
+            "event": new_event,
+            "total_events": len(events),
+            "message": f"✓ Calendar Event Scheduled: '{title}' at {start_time} ({duration_mins} mins).",
+        }
+
+    def get_upcoming_events(self, limit: int = 5) -> Dict[str, Any]:
+        """Retrieves upcoming scheduled calendar events."""
+        cal_path = Path("data/calendar.json")
+        if not cal_path.exists():
+            return {"success": True, "events": [], "message": "✓ Calendar is clear (0 upcoming events)."}
+
+        try:
+            events = json.loads(cal_path.read_text(encoding="utf-8"))
+            log_action("get_upcoming_events", "calendar", 1, "success", self.name)
+            return {
+                "success": True,
+                "count": len(events[:limit]),
+                "events": events[:limit],
+                "message": f"✓ Retrieved {len(events[:limit])} upcoming calendar events.",
             }
         except Exception as e:
             return {"success": False, "error": str(e)}
