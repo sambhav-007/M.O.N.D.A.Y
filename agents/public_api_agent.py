@@ -77,11 +77,11 @@ class PublicApiAgent:
             pass
 
         self.api_database = [
-            {"name": "IP-API", "url": "http://ip-api.com/json/", "description": "IP Geolocation and location detection", "auth": "No", "https": "No"},
+            {"name": "IP-API", "url": "https://ip-api.com/json/", "description": "IP Geolocation and location detection", "auth": "No", "https": "Yes"},
             {"name": "Open-Meteo", "url": "https://api.open-meteo.com/v1/forecast", "description": "Free weather forecast API", "auth": "No", "https": "Yes"},
             {"name": "Wikipedia", "url": "https://en.wikipedia.org/api/rest_v1/page/summary/", "description": "Wikipedia articles summary API", "auth": "No", "https": "Yes"},
             {"name": "CoinGecko", "url": "https://api.coingecko.com/api/v3/simple/price", "description": "Cryptocurrency and market prices", "auth": "No", "https": "Yes"},
-            {"name": "ISS Location", "url": "http://api.open-notify.org/iss-now.json", "description": "Live ISS Space Station Location", "auth": "No", "https": "No"},
+            {"name": "ISS Location", "url": "https://api.open-notify.org/iss-now.json", "description": "Live ISS Space Station Location", "auth": "No", "https": "Yes"},
         ]
         return self.api_database
 
