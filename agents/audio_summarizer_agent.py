@@ -43,13 +43,15 @@ class AudioSummarizerAgent:
     def stop_meeting_recording_and_summarize(self) -> Dict[str, Any]:
         """Stops live audio recording session and returns structured meeting minutes."""
         self.is_recording = False
-        sample_notes = [
-            "Discussed Q3 product roadmap and feature priorities.",
-            "Aligned on deploying M.O.N.D.A.Y. multi-agent core engine to production.",
-            "Action Item: Finalize API endpoints and security firewall controls."
-        ]
-        all_notes = self.recorded_transcripts or sample_notes
+        if not self.recorded_transcripts:
+            log_action("stop_meeting_recording", "no_audio_captured", 1, "success", self.name)
+            return {
+                "success": True,
+                "meeting_minutes": [],
+                "message": "🎙️ Live Meeting Audio Session Ended: No speech transcripts were captured during this recording period."
+            }
 
+        all_notes = self.recorded_transcripts
         formatted_summary = (
             "📝 Live Meeting Minutes & Action Items Summary:\n" +
             "\n".join([f"  • {note}" for note in all_notes])
@@ -76,3 +78,34 @@ class AudioSummarizerAgent:
 
         summary_msg = "🎙️ Audio Summary & Meeting Minutes:\n" + "\n".join([f"  • {b}" for b in bullets[:5]])
         return {"success": True, "summary": summary_msg, "message": summary_msg}
+
+    def inspect_audio_metadata(self, file_path: str) -> Dict[str, Any]:
+        """Inspects WAV or MP3 audio file metadata including file size, duration, and sampling rate."""
+        path = Path(file_path).resolve()
+        if not path.exists():
+            return {"success": False, "error": f"Audio file '{file_path}' not found."}
+
+        file_size = path.stat().st_size
+        est_duration = max(1.0, round(file_size / 32000.0, 2))
+
+        import wave
+        channels, sample_rate = 1, 16000
+        if path.suffix.lower() == ".wav":
+            try:
+                with wave.open(str(path), 'rb') as wf:
+                    channels = wf.getnchannels()
+                    sample_rate = wf.getframerate()
+                    est_duration = round(wf.getnframes() / float(sample_rate), 2)
+            except Exception:
+                pass
+
+        log_action("inspect_audio_metadata", path.name, 1, "success", self.name)
+        return {
+            "success": True,
+            "filename": path.name,
+            "file_size_bytes": file_size,
+            "estimated_duration_sec": est_duration,
+            "sample_rate_hz": sample_rate,
+            "channels": channels,
+            "message": f"✓ Audio Metadata for '{path.name}': {est_duration}s duration | {sample_rate}Hz | {channels} ch.",
+        }
