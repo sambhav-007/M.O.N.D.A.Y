@@ -259,3 +259,12 @@ class TestFullSystemArchitecture:
         res = explain_command_intent("organize my downloads folder")
         assert "key_influencing_features" in res
         assert "xai_model" in res
+
+    def test_monday_voice_model_training(self):
+        """Verifies voice model training from mondayvoice.mp3 reference audio sample."""
+        from ml.voice_cloner import MondayVoiceModel
+        cloner = MondayVoiceModel()
+        ref_path = Path("ui/mondayvoice.mp3")
+        res = cloner.train_from_reference(ref_path)
+        assert res.get("success") is True
+        assert res.get("profile", {}).get("trained") is True
