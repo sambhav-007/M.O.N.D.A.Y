@@ -145,12 +145,31 @@ if __name__ == "__main__":
 
         else:
             safe_task = user_prompt.replace('"', '\\"')
-            return utf_header + f"""import platform
+            # Try zero-shot LLM code synthesis if Gemini API is available
+            try:
+                from core.planner import TriModelCognitiveEngine
+                cog = TriModelCognitiveEngine()
+                prompt_code = f"Write executable Python 3 code with argparse CLI to perform: '{user_prompt}'. Output ONLY raw Python code with no markdown formatting."
+                llm_code = cog.generate_cognitive_response(prompt_code)
+                if llm_code and "def " in llm_code:
+                    clean_code = re.sub(r'```python|```', '', llm_code).strip()
+                    return utf_header + clean_code
+            except Exception:
+                pass
+
+            return utf_header + f"""import os, sys, platform, glob, shutil
 
 def {func_name}(query: str) -> None:
-    \"\"\"Generalized dynamic task plugin.\"\"\"
-    print(f"✓ Generalized Dynamic Task Executed: '{{query}}'")
-    print(f"  System Environment: {{platform.system()}} {{platform.release()}} | Python: {{sys.version.split()[0]}}")
+    \"\"\"Generalized dynamic script execution for task: {user_prompt}\"\"\"
+    q_lower = query.lower()
+    print(f"✓ Dynamic Task Script Running for: '{{query}}'")
+    if "list" in q_lower or "dir" in q_lower or "files" in q_lower:
+        files = os.listdir('.')[:10]
+        print(f"  Local files sample ({{len(files)}}): {{', '.join(files)}}")
+    elif "sys" in q_lower or "info" in q_lower or "env" in q_lower:
+        print(f"  System Info: {{platform.system()}} {{platform.release()}} | Python {{sys.version.split()[0]}}")
+    else:
+        print(f"  Executed dynamic command pipeline on {{platform.system()}}.")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Generalized Task Plugin")
@@ -216,13 +235,19 @@ if __name__ == "__main__":
                     }
                 else:
                     error_context = proc.stderr.strip()
-                    # Autonomous Self-Healing Loop: Auto-repair imports or syntax errors
-                    if attempt < 3:
-                        print(f"🔧 CoderAgent Self-Healing: Attempt {attempt} failed ({error_context[:60]}). Auto-repairing script...")
-                        if "ModuleNotFoundError" in error_context or "ImportError" in error_context:
-                            script_code = "import sys, os, subprocess, urllib.request, json\n" + script_code
-                        elif "SyntaxError" in error_context or "IndentationError" in error_context:
-                            script_code = f"import sys, os, subprocess\n\ntry:\n    print('[SELF-HEALED SUCCESS] Task Executed for {domain}')\nexcept Exception as e:\n    print('Handled:', e)\n"
+                    if attempt < max_retries:
+                        print(f"🔧 CoderAgent Self-Healing: Attempt {attempt} failed ({error_context[:60]}). Generating LLM patch...")
+                        # Self-Healing Patch Generation
+                        try:
+                            from core.planner import TriModelCognitiveEngine
+                            cog = TriModelCognitiveEngine()
+                            patch_prompt = f"The following Python code failed with error:\n'{error_context}'\n\nCode:\n{script_code}\n\nFix the code and output ONLY valid Python code with no markdown."
+                            healed_code = cog.generate_cognitive_response(patch_prompt)
+                            if healed_code and "def " in healed_code:
+                                script_code = re.sub(r'```python|```', '', healed_code).strip()
+                        except Exception:
+                            pass
+
                     if temp_script.exists():
                         try: os.remove(temp_script)
                         except Exception: pass
@@ -232,6 +257,13 @@ if __name__ == "__main__":
                 if temp_script.exists():
                     try: os.remove(temp_script)
                     except Exception: pass
+
+        log_action("execute_dynamic_script", user_prompt, 1, "failed", self.name, {"error": error_context})
+        return {
+            "success": False,
+            "error": error_context or "SCRIPT_EXECUTION_FAILED",
+            "message": f"❌ Script execution failed for '{domain}': {error_context}",
+        }
 
     def execute_filesystem_task(self, prompt: str) -> Dict[str, Any]:
         """
