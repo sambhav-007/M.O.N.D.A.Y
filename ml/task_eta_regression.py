@@ -170,8 +170,10 @@ def engineer_features(df: pd.DataFrame) -> Tuple[np.ndarray, np.ndarray]:
     4. Return (X, y) arrays
     """
     # One-hot encode categoricals
-    task_dummies = pd.get_dummies(df["task_type"], prefix="task")
-    agent_dummies = pd.get_dummies(df["agent_involved"], prefix="agent")
+    task_cat = pd.Categorical(df["task_type"], categories=TASK_TYPES)
+    agent_cat = pd.Categorical(df["agent_involved"], categories=AGENTS)
+    task_dummies = pd.get_dummies(task_cat, prefix="task")
+    agent_dummies = pd.get_dummies(agent_cat, prefix="agent")
 
     # Cyclic encoding for hour
     tod_sin = np.sin(2 * np.pi * df["time_of_day_h"] / 24)
