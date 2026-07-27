@@ -84,6 +84,12 @@ TEMPLATES = {
         "keep a note that {topic} is important", "look up my saved info on {topic}",
         "what do I know about {topic}", "add {topic} to my memory",
     ],
+    "chitchat": [
+        "hello", "hi {person}", "hey monday", "good morning", "good evening",
+        "how are you today", "who are you", "what is your name",
+        "thanks for the help", "thank you monday", "are you an AI",
+        "tell me a joke", "how is the weather", "nice to meet you",
+    ],
     # Ambiguous / underspecified — should be hard to route confidently.
     "llm_fallback": [
         "help me with this", "do the thing", "make it better",

@@ -20,8 +20,8 @@ from datagen.commands import generate_commands
 
 def main() -> None:
     ap = argparse.ArgumentParser(description="Generate MONDAY synthetic datasets")
-    ap.add_argument("--commands", type=int, default=3000, help="number of labeled commands")
-    ap.add_argument("--sessions", type=int, default=1200, help="number of action-log sessions")
+    ap.add_argument("--commands", type=int, default=10000, help="number of labeled commands")
+    ap.add_argument("--sessions", type=int, default=3000, help="number of action-log sessions")
     ap.add_argument("--seed", type=int, default=42)
     args = ap.parse_args()
 
