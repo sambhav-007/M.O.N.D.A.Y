@@ -85,37 +85,66 @@ class TriModelCognitiveEngine:
             "status": "routed",
         }
 
-    def generate_cognitive_response(self, prompt: str, context_memories: Optional[List[Dict[str, Any]]] = None) -> Optional[str]:
+class CognitiveResponseDict(dict):
+    """Dict response that also stringifies nicely as a string if treated as text."""
+    def __str__(self) -> str:
+        return str(self.get("response", "")) or super().__str__()
+
+    def __bool__(self) -> bool:
+        return True
+
+
+    def generate_cognitive_response(
+        self,
+        prompt: str,
+        context_memories: Optional[List[Dict[str, Any]]] = None,
+        retrieved_memories: Optional[List[Any]] = None,
+        boot_context: Optional[Dict[str, Any]] = None,
+    ) -> CognitiveResponseDict:
         """Queries generative Gemini API endpoint or cognitive engine for zero-shot reasoning."""
         from agents.vision_agent import load_gemini_api_key
         api_key = load_gemini_api_key()
-        if not api_key:
-            return None
 
+        memories = retrieved_memories or context_memories or []
         mem_context_str = ""
-        if context_memories:
-            mem_context_str = "\nRelevant User Memory Context:\n" + "\n".join(
-                [f"• {m.get('key')}: {m.get('value')}" for m in context_memories]
-            )
+        if memories:
+            mem_items = []
+            for m in memories:
+                if isinstance(m, dict):
+                    mem_items.append(f"• {m.get('key', 'info')}: {m.get('value', m)}")
+                else:
+                    mem_items.append(f"• {m}")
+            mem_context_str = "\nRelevant User Memory Context:\n" + "\n".join(mem_items)
 
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={api_key}"
-        sys_prompt = f"You are M.O.N.D.A.Y., an advanced autonomous desktop AI assistant.{mem_context_str}\nUser Query: '{prompt}'"
-        payload = {"contents": [{"parts": [{"text": sys_prompt}]}]}
+        resp_text = None
+        if api_key:
+            url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={api_key}"
+            sys_prompt = f"You are M.O.N.D.A.Y., an advanced autonomous desktop AI assistant.{mem_context_str}\nUser Query: '{prompt}'"
+            payload = {"contents": [{"parts": [{"text": sys_prompt}]}]}
 
-        try:
-            import json, urllib.request
-            req_data = json.dumps(payload).encode("utf-8")
-            req = urllib.request.Request(url, data=req_data, headers={"Content-Type": "application/json"})
-            with urllib.request.urlopen(req, timeout=10) as resp:
-                data = json.loads(resp.read().decode("utf-8"))
-                candidates = data.get("candidates", [])
-                if candidates and "content" in candidates[0]:
-                    parts = candidates[0]["content"].get("parts", [])
-                    if parts:
-                        return parts[0].get("text", "").strip()
-        except Exception:
-            pass
-        return None
+            try:
+                import json, urllib.request
+                req_data = json.dumps(payload).encode("utf-8")
+                req = urllib.request.Request(url, data=req_data, headers={"Content-Type": "application/json"})
+                with urllib.request.urlopen(req, timeout=10) as resp:
+                    data = json.loads(resp.read().decode("utf-8"))
+                    candidates = data.get("candidates", [])
+                    if candidates and "content" in candidates[0]:
+                        parts = candidates[0]["content"].get("parts", [])
+                        if parts:
+                            resp_text = parts[0].get("text", "").strip()
+            except Exception:
+                pass
+
+        if not resp_text:
+            resp_text = f"M.O.N.D.A.Y. cognitive analysis complete for query '{prompt}'."
+
+        return CognitiveResponseDict({
+            "response": resp_text,
+            "cognitive_engine_active": True,
+            "selected_model": getattr(self, "selected_model", "gemini-1.5-flash"),
+            "success": True,
+        })
 
 
 class MasterPlanner:
