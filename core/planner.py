@@ -49,6 +49,15 @@ from ml.intent_classifier import get_trained_classifier, predict_intent
 from ml.rl_router import EpsilonGreedyBandit, ROUTING_ACTIONS
 
 
+class CognitiveResponseDict(dict):
+    """Dict response that also stringifies nicely as a string if treated as text."""
+    def __str__(self) -> str:
+        return str(self.get("response", "")) or super().__str__()
+
+    def __bool__(self) -> bool:
+        return True
+
+
 class TriModelCognitiveEngine:
     """
     Tri-Model Cognitive Engine: Dynamic routing matrix & generative reasoning across models:
@@ -84,15 +93,6 @@ class TriModelCognitiveEngine:
             "prompt": prompt,
             "status": "routed",
         }
-
-class CognitiveResponseDict(dict):
-    """Dict response that also stringifies nicely as a string if treated as text."""
-    def __str__(self) -> str:
-        return str(self.get("response", "")) or super().__str__()
-
-    def __bool__(self) -> bool:
-        return True
-
 
     def generate_cognitive_response(
         self,
