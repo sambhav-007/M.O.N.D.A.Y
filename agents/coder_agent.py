@@ -171,6 +171,24 @@ if __name__ == "__main__":
 
         domain, func_name, params = self._extract_domain_and_params(user_prompt)
 
+        # Honest failure instead of fabricated "generalized dynamic task": only
+        # domains with a real implementation below are executed. Anything else is
+        # something we genuinely can't do yet — say so plainly rather than writing
+        # a throwaway plugin that just prints a fake success line.
+        SUPPORTED_DOMAINS = {"system_volume", "desktop_folder", "web_scraper"}
+        if domain not in SUPPORTED_DOMAINS:
+            log_action("execute_dynamic_script", user_prompt, 1, "unsupported", self.name)
+            return {
+                "success": False,
+                "domain": domain,
+                "message": (
+                    f"I'm not sure how to do that yet: \"{user_prompt}\". "
+                    "I can currently open apps, search the web, work with documents, "
+                    "save/recall memories, adjust system volume, and create desktop "
+                    "folders. Try rephrasing or a more specific command."
+                ),
+            }
+
         while attempt < max_retries:
             attempt += 1
             script_code = self._generate_generalized_script(user_prompt, domain, func_name, params)

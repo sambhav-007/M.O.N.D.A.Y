@@ -98,6 +98,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Classical ML component endpoints (2.2–2.5) — makes all 5 ML models demoable at /docs
+from api.ml_router import router as ml_component_router
+app.include_router(ml_component_router)
+
 
 # ── Request Schemas ────────────────────────────────────────────────────────────
 class ExecuteRequest(BaseModel):

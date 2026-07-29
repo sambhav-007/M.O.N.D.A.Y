@@ -485,9 +485,11 @@
 
     function setEntityMode(mode) {
       currentMode = mode;
-      document.getElementById('state-badge').innerText = mode.toUpperCase();
-      document.getElementById('presence-state-badge').innerText = mode.toUpperCase();
-      document.getElementById('state-text-indicator').innerText = (viewMode === 'presence' ? 'Presence Mode Active' : 'Console Mode Active') + ` (${mode.toUpperCase()})`;
+      // Null-safe: a missing badge element must never abort command execution.
+      const setText = (id, txt) => { const el = document.getElementById(id); if (el) el.innerText = txt; };
+      setText('state-badge', mode.toUpperCase());
+      setText('presence-state-badge', mode.toUpperCase());
+      setText('state-text-indicator', (viewMode === 'presence' ? 'Presence Mode Active' : 'Console Mode Active') + ` (${mode.toUpperCase()})`);
     }
 
     function onWindowResize() {

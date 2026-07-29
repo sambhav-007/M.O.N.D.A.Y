@@ -328,12 +328,21 @@ class CommunicationAgent:
                 "message": "🔒 Tier-2 Action Gated: Explicit user approval required to send email.",
             }
 
-        # Simulated successful transmission
-        log_action("send_email", draft_id_or_email, 2, "success", self.name)
+        # Honest status: the draft is real (Gmail API), but no real send transport
+        # is wired here. Do NOT claim a delivery that did not happen. Enabling real
+        # delivery requires the Gmail send scope / SMTP credentials configured by the
+        # user — an irreversible Tier-2 action that must not be faked.
+        log_action("send_email", draft_id_or_email, 2, "not_sent", self.name)
         return {
-            "success": True,
+            "success": False,
+            "delivered": False,
+            "approved": True,
             "target": draft_id_or_email,
-            "message": f"✓ Email successfully sent to '{draft_id_or_email}'.",
+            "message": (
+                f"Draft for '{draft_id_or_email}' is ready and approved, but real "
+                "delivery is not enabled. Configure the Gmail send scope or SMTP "
+                "credentials in .env to actually send."
+            ),
         }
 
     def send_desktop_notification(self, title: str, message: str) -> Dict[str, Any]:
