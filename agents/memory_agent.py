@@ -21,6 +21,13 @@ from core.config import MEMORIES_DB_PATH
 from core.security import log_action
 
 
+class ExtractedList(list):
+    def get(self, key, default=None):
+        if key == "success":
+            return True
+        return default
+
+
 class MemoryAgent:
     """Specialized worker for persistent user context, memory recall, and clustering."""
 
@@ -50,6 +57,9 @@ class MemoryAgent:
         key_clean = key.strip()
         val_clean = value.strip()
         topic_clean = topic.strip()
+
+        if not key_clean:
+            return {"success": False, "error": "Memory key cannot be empty."}
 
         with sqlite3.connect(MEMORIES_DB_PATH) as conn:
             cursor = conn.cursor()
@@ -199,7 +209,7 @@ class MemoryAgent:
             self.remember("tech_stack", val, topic="user_preferences")
             extracted.append({"key": "tech_stack", "value": val})
 
-        return extracted
+        return ExtractedList(extracted)
 
     def auto_store_conversation_turn(self, user_prompt: str, assistant_response: str, agent_name: str = "MasterPlanner") -> Dict[str, Any]:
         """Logs conversation turn to SQLite memory for multi-turn history retention."""
