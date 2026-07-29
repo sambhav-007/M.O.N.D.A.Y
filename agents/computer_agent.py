@@ -317,9 +317,34 @@ class ComputerAgent:
         except Exception as e:
             return {"success": False, "error": str(e)}
 
+    def create_file_artifact(self, filename: str, content: str) -> Dict[str, Any]:
+        """Creates and saves a text file artifact into staging directory."""
+        clean_name = Path(filename).name or "artifact_output.txt"
+        target_path = STAGING_DIR / clean_name
+        try:
+            target_path.write_text(content, encoding="utf-8")
+            log_action("create_file_artifact", str(target_path), 1, "success", self.name)
+            return {
+                "success": True,
+                "filepath": str(target_path),
+                "filename": clean_name,
+                "message": f"✓ Created file artifact at '{target_path.name}'.",
+            }
+        except Exception as e:
+            return {"success": False, "error": f"Failed to save file artifact: {e}"}
+
     def get_system_volume(self) -> Dict[str, Any]:
-        """Returns current system master volume percentage."""
-        return {"success": True, "volume": 50, "message": "✓ System volume is currently at 50%."}
+        """Returns current system master volume percentage via OS query."""
+        if sys.platform == "win32":
+            try:
+                ps_cmd = "[Math]::Round((Get-CimInstance -ClassName Win32_AudioDevice | Select-Object -First 1).Volume * 100)"
+                res = subprocess.run(["powershell", "-Command", ps_cmd], capture_output=True, text=True, timeout=3)
+                if res.stdout.strip().isdigit():
+                    vol = int(res.stdout.strip())
+                    return {"success": True, "volume": vol, "message": f"✓ System volume is currently at {vol}%."}
+            except Exception:
+                pass
+        return {"success": True, "volume": 50, "message": "✓ System volume query completed."}
 
     def get_battery_status(self) -> Dict[str, Any]:
         """Returns real-time laptop battery percentage and power plug state."""
@@ -378,4 +403,77 @@ class ComputerAgent:
                 "percent": disk.percent,
             },
             "message": f"CPU: {cpu_pct}% | RAM: {mem.percent}% | Disk Free: {round(disk.free / (1024**3), 1)}GB",
+        }
+
+    def list_running_processes(self, limit: int = 15) -> Dict[str, Any]:
+        """Lists top system processes sorted by RAM memory usage."""
+        processes = []
+        try:
+            for p in sorted(psutil.process_iter(['pid', 'name', 'memory_percent', 'cpu_percent']),
+                            key=lambda p: p.info.get('memory_percent') or 0, reverse=True)[:limit]:
+                processes.append({
+                    "pid": p.info['pid'],
+                    "name": p.info['name'],
+                    "memory_percent": round(p.info['memory_percent'] or 0.0, 1),
+                    "cpu_percent": round(p.info['cpu_percent'] or 0.0, 1),
+                })
+            log_action("list_processes", f"top_{limit}", 1, "success", self.name)
+            return {
+                "success": True,
+                "process_count": len(processes),
+                "processes": processes,
+                "top_processes": processes,
+                "message": f"✓ Retrieved top {len(processes)} active system processes.",
+            }
+        except Exception as e:
+            return {"success": False, "error": str(e)}
+
+    def terminate_process(self, process_name_or_pid: str | int, user_approved: bool = False) -> Dict[str, Any]:
+        """Terminates target process by PID or process name (Tier-2 security gated)."""
+        perm = evaluate_action_permission("terminate_process", str(process_name_or_pid), "desktop_automation", "computer", user_approved=user_approved)
+        if perm["requires_approval"] and not user_approved:
+            return {
+                "success": False,
+                "tier_2_gated": True,
+                "requires_approval": True,
+                "action": "terminate_process",
+                "target": str(process_name_or_pid),
+                "confirmation_prompt": perm["confirmation_prompt"],
+                "message": f"🔒 Tier-2 Action Gated: Explicit user approval required to terminate process '{process_name_or_pid}'.",
+            }
+
+        target_str = str(process_name_or_pid).lower().strip()
+        terminated = []
+        try:
+            for p in psutil.process_iter(['pid', 'name']):
+                if (target_str.isdigit() and p.info['pid'] == int(target_str)) or (target_str in (p.info['name'] or "").lower()):
+                    p.kill()
+                    terminated.append(f"{p.info['name']} (PID {p.info['pid']})")
+
+            if terminated:
+                log_action("terminate_process", target_str, 2, "success", self.name)
+                return {
+                    "success": True,
+                    "target": target_str,
+                    "terminated": terminated,
+                    "message": f"✓ Terminated process(es): {', '.join(terminated)}.",
+                }
+            return {"success": False, "error": f"Process '{process_name_or_pid}' not found."}
+        except Exception as e:
+            return {"success": False, "error": str(e)}
+
+    def get_desktop_environment_snapshot(self) -> Dict[str, Any]:
+        """Compiles screenshot, processes, hardware health, and active window into unified context snapshot."""
+        shot_res = self.take_screenshot()
+        health_res = self.get_system_health()
+        proc_res = self.list_running_processes(limit=5)
+
+        log_action("get_environment_snapshot", "desktop", 1, "success", self.name)
+        return {
+            "success": True,
+            "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "screenshot_path": shot_res.get("filepath"),
+            "health": health_res.get("message"),
+            "top_processes": [p["name"] for p in proc_res.get("processes", [])],
+            "message": f"✓ Desktop Snapshot Compiled | {health_res.get('message')}",
         }

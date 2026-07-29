@@ -140,6 +140,7 @@ async def root() -> Dict[str, Any]:
     return {
         "engine": "M.O.N.D.A.Y. Multi-Agent System",
         "status": "ONLINE",
+        "healthy": True,
         "version": "1.0.0",
         "interactive_app": "http://localhost:8000/app",
         "docs": "http://localhost:8000/docs",
@@ -290,12 +291,17 @@ async def action_history(limit: int = 30) -> List[Dict[str, Any]]:
 
 # ── Classic ML Endpoints ───────────────────────────────────────────────────────
 
-@app.post("/intent/classify", tags=["Component 2.1 — CLO04"])
-async def classify_intent_endpoint(command: str) -> Dict[str, Any]:
-    if _PLANNER is None:
-        raise HTTPException(503, "Planner offline.")
-    intent, conf, fallback = predict_intent(_PLANNER.classifier, command)
-    return {"command": command, "intent": intent, "confidence": round(conf, 4), "llm_fallback": fallback}
+@app.get("/xai/explain", tags=["Component 2.6 — XAI Explainer"])
+async def xai_explain_endpoint(command: str = "organize my downloads folder") -> Dict[str, Any]:
+    """Returns SHAP feature importance breakdown explaining intent & routing decisions."""
+    from ml.xai_explainer import explain_command_intent
+    planner = get_planner()
+    explanation = explain_command_intent(command)
+    return {
+        "command": command,
+        "key_influencing_features": explanation.get("top_words", []),
+        "explanation": explanation,
+    }
 
 
 # ── Entry Point ────────────────────────────────────────────────────────────────

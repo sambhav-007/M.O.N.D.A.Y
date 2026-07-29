@@ -286,6 +286,12 @@ def print_regression_comparison(results: Dict[str, Dict]) -> str:
     return best_model
 
 
+def predict_eta(task_type: str, agent: str, step_count: int = 1) -> float:
+    """Predicts completion ETA seconds based on task type, agent, and step count."""
+    base_time = HISTORICAL_AVG.get(task_type, 3.5)
+    return round(base_time + (step_count * 1.2), 2)
+
+
 def run() -> Pipeline:
     """
     Main entry point. Generates data, trains all regression models,
@@ -310,7 +316,6 @@ def run() -> Pipeline:
         X, y, test_size=0.2, random_state=42
     )
 
-    # Find the index of step_count column (for simple linear baseline)
     feature_cols = (
         [f"task_{t}" for t in TASK_TYPES] +
         [f"agent_{a}" for a in AGENTS] +

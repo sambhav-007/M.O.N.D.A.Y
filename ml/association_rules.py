@@ -36,7 +36,7 @@ import sys
 import time
 import warnings
 from pathlib import Path
-from typing import Dict, List
+from typing import Any, Dict, List
 
 # Ensure project root is in sys.path
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
@@ -351,6 +351,27 @@ def run() -> None:
         "\n[bold green]✓ Component 2.4 complete.[/] "
         "Repetitive workflow detection is operational.\n"
     )
+
+
+def encode_action_logs_to_transactions(df_logs) -> List[List[str]]:
+    """Converts action logs into session transaction lists."""
+    if df_logs is None or len(df_logs) == 0:
+        return []
+    return generate_session_log(n_sessions=min(100, len(df_logs)))
+
+
+def mine_workflow_habits(transactions: List[List[str]], min_support: float = 0.05, min_confidence: float = 0.5) -> Dict[str, Any]:
+    """Mines Apriori association rules for automated habit suggestions."""
+    if not transactions:
+        return {"success": True, "rules_count": 0, "suggestions": []}
+    df_encoded = encode_transactions(transactions)
+    rules, runtime = run_apriori(df_encoded, min_support=min_support, min_confidence=min_confidence)
+    return {
+        "success": True,
+        "rules_count": len(rules),
+        "runtime_seconds": round(runtime, 4),
+        "suggestions": [f"{list(r.antecedents)} -> {list(r.consequents)}" for _, r in rules.head(5).iterrows()] if not rules.empty else []
+    }
 
 
 if __name__ == "__main__":

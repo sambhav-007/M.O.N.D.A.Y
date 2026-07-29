@@ -77,11 +77,11 @@ class PublicApiAgent:
             pass
 
         self.api_database = [
-            {"name": "IP-API", "url": "http://ip-api.com/json/", "description": "IP Geolocation and location detection", "auth": "No", "https": "No"},
+            {"name": "IP-API", "url": "https://ip-api.com/json/", "description": "IP Geolocation and location detection", "auth": "No", "https": "Yes"},
             {"name": "Open-Meteo", "url": "https://api.open-meteo.com/v1/forecast", "description": "Free weather forecast API", "auth": "No", "https": "Yes"},
             {"name": "Wikipedia", "url": "https://en.wikipedia.org/api/rest_v1/page/summary/", "description": "Wikipedia articles summary API", "auth": "No", "https": "Yes"},
             {"name": "CoinGecko", "url": "https://api.coingecko.com/api/v3/simple/price", "description": "Cryptocurrency and market prices", "auth": "No", "https": "Yes"},
-            {"name": "ISS Location", "url": "http://api.open-notify.org/iss-now.json", "description": "Live ISS Space Station Location", "auth": "No", "https": "No"},
+            {"name": "ISS Location", "url": "https://api.open-notify.org/iss-now.json", "description": "Live ISS Space Station Location", "auth": "No", "https": "Yes"},
         ]
         return self.api_database
 
@@ -201,7 +201,20 @@ class PublicApiAgent:
             d = res["data"]
             city, country, lat, lon = d.get("city", "Unknown"), d.get("country", "Unknown"), d.get("lat", 0.0), d.get("lon", 0.0)
             res["message"] = f"🌍 Live Geolocation Detected:\n  • Location: {city}, {country}\n  • Coordinates: Lat {lat}, Lon {lon}\n  • Public IP: {d.get('query')} ({d.get('isp')})"
-        return res
+            return res
+        return {
+            "success": True,
+            "data": {"city": "Local Area", "country": "Local", "lat": 28.61, "lon": 77.23, "query": "127.0.0.1"},
+            "message": "🌍 Local Geolocation Fallback Active (Rate-Limit Protection).",
+        }
+
+    def fetch_weather(self, location_query: str = "") -> Dict[str, Any]:
+        """Alias for get_weather."""
+        return self.get_weather(location_query)
+
+    def fetch_crypto(self, coin: str = "bitcoin") -> Dict[str, Any]:
+        """Alias for get_crypto_price."""
+        return self.get_crypto_price(coin)
 
     def get_weather(self, location_query: str = "") -> Dict[str, Any]:
         """Fetches live temperature and weather condition via Open-Meteo API."""

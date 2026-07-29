@@ -63,14 +63,15 @@ class BrowserAgent:
                                 "url": link,
                             })
         except Exception as e:
-            # Graceful fallback: return mock structured search result if offline/rate-limited
-            results = [
-                {
-                    "title": f"Overview of {query}",
-                    "snippet": f"Comprehensive information and documentation regarding {query}.",
-                    "url": f"https://en.wikipedia.org/wiki/{encoded}",
-                }
-            ]
+            log_action("web_search", query, 1, "failed", self.name, {"error": str(e)})
+            return {
+                "success": False,
+                "query": query,
+                "result_count": 0,
+                "results": [],
+                "error": f"WEB_SEARCH_ERROR: {e}",
+                "message": f"❌ Web search for '{query}' failed due to network/rate-limit error: {e}",
+            }
 
         log_action("web_search", query, 1, "success", self.name, {"results_count": len(results)})
 
@@ -120,6 +121,29 @@ class BrowserAgent:
                 }
         except Exception as e:
             return {"success": False, "error": f"Failed to fetch {url}: {e}"}
+
+    def extract_webpage_markdown(self, url: str) -> Dict[str, Any]:
+        """Fetches target web page and converts HTML structure into clean Markdown."""
+        page_res = self.fetch_webpage_content(url)
+        if not page_res.get("success"):
+            return page_res
+
+        title = page_res.get("title", "Webpage")
+        content = page_res.get("content", "")
+        
+        # Format into clean markdown report
+        markdown = f"# {title}\n\n**Source URL**: {url}\n\n"
+        paragraphs = [p.strip() for p in content.split("\n") if p.strip()]
+        markdown += "\n\n".join(paragraphs[:30])
+
+        log_action("extract_webpage_markdown", url, 1, "success", self.name)
+        return {
+            "success": True,
+            "url": url,
+            "title": title,
+            "markdown_content": markdown,
+            "message": f"✓ Extracted Markdown representation for '{title}'.",
+        }
 
     def research_topic(self, topic: str) -> Dict[str, Any]:
         """

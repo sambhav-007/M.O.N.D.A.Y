@@ -177,3 +177,127 @@ class DocumentAgent:
             "results": results,
             "message": f"✓ Found {len(results)} relevant passages across {len(document_paths)} documents.",
         }
+
+    def compare_documents(self, filepath1: str | Path, filepath2: str | Path) -> Dict[str, Any]:
+        """Generates a unified text/code diff comparison report between two files."""
+        import difflib
+        ok1, text1, err1 = self.read_document_text(filepath1)
+        ok2, text2, err2 = self.read_document_text(filepath2)
+        if not ok1 or not ok2:
+            return {"success": False, "error": f"Failed to read input files: {err1 or err2}"}
+
+        lines1 = text1.splitlines(keepends=True)
+        lines2 = text2.splitlines(keepends=True)
+        diff = list(difflib.unified_diff(lines1, lines2, fromfile=str(filepath1), tofile=str(filepath2)))
+        diff_text = "".join(diff[:100]) or "No differences found (Files are identical)."
+
+        log_action("compare_documents", f"{filepath1} vs {filepath2}", 1, "success", self.name)
+        return {
+            "success": True,
+            "file1": str(filepath1),
+            "file2": str(filepath2),
+            "diff": diff_text,
+            "diff_lines_count": len(diff),
+            "diff_report": diff_text,
+            "message": f"✓ Generated document diff report between '{Path(filepath1).name}' and '{Path(filepath2).name}' ({len(diff)} diff lines).",
+        }
+
+    def query_dataset(self, filepath: str | Path, query_filter: str = "", query_expr: str = "") -> Dict[str, Any]:
+        """Queries local CSV/JSON datasets using pandas filtering and analytics."""
+        import pandas as pd
+        path = Path(filepath).resolve()
+        if not path.exists():
+            return {"success": False, "error": f"Dataset file '{filepath}' not found."}
+
+        effective_query = query_expr or query_filter
+        try:
+            if path.suffix.lower() == ".csv":
+                df = pd.read_csv(path)
+            elif path.suffix.lower() == ".json":
+                df = pd.read_json(path)
+            else:
+                return {"success": False, "error": "Unsupported dataset format. Use CSV or JSON."}
+
+            if effective_query:
+                filtered_df = df.query(effective_query) if hasattr(df, "query") else df
+            else:
+                filtered_df = df
+
+            summary_str = f"Rows: {len(filtered_df)} | Columns: {list(filtered_df.columns)[:5]}"
+            sample_records = filtered_df.head(5).to_dict(orient="records")
+
+            return {
+                "success": True,
+                "dataset": path.name,
+                "total_rows": len(df),
+                "filtered_rows": len(filtered_df),
+                "row_count": len(filtered_df),
+                "summary": summary_str,
+                "records_sample": sample_records,
+                "message": f"✓ Queried dataset '{path.name}': {len(filtered_df)} matching records.",
+            }
+        except Exception as e:
+            return {"success": False, "error": f"Dataset query failed: {e}"}
+
+    def ask_document_question(
+        self,
+        filepath_or_question: str | Path = "",
+        question_or_filepath: str | Path = "",
+        document_paths: Optional[List[str | Path]] = None,
+        question: str = "",
+        filepath: str | Path = "",
+    ) -> Dict[str, Any]:
+        """Performs RAG search over document and uses cognitive engine to answer question with citations."""
+        target_question = question
+        target_path = filepath or (document_paths[0] if document_paths else "")
+
+        if not target_question and filepath_or_question:
+            arg1_str = str(filepath_or_question)
+            if not target_path and (Path(arg1_str).exists() or any(arg1_str.endswith(ext) for ext in [".txt", ".pdf", ".md", ".csv"])):
+                target_path = filepath_or_question
+                target_question = str(question_or_filepath) if question_or_filepath else ""
+            else:
+                target_question = arg1_str
+                if not target_path and question_or_filepath:
+                    target_path = question_or_filepath
+
+        if not target_path and document_paths:
+            target_path = document_paths[0]
+
+        if not target_path:
+            return {"success": False, "error": "No valid document path provided for QA."}
+
+        path_obj = Path(target_path)
+        ok, full_text, err = self.read_document_text(path_obj)
+        if not ok:
+            return {"success": False, "error": f"Could not read document '{target_path}': {err}"}
+
+        doc_list = document_paths if document_paths else [path_obj]
+        rag_res = self.rag_search(target_question, document_paths=doc_list)
+        passages = rag_res.get("results", [])
+
+        passage_str = "\n".join([f"Passage {idx+1}: {p['excerpt']}" for idx, p in enumerate(passages[:3])])
+        if not passage_str:
+            passage_str = full_text[:1500]
+
+        answer = None
+        try:
+            from core.planner import TriModelCognitiveEngine
+            cog = TriModelCognitiveEngine()
+            prompt = f"Based on the following document passages:\n{passage_str}\n\nAnswer this question: '{target_question}'"
+            answer = cog.generate_cognitive_response(prompt)
+        except Exception:
+            pass
+
+        if not answer:
+            answer = f"Found relevant information in '{path_obj.name}':\n{passage_str[:400]}"
+
+        log_action("ask_document_question", target_question, 1, "success", self.name)
+        return {
+            "success": True,
+            "document": path_obj.name,
+            "question": target_question,
+            "answer": str(answer),
+            "passages_consulted": len(passages),
+            "message": f"✓ Document Q&A Answer:\n{answer}",
+        }
