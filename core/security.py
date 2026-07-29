@@ -66,6 +66,7 @@ def evaluate_action_permission(
     task_type: str = "desktop_automation",
     agent: str = "computer",
     step_count: int = 1,
+    user_approved: bool = False,
 ) -> Dict[str, Any]:
     """
     Evaluates permission for a proposed action.
@@ -94,7 +95,7 @@ def evaluate_action_permission(
     except Exception:
         pass
 
-    requires_approval = (tier == 2)
+    requires_approval = (tier == 2) and not user_approved
 
     return {
         "action_name": action_name,
