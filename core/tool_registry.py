@@ -68,9 +68,9 @@ class ToolRegistry:
         """Retrieves tool metadata and function pointer."""
         return self._tools.get(name)
 
-    def list_tools(self) -> ToolRegistryDict:
+    def list_tools(self) -> List[Dict[str, Any]]:
         """Returns metadata for all registered tools."""
-        tools_list = [
+        return [
             {
                 "name": t["name"],
                 "category": t["category"],
@@ -79,7 +79,6 @@ class ToolRegistry:
             }
             for t in self._tools.values()
         ]
-        return ToolRegistryDict(tools_list)
 
     def execute_tool(self, name: str, **kwargs: Any) -> Dict[str, Any]:
         """Executes a registered tool by name."""
