@@ -217,6 +217,7 @@ class MasterPlanner:
             pass
 
         boot_data = {
+            "user": username,
             "username": username,
             "platform": sys.platform,
             "cpu_usage_pct": cpu_pct,
