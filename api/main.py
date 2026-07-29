@@ -139,8 +139,8 @@ class SpeakRequest(BaseModel):
 async def root() -> Dict[str, Any]:
     return {
         "engine": "M.O.N.D.A.Y. Multi-Agent System",
-        "status": "healthy",
-        "state": "ONLINE",
+        "status": "ONLINE",
+        "healthy": True,
         "version": "1.0.0",
         "interactive_app": "http://localhost:8000/app",
         "docs": "http://localhost:8000/docs",
