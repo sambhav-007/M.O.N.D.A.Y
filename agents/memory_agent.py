@@ -201,13 +201,14 @@ class MemoryAgent:
 
         return extracted
 
-    def auto_store_conversation_turn(self, user_prompt: str, assistant_response: str) -> None:
+    def auto_store_conversation_turn(self, user_prompt: str, assistant_response: str, agent_name: str = "MasterPlanner") -> Dict[str, Any]:
         """Logs conversation turn to SQLite memory for multi-turn history retention."""
         if not user_prompt or not assistant_response:
-            return
+            return {"success": False, "error": "Empty prompt or response."}
         turn_key = f"turn_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
-        turn_val = f"User: {user_prompt[:200]} | Assistant: {assistant_response[:200]}"
-        self.remember(turn_key, turn_val, topic="conversation_history")
+        turn_val = f"Agent: {agent_name} | User: {user_prompt[:200]} | Assistant: {assistant_response[:200]}"
+        res = self.remember(turn_key, turn_val, topic="conversation_history")
+        return {"success": True, "turn_key": turn_key, "result": res}
 
     def get_contextual_memories(self, user_prompt: str, limit: int = 3) -> List[Dict[str, Any]]:
         """Pre-fetches memories relevant to the current user prompt."""
