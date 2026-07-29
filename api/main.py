@@ -139,7 +139,8 @@ class SpeakRequest(BaseModel):
 async def root() -> Dict[str, Any]:
     return {
         "engine": "M.O.N.D.A.Y. Multi-Agent System",
-        "status": "ONLINE",
+        "status": "healthy",
+        "state": "ONLINE",
         "version": "1.0.0",
         "interactive_app": "http://localhost:8000/app",
         "docs": "http://localhost:8000/docs",
@@ -294,13 +295,12 @@ async def action_history(limit: int = 30) -> List[Dict[str, Any]]:
 async def xai_explain_endpoint(command: str = "organize my downloads folder") -> Dict[str, Any]:
     """Returns SHAP feature importance breakdown explaining intent & routing decisions."""
     from ml.xai_explainer import explain_command_intent
-    if _PLANNER is None:
-        raise HTTPException(503, "Planner offline.")
+    planner = get_planner()
     explanation = explain_command_intent(command)
     return {
-        "success": True,
         "command": command,
-        "xai_explanation": explanation,
+        "key_influencing_features": explanation.get("top_words", []),
+        "explanation": explanation,
     }
 
 
