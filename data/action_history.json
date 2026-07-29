@@ -1,6 +1,55 @@
 [
   {
-    "timestamp": "2026-07-29T10:55:02.166159",
+    "timestamp": "2026-07-29T11:01:39.073893",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-07-29 11:01:39",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-07-29T11:01:39.406292",
+    "action": "recall_memory",
+    "target": "summarize my research notes",
+    "tier": 1,
+    "status": "success",
+    "agent": "MemoryAgent",
+    "details": {
+      "match_count": 3
+    }
+  },
+  {
+    "timestamp": "2026-07-29T11:01:39.422151",
+    "action": "summarize_document",
+    "target": "text snippet",
+    "tier": 1,
+    "status": "success",
+    "agent": "DocumentAgent",
+    "details": {
+      "word_count": 1,
+      "summary_sentences": 5
+    }
+  },
+  {
+    "timestamp": "2026-07-29T11:01:39.442225",
+    "action": "store_memory",
+    "target": "turn_20260729_110139",
+    "tier": 1,
+    "status": "success",
+    "agent": "MemoryAgent",
+    "details": {
+      "id": 234,
+      "topic": "conversation_history"
+    }
+  },
+  {
+    "timestamp": "2026-07-29T11:01:39.454295",
     "action": "voice_speak",
     "target": "\u2713 Summarised text snippet (1 words):\n\u2022 my",
     "tier": 1,
