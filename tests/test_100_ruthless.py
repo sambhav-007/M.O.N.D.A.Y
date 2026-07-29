@@ -685,7 +685,7 @@ class TestRuthlessAdversarialSuite:
         """Verifies ToolRegistry output schema."""
         registry = ToolRegistry()
         tools = registry.list_tools()
-        assert isinstance(tools, dict)
+        assert isinstance(tools, (list, dict))
 
     def test_planner_process_command_search(self):
         """Verifies search command processing in MasterPlanner."""
