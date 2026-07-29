@@ -435,6 +435,7 @@ class ComputerAgent:
             return {
                 "success": False,
                 "tier_2_gated": True,
+                "requires_approval": True,
                 "action": "terminate_process",
                 "target": str(process_name_or_pid),
                 "confirmation_prompt": perm["confirmation_prompt"],
