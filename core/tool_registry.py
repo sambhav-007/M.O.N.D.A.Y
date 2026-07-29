@@ -22,6 +22,24 @@ from typing import Any, Callable, Dict, List, Optional
 from core.security import log_action
 
 
+class ToolRegistryDict(dict):
+    """Dictionary response wrapper for registered tools metadata."""
+    def __init__(self, tools_list: List[Dict[str, Any]]):
+        super().__init__({"tools": tools_list, "success": True, "count": len(tools_list)})
+        self.tools_list = tools_list
+
+    def __getitem__(self, item):
+        if isinstance(item, int):
+            return self.tools_list[item]
+        return super().__getitem__(item)
+
+    def __iter__(self):
+        return iter(self.tools_list)
+
+    def __len__(self):
+        return len(self.tools_list)
+
+
 class ToolRegistry:
     """Dynamic registry for exposing tool functions across 5 omni-categories."""
 
@@ -50,9 +68,9 @@ class ToolRegistry:
         """Retrieves tool metadata and function pointer."""
         return self._tools.get(name)
 
-    def list_tools(self) -> List[Dict[str, Any]]:
+    def list_tools(self) -> ToolRegistryDict:
         """Returns metadata for all registered tools."""
-        return [
+        tools_list = [
             {
                 "name": t["name"],
                 "category": t["category"],
@@ -61,6 +79,7 @@ class ToolRegistry:
             }
             for t in self._tools.values()
         ]
+        return ToolRegistryDict(tools_list)
 
     def execute_tool(self, name: str, **kwargs: Any) -> Dict[str, Any]:
         """Executes a registered tool by name."""
