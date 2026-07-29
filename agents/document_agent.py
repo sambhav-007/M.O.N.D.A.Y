@@ -196,6 +196,7 @@ class DocumentAgent:
             "success": True,
             "file1": str(filepath1),
             "file2": str(filepath2),
+            "diff": diff_text,
             "diff_lines_count": len(diff),
             "diff_report": diff_text,
             "message": f"✓ Generated document diff report between '{Path(filepath1).name}' and '{Path(filepath2).name}' ({len(diff)} diff lines).",
