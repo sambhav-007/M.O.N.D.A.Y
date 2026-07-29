@@ -314,5 +314,21 @@ def run() -> Tuple[np.ndarray, np.ndarray]:
     return best_labels, X_vis
 
 
+def generate_memory_clusters(n_clusters: int = 5) -> Dict[str, Any]:
+    """Generates K-Means/DBSCAN memory clusters for proactive suggestions."""
+    texts, Y_topics = build_synthetic_memories(n_per_topic=20)
+    X = vectorize_memories(texts)
+    X_pca, _ = reduce_dimensions(X, n_components=10)
+    labels = run_kmeans(X_pca, n_clusters=n_clusters)
+    score = evaluate_clustering(X_pca, labels)
+    return {
+        "success": True,
+        "n_clusters": n_clusters,
+        "silhouette_score": round(score, 4),
+        "clusters": [int(x) for x in set(labels)],
+        "message": f"✓ Memory Clustering complete ({n_clusters} clusters, Silhouette: {score:.4f})."
+    }
+
+
 if __name__ == "__main__":
     run()
