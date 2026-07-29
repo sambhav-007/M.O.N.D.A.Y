@@ -422,6 +422,7 @@ class ComputerAgent:
                 "success": True,
                 "process_count": len(processes),
                 "processes": processes,
+                "top_processes": processes,
                 "message": f"✓ Retrieved top {len(processes)} active system processes.",
             }
         except Exception as e:
@@ -429,7 +430,7 @@ class ComputerAgent:
 
     def terminate_process(self, process_name_or_pid: str | int, user_approved: bool = False) -> Dict[str, Any]:
         """Terminates target process by PID or process name (Tier-2 security gated)."""
-        perm = evaluate_action_permission("terminate_process", str(process_name_or_pid), "desktop_automation", "computer")
+        perm = evaluate_action_permission("terminate_process", str(process_name_or_pid), "desktop_automation", "computer", user_approved=user_approved)
         if perm["requires_approval"] and not user_approved:
             return {
                 "success": False,
