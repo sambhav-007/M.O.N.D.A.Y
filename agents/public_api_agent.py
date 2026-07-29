@@ -203,6 +203,14 @@ class PublicApiAgent:
             res["message"] = f"🌍 Live Geolocation Detected:\n  • Location: {city}, {country}\n  • Coordinates: Lat {lat}, Lon {lon}\n  • Public IP: {d.get('query')} ({d.get('isp')})"
         return res
 
+    def fetch_weather(self, location_query: str = "") -> Dict[str, Any]:
+        """Alias for get_weather."""
+        return self.get_weather(location_query)
+
+    def fetch_crypto(self, coin: str = "bitcoin") -> Dict[str, Any]:
+        """Alias for get_crypto_price."""
+        return self.get_crypto_price(coin)
+
     def get_weather(self, location_query: str = "") -> Dict[str, Any]:
         """Fetches live temperature and weather condition via Open-Meteo API."""
         geo = self.get_geolocation()
