@@ -129,7 +129,7 @@ def generate_commands(
 ) -> pd.DataFrame:
     """Return a shuffled DataFrame of unique ``(text, intent)`` rows.
 
-    Balanced by class: each of the 6 intents targets ``n // 6`` *unique*
+    Balanced by class: each of the 7 intents targets ``n // 7`` *unique*
     commands. For each class we sample template+filler+noise combinations until
     the target is met (or the combinatorial space is exhausted), so the final
     dataset is both class-balanced and free of exact duplicates.

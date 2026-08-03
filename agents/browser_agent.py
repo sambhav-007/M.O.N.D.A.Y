@@ -34,53 +34,100 @@ class BrowserAgent:
 
     def web_search(self, query: str, num_results: int = 5) -> Dict[str, Any]:
         """
-        Performs a live web search using DuckDuckGo html search endpoint
-        and parses result titles, links, and snippets.
+        Performs a live web search using DuckDuckGo and parses result titles,
+        links, and snippets.
+
+        Tries the `html.` endpoint first, then falls back to the `lite.` one.
+        Under load DuckDuckGo answers the html endpoint with HTTP 202 and an
+        anomaly-challenge page instead of results, so a parse that yields
+        nothing is treated as a failed search, not an empty one.
         """
         encoded = quote_plus(query)
-        url = f"https://html.duckduckgo.com/html/?q={encoded}"
+        endpoints = (
+            ("https://html.duckduckgo.com/html/?q=" + encoded, self._parse_ddg_html),
+            ("https://lite.duckduckgo.com/lite/?q=" + encoded, self._parse_ddg_lite),
+        )
 
-        results: List[Dict[str, str]] = []
+        last_error: Optional[str] = None
 
-        try:
-            with httpx.Client(headers=HEADERS, timeout=8.0, follow_redirects=True) as client:
-                resp = client.get(url)
-                if resp.status_code == 200:
-                    soup = BeautifulSoup(resp.text, "html.parser")
-                    for a in soup.select(".result__body")[:num_results]:
-                        title_elem = a.select_one(".result__title")
-                        snippet_elem = a.select_one(".result__snippet")
-                        link_elem = a.select_one(".result__url")
+        for url, parser in endpoints:
+            try:
+                with httpx.Client(headers=HEADERS, timeout=8.0, follow_redirects=True) as client:
+                    resp = client.get(url)
+            except Exception as e:
+                last_error = f"WEB_SEARCH_ERROR: {e}"
+                continue
 
-                        title = title_elem.get_text(strip=True) if title_elem else "No title"
-                        snippet = snippet_elem.get_text(strip=True) if snippet_elem else ""
-                        link = link_elem.get_text(strip=True) if link_elem else ""
+            if resp.status_code != 200:
+                # 202 = DuckDuckGo rate-limit / anomaly challenge.
+                last_error = f"WEB_SEARCH_HTTP_{resp.status_code}"
+                continue
 
-                        if title and snippet:
-                            results.append({
-                                "title": title,
-                                "snippet": snippet,
-                                "url": link,
-                            })
-        except Exception as e:
-            # Graceful fallback: return mock structured search result if offline/rate-limited
-            results = [
-                {
-                    "title": f"Overview of {query}",
-                    "snippet": f"Comprehensive information and documentation regarding {query}.",
-                    "url": f"https://en.wikipedia.org/wiki/{encoded}",
+            results = parser(resp.text, num_results)
+            if results:
+                log_action("web_search", query, 1, "success", self.name,
+                           {"results_count": len(results)})
+                return {
+                    "success": True,
+                    "query": query,
+                    "result_count": len(results),
+                    "results": results,
+                    "message": f"✓ Found {len(results)} web search results for '{query}'.",
                 }
-            ]
 
-        log_action("web_search", query, 1, "success", self.name, {"results_count": len(results)})
+            last_error = "WEB_SEARCH_NO_RESULTS"
 
+        log_action("web_search", query, 1, "failed", self.name, {"error": last_error})
         return {
-            "success": True,
+            "success": False,
             "query": query,
-            "result_count": len(results),
-            "results": results,
-            "message": f"✓ Found {len(results)} web search results for '{query}'.",
+            "result_count": 0,
+            "results": [],
+            "error": last_error or "WEB_SEARCH_NO_RESULTS",
+            "message": (
+                f"❌ Web search for '{query}' returned no results "
+                f"({last_error}). DuckDuckGo may be rate-limiting this machine."
+            ),
         }
+
+    @staticmethod
+    def _parse_ddg_html(html: str, num_results: int) -> List[Dict[str, str]]:
+        """Parses the `html.duckduckgo.com` result layout."""
+        soup = BeautifulSoup(html, "html.parser")
+        results: List[Dict[str, str]] = []
+        for a in soup.select(".result__body")[:num_results]:
+            title_elem = a.select_one(".result__title")
+            snippet_elem = a.select_one(".result__snippet")
+            link_elem = a.select_one(".result__url")
+
+            title = title_elem.get_text(strip=True) if title_elem else "No title"
+            snippet = snippet_elem.get_text(strip=True) if snippet_elem else ""
+            link = link_elem.get_text(strip=True) if link_elem else ""
+
+            if title and snippet:
+                results.append({"title": title, "snippet": snippet, "url": link})
+        return results
+
+    @staticmethod
+    def _parse_ddg_lite(html: str, num_results: int) -> List[Dict[str, str]]:
+        """Parses the `lite.duckduckgo.com` table layout (title row + snippet row)."""
+        soup = BeautifulSoup(html, "html.parser")
+        results: List[Dict[str, str]] = []
+        for link in soup.select("a.result-link")[:num_results]:
+            title = link.get_text(strip=True)
+            url = link.get("href", "")
+
+            snippet = ""
+            row = link.find_parent("tr")
+            snippet_row = row.find_next_sibling("tr") if row else None
+            if snippet_row:
+                snippet_cell = snippet_row.select_one(".result-snippet")
+                if snippet_cell:
+                    snippet = snippet_cell.get_text(strip=True)
+
+            if title and snippet:
+                results.append({"title": title, "snippet": snippet, "url": url})
+        return results
 
     def fetch_webpage_content(self, url: str, max_chars: int = 3000) -> Dict[str, Any]:
         """
@@ -120,6 +167,29 @@ class BrowserAgent:
                 }
         except Exception as e:
             return {"success": False, "error": f"Failed to fetch {url}: {e}"}
+
+    def extract_webpage_markdown(self, url: str) -> Dict[str, Any]:
+        """Fetches target web page and converts HTML structure into clean Markdown."""
+        page_res = self.fetch_webpage_content(url)
+        if not page_res.get("success"):
+            return page_res
+
+        title = page_res.get("title", "Webpage")
+        content = page_res.get("content", "")
+        
+        # Format into clean markdown report
+        markdown = f"# {title}\n\n**Source URL**: {url}\n\n"
+        paragraphs = [p.strip() for p in content.split("\n") if p.strip()]
+        markdown += "\n\n".join(paragraphs[:30])
+
+        log_action("extract_webpage_markdown", url, 1, "success", self.name)
+        return {
+            "success": True,
+            "url": url,
+            "title": title,
+            "markdown_content": markdown,
+            "message": f"✓ Extracted Markdown representation for '{title}'.",
+        }
 
     def research_topic(self, topic: str) -> Dict[str, Any]:
         """

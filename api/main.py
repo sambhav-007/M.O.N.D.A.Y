@@ -135,6 +135,11 @@ class SpeakRequest(BaseModel):
     text: str = Field(..., example="Hello, M.O.N.D.A.Y. online and operational.", description="Text phrase to speak")
 
 
+class ClassifyRequest(BaseModel):
+    command: str = Field(..., example="summarize the quarterly report", description="Natural language command to classify")
+    confidence_threshold: float = Field(default=0.65, ge=0.0, le=1.0, description="Below this confidence the command is routed to the LLM planner")
+
+
 
 # ── Endpoints ──────────────────────────────────────────────────────────────────
 
@@ -144,6 +149,7 @@ async def root() -> Dict[str, Any]:
     return {
         "engine": "M.O.N.D.A.Y. Multi-Agent System",
         "status": "ONLINE",
+        "healthy": True,
         "version": "1.0.0",
         "interactive_app": "http://localhost:8000/app",
         "docs": "http://localhost:8000/docs",
@@ -172,6 +178,33 @@ def execute_command(req: ExecuteRequest) -> Dict[str, Any]:
     """
     planner = get_planner()
     return planner.process_command(req.command, user_approved=req.user_approved)
+
+
+@app.post("/intent/classify", tags=["2.1 Intent Classifier (CLO04)"])
+def classify_intent(req: ClassifyRequest) -> Dict[str, Any]:
+    """
+    **Component 2.1 — Intent Classification (CLO04)**
+
+    Classifies a command into one of 7 intents using the TF-IDF → Logistic
+    Regression pipeline trained on the `datagen/` corpus. Commands below the
+    confidence threshold (or classified `unclear`) are flagged for the LLM
+    planner rather than dispatched directly.
+    """
+    if _PLANNER is None:
+        raise HTTPException(503, "Planner offline.")
+
+    intent, confidence, fallback = predict_intent(
+        _PLANNER.classifier, req.command, confidence_threshold=req.confidence_threshold
+    )
+    return {
+        "command": req.command,
+        "predicted_intent": intent,
+        "confidence": round(float(confidence), 4),
+        "llm_fallback": fallback,
+        "confidence_threshold": req.confidence_threshold,
+        "clo": "CLO04",
+        "component": "2.1 Intent Classifier",
+    }
 
 
 @app.post("/agent/computer/organize", tags=["Computer Agent"])
@@ -294,12 +327,17 @@ async def action_history(limit: int = 30) -> List[Dict[str, Any]]:
 
 # ── Classic ML Endpoints ───────────────────────────────────────────────────────
 
-@app.post("/intent/classify", tags=["Component 2.1 — CLO04"])
-async def classify_intent_endpoint(command: str) -> Dict[str, Any]:
-    if _PLANNER is None:
-        raise HTTPException(503, "Planner offline.")
-    intent, conf, fallback = predict_intent(_PLANNER.classifier, command)
-    return {"command": command, "intent": intent, "confidence": round(conf, 4), "llm_fallback": fallback}
+@app.get("/xai/explain", tags=["Component 2.6 — XAI Explainer"])
+async def xai_explain_endpoint(command: str = "organize my downloads folder") -> Dict[str, Any]:
+    """Returns SHAP feature importance breakdown explaining intent & routing decisions."""
+    from ml.xai_explainer import explain_command_intent
+    planner = get_planner()
+    explanation = explain_command_intent(command)
+    return {
+        "command": command,
+        "key_influencing_features": explanation.get("top_words", []),
+        "explanation": explanation,
+    }
 
 
 # ── Entry Point ────────────────────────────────────────────────────────────────

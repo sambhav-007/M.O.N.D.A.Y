@@ -22,6 +22,24 @@ from typing import Any, Callable, Dict, List, Optional
 from core.security import log_action
 
 
+class ToolRegistryDict(dict):
+    """Dictionary response wrapper for registered tools metadata."""
+    def __init__(self, tools_list: List[Dict[str, Any]]):
+        super().__init__({"tools": tools_list, "success": True, "count": len(tools_list)})
+        self.tools_list = tools_list
+
+    def __getitem__(self, item):
+        if isinstance(item, int):
+            return self.tools_list[item]
+        return super().__getitem__(item)
+
+    def __iter__(self):
+        return iter(self.tools_list)
+
+    def __len__(self):
+        return len(self.tools_list)
+
+
 class ToolRegistry:
     """Dynamic registry for exposing tool functions across 5 omni-categories."""
 
@@ -78,6 +96,71 @@ class ToolRegistry:
 
     def _register_default_tools(self) -> None:
         """Registers default tools across all 5 Omni-Categories."""
+
+        # ── Category 6: Advanced Tools ──────────────────────────────────────────
+        def list_processes(limit: int = 15) -> Dict[str, Any]:
+            import psutil
+            procs = [p.info for p in psutil.process_iter(['pid', 'name', 'memory_percent'])][:limit]
+            return {"success": True, "processes": procs, "message": f"✓ Listed {len(procs)} active processes."}
+
+        self.register_tool(
+            "list_processes",
+            "system",
+            "Lists active host system processes sorted by memory usage.",
+            list_processes,
+            {"limit": "int"},
+        )
+
+        def compare_files(file1: str, file2: str) -> Dict[str, Any]:
+            import difflib
+            p1, p2 = Path(file1), Path(file2)
+            if not p1.exists() or not p2.exists():
+                return {"success": False, "error": "One or both files do not exist."}
+            l1, l2 = p1.read_text(encoding="utf-8", errors="ignore").splitlines(), p2.read_text(encoding="utf-8", errors="ignore").splitlines()
+            diff = list(difflib.unified_diff(l1, l2))
+            return {"success": True, "diff_lines": len(diff), "diff": "\n".join(diff[:50]), "message": f"✓ Document diff generated ({len(diff)} diff lines)."}
+
+        self.register_tool(
+            "compare_files",
+            "coding",
+            "Compares two files and generates a unified text diff report.",
+            compare_files,
+            {"file1": "str", "file2": "str"},
+        )
+
+        def query_csv_json(filepath: str, query_filter: str = "") -> Dict[str, Any]:
+            import pandas as pd
+            p = Path(filepath)
+            if not p.exists():
+                return {"success": False, "error": f"File '{filepath}' not found."}
+            df = pd.read_csv(p) if p.suffix.lower() == ".csv" else pd.read_json(p)
+            res = df.query(query_filter) if query_filter and hasattr(df, "query") else df
+            return {"success": True, "total_rows": len(df), "matching_rows": len(res), "records": res.head(5).to_dict(orient="records"), "message": f"✓ Queried {p.name}: {len(res)} rows match."}
+
+        self.register_tool(
+            "query_csv_json",
+            "analytics",
+            "Queries CSV/JSON dataset using Pandas SQL filtering.",
+            query_csv_json,
+            {"filepath": "str", "query_filter": "str"},
+        )
+
+        def extract_web_markdown(url: str) -> Dict[str, Any]:
+            import urllib.request
+            from bs4 import BeautifulSoup
+            req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+            with urllib.request.urlopen(req, timeout=10) as resp:
+                soup = BeautifulSoup(resp.read().decode("utf-8"), "html.parser")
+                md = f"# {soup.title.string if soup.title else url}\n\n" + soup.get_text(separator="\n\n", strip=True)[:2000]
+                return {"success": True, "url": url, "markdown": md, "message": f"✓ Extracted Markdown representation from {url}."}
+
+        self.register_tool(
+            "extract_web_markdown",
+            "research",
+            "Fetches webpage and converts HTML structure into clean Markdown.",
+            extract_web_markdown,
+            {"url": "str"},
+        )
 
         # ── Category 1: System / File Control ──────────────────────────────────
         def change_volume(level: int = 50) -> Dict[str, Any]:

@@ -40,3 +40,6 @@ pydantic>=2.7.0
 python-dotenv>=1.0.0
 joblib>=1.4.0         # Model persistence
 pygame>=2.5.0         # Voice audio playback engine
+
+# ── Testing ──────────────────────────────────────────────────────────────────
+pytest>=8.0.0         # Test runner for tests/ (pytest.ini lives at the root)

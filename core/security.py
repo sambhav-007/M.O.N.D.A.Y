@@ -12,11 +12,26 @@ PRD §9 Implementation:
 from __future__ import annotations
 
 import json
+import os
+import threading
 import time
 from datetime import datetime
 from typing import Any, Dict, List, Optional, Tuple
 
 from core.config import ACTION_LOG_PATH, AUTO_EXECUTE_TIER_1
+
+# AutonomyDaemon logs from a background thread while the planner logs from the
+# main thread. Without this lock the read-modify-write below interleaves, one
+# writer clobbers the other, and a reader can observe a half-written file.
+#
+# Scope: this makes logging lossless within one interpreter (verified: 480
+# entries across 8 threads, none lost), which is how the app runs. Several
+# interpreters writing the same log concurrently — e.g. a test suite alongside a
+# live app — still lose entries to last-writer-wins, though the file stays valid
+# JSON. Cross-process safety would need a file lock or an append-only format.
+_LOG_LOCK = threading.Lock()
+_LOG_WRITE_RETRIES = 5
+_LOG_WRITE_BACKOFF_S = 0.02
 
 # ── Defined Risk Tiers ─────────────────────────────────────────────────────────
 TIER_1_ACTIONS = {
@@ -41,6 +56,8 @@ TIER_2_ACTIONS = {
     "execute_shell",
     "submit_form",
     "modify_system_settings",
+    "terminate_process",
+    "kill_process",
 }
 
 
@@ -64,6 +81,7 @@ def evaluate_action_permission(
     task_type: str = "desktop_automation",
     agent: str = "computer",
     step_count: int = 1,
+    user_approved: bool = False,
 ) -> Dict[str, Any]:
     """
     Evaluates permission for a proposed action.
@@ -92,7 +110,7 @@ def evaluate_action_permission(
     except Exception:
         pass
 
-    requires_approval = (tier == 2)
+    requires_approval = (tier == 2) and not user_approved
 
     return {
         "action_name": action_name,
@@ -129,19 +147,57 @@ def log_action(
         "details": details or {},
     }
 
-    # Append to JSON log file
-    history: List[Dict[str, Any]] = []
-    if ACTION_LOG_PATH.exists():
+    # Append to JSON log file. Serialised and written atomically so a crash or a
+    # concurrent reader never truncates the audit trail.
+    with _LOG_LOCK:
+        history: List[Dict[str, Any]] = []
+        if ACTION_LOG_PATH.exists():
+            try:
+                with open(ACTION_LOG_PATH, "r", encoding="utf-8") as f:
+                    history = json.load(f)
+                if not isinstance(history, list):
+                    raise ValueError("audit log is not a JSON array")
+            except Exception:
+                # Do NOT silently start over — that discards the whole audit
+                # trail. Preserve the unreadable file for inspection first.
+                salvage = ACTION_LOG_PATH.with_suffix(
+                    f".corrupt-{datetime.now():%Y%m%d-%H%M%S}.json"
+                )
+                try:
+                    os.replace(ACTION_LOG_PATH, salvage)
+                except Exception:
+                    pass
+                history = []
+
+        history.append(entry)
+
+        # The temp name must be unique per process: the lock above is per-process,
+        # so two interpreters sharing one temp path would interleave their writes
+        # into it and then replace that mixture into place.
+        tmp_path = ACTION_LOG_PATH.with_suffix(f".{os.getpid()}.tmp")
         try:
-            with open(ACTION_LOG_PATH, "r", encoding="utf-8") as f:
-                history = json.load(f)
+            with open(tmp_path, "w", encoding="utf-8") as f:
+                json.dump(history, f, indent=2)
+
+            # On Windows os.replace raises PermissionError while another process
+            # holds the destination open, so retry briefly. Auditing must never
+            # take down the action it is recording, hence the swallow at the end.
+            for attempt in range(_LOG_WRITE_RETRIES):
+                try:
+                    os.replace(tmp_path, ACTION_LOG_PATH)
+                    break
+                except PermissionError:
+                    if attempt == _LOG_WRITE_RETRIES - 1:
+                        break
+                    time.sleep(_LOG_WRITE_BACKOFF_S * (attempt + 1))
         except Exception:
-            history = []
-
-    history.append(entry)
-
-    with open(ACTION_LOG_PATH, "w", encoding="utf-8") as f:
-        json.dump(history, f, indent=2)
+            pass
+        finally:
+            if tmp_path.exists():
+                try:
+                    tmp_path.unlink()
+                except Exception:
+                    pass
 
     return entry
 

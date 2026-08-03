@@ -8,10 +8,18 @@ Owner          : AI/ML Specialist
 Purpose
 -------
 Before invoking the (expensive, slower) LLM Planner, classify simple/common
-commands directly into one of 6 intent categories:
+commands directly into one of 7 intent categories:
 
     document_intel | communication | browser | desktop_automation
-    memory_query   | unclear → LLM_fallback
+    memory_query   | chitchat      | unclear → LLM_fallback
+
+Dataset
+-------
+Labelled commands come from `datagen/` (data/synthetic/commands.csv), which
+shares filler vocabulary across intents and injects ~6% label noise so the
+classes overlap the way real user commands do. Without that overlap the task
+is trivially separable and every linear model scores ~100%, which makes the
+model comparison below meaningless.
 
 Pipeline
 --------
@@ -90,9 +98,15 @@ INTENT_CLASSES = [
     "unclear",
 ]
 
+# `datagen/` names the low-confidence bucket `llm_fallback`; the rest of the
+# system (planner routing, predict_intent) calls it `unclear`. Normalise on load.
+DATAGEN_LABEL_ALIASES = {"llm_fallback": "unclear"}
+
 # ── Synthetic Command Dataset ──────────────────────────────────────────────────
-# Each list contains representative commands for the given intent.
-# The generator will paraphrase and augment these to reach 3000+ samples.
+# Fallback seeds ONLY. The real dataset comes from `datagen/` — see
+# build_synthetic_dataset(). These seeds use disjoint per-intent vocabulary,
+# which makes the classes trivially separable (linear models score ~100%), so
+# they are not a defensible basis for the CLO04 model comparison.
 
 COMMAND_SEEDS: Dict[str, List[str]] = {
     "document_intel": [
@@ -218,18 +232,75 @@ COMMAND_SEEDS: Dict[str, List[str]] = {
 
 def build_synthetic_dataset(samples_per_class: int = 500) -> pd.DataFrame:
     """
-    Generates or loads synthetic labelled dataset of commands.
-    Checks data/synthetic/commands.csv first before generating dynamically.
+    Loads the labelled command dataset, preferring the `datagen/` corpus.
+
+    Resolution order:
+      1. data/synthetic/commands.csv  (written by `python -m datagen.generate`)
+      2. datagen.commands.generate_commands() in-process
+      3. the COMMAND_SEEDS fallback above (last resort — see its caveat)
+
+    The datagen corpus deliberately shares filler vocabulary across intents and
+    carries ~6% label noise, so the classes overlap the way real user commands
+    do. That is what makes the 5-model comparison informative; the seed
+    fallback is separable enough that every linear model scores ~100%.
+
+    Returns a DataFrame with columns ``command`` and ``intent``, capped at
+    ``samples_per_class`` rows per intent.
     """
+    df = _load_datagen_commands()
+    if df is not None:
+        return _balance(df, samples_per_class)
+
+    warnings.warn(
+        "datagen corpus unavailable — falling back to COMMAND_SEEDS, which is "
+        "trivially separable and NOT valid for the CLO04 model comparison. "
+        "Run `python -m datagen.generate` to restore the real dataset."
+    )
+    return _build_seed_dataset(samples_per_class)
+
+
+def _load_datagen_commands() -> pd.DataFrame | None:
+    """Reads the datagen corpus from CSV, or generates it in-process."""
     csv_path = PROJECT_ROOT / "data" / "synthetic" / "commands.csv"
+    df = None
+
     if csv_path.exists():
         try:
             df = pd.read_csv(csv_path)
-            if "command" in df.columns and "intent" in df.columns:
-                return df
         except Exception:
-            pass
+            df = None
 
+    if df is None:
+        try:
+            from datagen.commands import generate_commands
+            df = generate_commands(n=10000)
+        except Exception:
+            return None
+
+    # datagen writes `text`; earlier revisions of this module wrote `command`.
+    if "text" in df.columns:
+        df = df.rename(columns={"text": "command"})
+    if "command" not in df.columns or "intent" not in df.columns:
+        return None
+
+    df = df.copy()
+    df["intent"] = df["intent"].replace(DATAGEN_LABEL_ALIASES)
+    unknown = set(df["intent"]) - set(INTENT_CLASSES)
+    if unknown:
+        warnings.warn(f"Dropping rows with unmapped intents: {sorted(unknown)}")
+        df = df[df["intent"].isin(INTENT_CLASSES)]
+
+    return df.dropna(subset=["command", "intent"]).reset_index(drop=True)
+
+
+def _balance(df: pd.DataFrame, samples_per_class: int) -> pd.DataFrame:
+    """Caps each intent at `samples_per_class` rows and reshuffles."""
+    capped = df[df.groupby("intent").cumcount() < samples_per_class]
+    return capped.sample(frac=1, random_state=42).reset_index(drop=True)
+
+
+def _build_seed_dataset(samples_per_class: int = 500) -> pd.DataFrame:
+    """Last-resort generator built from COMMAND_SEEDS. Trivially separable."""
     rng = np.random.default_rng(42)
 
     prefixes = [

@@ -49,9 +49,24 @@ from ml.intent_classifier import get_trained_classifier, predict_intent
 from ml.rl_router import EpsilonGreedyBandit, ROUTING_ACTIONS
 
 
+class CognitiveResponseDict(dict):
+    """Dict response that also stringifies nicely as a string if treated as text.
+
+    Truthiness reports whether a real model actually answered. Callers use
+    ``if llm_response:`` to decide whether to prefer the cognitive answer over
+    their own fallback, so an unconfigured engine must be falsy — otherwise a
+    placeholder string silently overwrites genuine agent results.
+    """
+    def __str__(self) -> str:
+        return str(self.get("response", "")) or super().__str__()
+
+    def __bool__(self) -> bool:
+        return bool(self.get("success", True))
+
+
 class TriModelCognitiveEngine:
     """
-    Tri-Model Cognitive Engine: Dynamic routing matrix across models:
+    Tri-Model Cognitive Engine: Dynamic routing matrix & generative reasoning across models:
       • Vision & Fast Voice IO: gemini-1.5-pro / gemini-2.5-flash (Google)
       • Complex OS Scripting & Deep Web Browser Automation: claude-3-5-sonnet (Anthropic)
       • Conversational Memory & Empathy: gpt-4o (OpenAI)
@@ -84,6 +99,66 @@ class TriModelCognitiveEngine:
             "prompt": prompt,
             "status": "routed",
         }
+
+    def generate_cognitive_response(
+        self,
+        prompt: str,
+        context_memories: Optional[List[Dict[str, Any]]] = None,
+        retrieved_memories: Optional[List[Any]] = None,
+        boot_context: Optional[Dict[str, Any]] = None,
+    ) -> CognitiveResponseDict:
+        """Queries generative Gemini API endpoint or cognitive engine for zero-shot reasoning."""
+        from agents.vision_agent import load_gemini_api_key
+        api_key = load_gemini_api_key()
+
+        memories = retrieved_memories or context_memories or []
+        mem_context_str = ""
+        if memories:
+            mem_items = []
+            for m in memories:
+                if isinstance(m, dict):
+                    mem_items.append(f"• {m.get('key', 'info')}: {m.get('value', m)}")
+                else:
+                    mem_items.append(f"• {m}")
+            mem_context_str = "\nRelevant User Memory Context:\n" + "\n".join(mem_items)
+
+        resp_text = None
+        if api_key:
+            url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={api_key}"
+            sys_prompt = f"You are M.O.N.D.A.Y., an advanced autonomous desktop AI assistant.{mem_context_str}\nUser Query: '{prompt}'"
+            payload = {"contents": [{"parts": [{"text": sys_prompt}]}]}
+
+            try:
+                import json, urllib.request
+                req_data = json.dumps(payload).encode("utf-8")
+                req = urllib.request.Request(url, data=req_data, headers={"Content-Type": "application/json"})
+                with urllib.request.urlopen(req, timeout=10) as resp:
+                    data = json.loads(resp.read().decode("utf-8"))
+                    candidates = data.get("candidates", [])
+                    if candidates and "content" in candidates[0]:
+                        parts = candidates[0]["content"].get("parts", [])
+                        if parts:
+                            resp_text = parts[0].get("text", "").strip()
+            except Exception:
+                pass
+
+        # No key, or the call failed/returned nothing. Say so — do NOT emit a
+        # placeholder that reads like an answer, and do not report success.
+        llm_backed = bool(resp_text)
+        if not resp_text:
+            reason = "no Gemini API key is configured" if not api_key else "the model call failed"
+            resp_text = (
+                f"I can't reason freeform about '{prompt}' because {reason}. "
+                "Set GEMINI_API_KEY to enable the cognitive engine."
+            )
+
+        return CognitiveResponseDict({
+            "response": resp_text,
+            "cognitive_engine_active": True,
+            "llm_backed": llm_backed,
+            "selected_model": getattr(self, "selected_model", "gemini-1.5-flash"),
+            "success": llm_backed,
+        })
 
 
 class MasterPlanner:
@@ -156,6 +231,7 @@ class MasterPlanner:
             pass
 
         boot_data = {
+            "user": username,
             "username": username,
             "platform": sys.platform,
             "cpu_usage_pct": cpu_pct,
@@ -187,7 +263,11 @@ class MasterPlanner:
         if not cmd:
             return {"success": False, "error": "Command is empty."}
 
-        # Step 0: Check for Multi-Turn Pending Clarification State
+        # Step 0: Auto-Memory Extraction & Context Pre-fetching
+        self.memory_agent.auto_extract_and_remember(cmd)
+        context_memories = self.memory_agent.get_contextual_memories(cmd)
+
+        # Step 0.1: Check for Multi-Turn Pending Clarification State
         if self.pending_clarification is not None:
             cmd_lower = cmd.lower().strip()
             # If input is a new independent command rather than an email/number selection or short reply, auto-clear clarification state
@@ -199,6 +279,7 @@ class MasterPlanner:
         # Step 0.5: Dynamic Multi-Step Task DAG Engine Check
         if self.task_dag_engine.is_multi_step_goal(cmd):
             dag_result = self.task_dag_engine.execute_dag(cmd, user_approved=user_approved)
+            self.memory_agent.auto_store_conversation_turn(cmd, str(dag_result.get("message", "")))
             return {
                 "user_command": cmd,
                 "intent_classification": {"predicted_intent": "multi_step_dag", "confidence": 1.0, "llm_fallback": False, "clo": "CLO04"},
@@ -218,11 +299,25 @@ class MasterPlanner:
         # Step 3: Match intent to target agent tool execution
         tool_result = self._dispatch_to_agent(cmd, intent, user_approved)
 
+        # If standard dispatch requires generative reasoning, query Cognitive Engine
+        if fallback or (isinstance(tool_result, dict) and not tool_result.get("success") and not tool_result.get("refusal")):
+            llm_response = self.cognitive_engine.generate_cognitive_response(cmd, context_memories)
+            if llm_response:
+                tool_result = {
+                    "success": True,
+                    "cognitive_llm": True,
+                    "message": f"🤖 M.O.N.D.A.Y. Cognitive Response:\n{llm_response}"
+                }
+
         # Reward feedback to RL bandit if successful
         if tool_result.get("success", False):
             self.rl_bandit.update(ROUTING_ACTIONS.index("direct_dispatch"), 1.0)
         else:
             self.rl_bandit.update(ROUTING_ACTIONS.index("direct_dispatch"), -1.0)
+
+        # Auto-store conversation turn to SQLite memory.db
+        if isinstance(tool_result, dict) and tool_result.get("message"):
+            self.memory_agent.auto_store_conversation_turn(cmd, str(tool_result.get("message", "")))
 
         output = {
             "user_command": cmd,
@@ -358,6 +453,30 @@ class MasterPlanner:
             }
         }
 
+    # Openers that mark a request for a fact rather than an action.
+    _QUESTION_OPENERS = (
+        "what ", "what's ", "whats ", "who ", "who's ", "whos ", "when ",
+        "where ", "why ", "which ", "how ",
+    )
+
+    # Questions about the user's own stored data belong to the memory agent, and
+    # questions about M.O.N.D.A.Y. itself belong to chitchat. Never web-search these.
+    _QUESTION_EXCLUSIONS = (
+        "what did i", "what do i", "what have i", "what was i", "what are my",
+        "what is my", "what's my", "whats my", "who am i", "my name", "my notes",
+        "my to-do", "my todo", "my tasks", "recall", "remember", "i saved",
+        "i mentioned", "i told you", "who are you", "your name", "are you an ai",
+        "how are you", "what can you do",
+    )
+
+    def _is_knowledge_question(self, cmd_lower: str, intent: str) -> bool:
+        """True for general-knowledge questions that should be answered from the web."""
+        if intent in ("memory_query", "document_intel", "communication"):
+            return False
+        if any(x in cmd_lower for x in self._QUESTION_EXCLUSIONS):
+            return False
+        return cmd_lower.startswith(self._QUESTION_OPENERS) or cmd_lower.endswith("?")
+
     def _dispatch_to_agent(self, command: str, intent: str, user_approved: bool) -> Dict[str, Any]:
         """Routes command to appropriate specialized tool agent."""
         cmd_lower = command.lower().strip()
@@ -414,7 +533,11 @@ class MasterPlanner:
             if not any(x in cmd_lower for x in ["my name", "who am i", "screen", "volume", "time", "date", "bitcoin", "crypto"]):
                 topic = re.sub(r'^.*(who was|who is|what is|wikipedia|explain|tell me about)\s+', '', command, flags=re.IGNORECASE).strip()
                 if topic and len(topic.split()) <= 5:
-                    return self.public_api_agent.get_wikipedia_summary(topic)
+                    wiki_res = self.public_api_agent.get_wikipedia_summary(topic)
+                    if wiki_res.get("success"):
+                        return wiki_res
+                    # Phrasal topics ("the capital of France") have no Wikipedia
+                    # page. Fall through to the knowledge-question web search.
 
         # ── 00000. System Control & Basic Utility Priority Intercepts (from Jarvis repo) ───
         from datetime import datetime
@@ -598,7 +721,44 @@ class MasterPlanner:
             state = "off" if "off" in cmd_lower else "on"
             return self.tool_registry.execute_tool("toggle_smart_light", device_name="Living Room Light", state=state)
 
-        # ── 1. Priority Override: Chitchat / Greetings ───────────────────────────
+        # ── 1. Voice Engine Override ───────────────────────────────────────────
+        # An explicit "say X" / "speak X" directive outranks the chitchat
+        # classification below ("say hello world" must speak, not greet).
+        # Anchored to the start: a bare "say " substring also matches
+        # "what did I say about X", which belongs to the memory agent.
+        if re.match(r'^(speak|say)\b', cmd_lower) or "say out loud" in cmd_lower:
+            phrase = re.sub(r'^(speak|say out loud|say)\s+', '', command, flags=re.IGNORECASE).strip()
+            return self.voice_agent.speak(phrase or "M.O.N.D.A.Y. online.")
+
+        # ── 2. Knowledge Questions → live web search ─────────────────────────────
+        # General-knowledge questions share vocabulary with greetings, so the
+        # classifier lands them in chitchat and the user gets a canned greeting.
+        # Answer them from the web instead. Runs after the math / identity /
+        # public-API intercepts above, which handle their own question forms.
+        if self._is_knowledge_question(cmd_lower, intent):
+            query = re.sub(r'^(hey\s+monday|monday)[,\s]+', '', command, flags=re.IGNORECASE).strip()
+            query = query.rstrip("?").strip()
+            search_res = self.browser_agent.web_search(query, num_results=3)
+            results = search_res.get("results", [])
+            if results:
+                top = results[0]
+                return {
+                    "success": True,
+                    "intent": "knowledge_question",
+                    "query": query,
+                    "sources_consulted": len(results),
+                    "results": results,
+                    "message": f"✓ {top['snippet']}\n\nSource: {top['title']} — {top['url']}",
+                }
+            return {
+                "success": False,
+                "intent": "knowledge_question",
+                "query": query,
+                "error": search_res.get("error", "NO_WEB_RESULTS"),
+                "message": f"I couldn't find a web answer for '{query}'.",
+            }
+
+        # ── 3. Priority Override: Chitchat / Greetings ───────────────────────────
         if intent == "chitchat" or (cmd_lower in ["hello", "hi", "hey monday", "good morning", "good evening", "how are you", "who are you"] and intent != "browser"):
             return {
                 "success": True,
@@ -606,12 +766,7 @@ class MasterPlanner:
                 "message": "Hello! I am M.O.N.D.A.Y., your Modular Operational Neural Desktop Assistant. How can I help you today?",
             }
 
-        # ── 1. Voice Engine Override ───────────────────────────────────────────
-        if "speak" in cmd_lower or "say out loud" in cmd_lower or "say " in cmd_lower:
-            phrase = re.sub(r'^.*(speak|say out loud|say)\s+', '', command, flags=re.IGNORECASE).strip()
-            return self.voice_agent.speak(phrase or "M.O.N.D.A.Y. online.")
-
-        # ── 2. Memory Operations ───────────────────────────────────────────────
+        # ── 4. Memory Operations ───────────────────────────────────────────────
         if "remember" in cmd_lower or "recall" in cmd_lower or "what did i" in cmd_lower or intent == "memory_query":
             if "remember" in cmd_lower:
                 clean_rem = re.sub(r'^.*remember\s+(that\s+)?', '', command, flags=re.IGNORECASE)

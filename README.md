@@ -20,7 +20,7 @@
 
 M.O.N.D.A.Y. is a multi-agent AI assistant built around **five classical ML components**, each doing genuine work inside the system and each mapped 1-to-1 to a Course Learning Outcome (CLO) from **24CSE0316 — Artificial Intelligence and Machine Learning**.
 
-This folder (`M.O.N.D.A.Y/`) contains the complete Python ML backend. For the full product architecture and website, see the companion [`monday-site/`](../monday-site/) folder.
+This repository contains the complete Python ML backend, the multi-agent runtime, and the WebGL desktop shell.
 
 ---
 
@@ -55,21 +55,40 @@ CLO06  Implement in Python       ←  All of 2.1–2.6 + live FastAPI demo
 ```
 M.O.N.D.A.Y/
 ├── app.py                        # Desktop Living Entity Shell launcher
+├── cli.py                        # Terminal REPL client
+├── harness.py                    # Unified pipeline harness
 ├── ui/                           # WebGL 3D Living Entity Desktop UI
 │   └── index.html                # Audio-reactive WebGL 3D entity & LOD performance controls
 ├── ml/
-│   ├── __init__.py
 │   ├── intent_classifier.py      # CLO04 — 5-model classification comparison
 │   ├── task_eta_regression.py    # CLO03 — 3-model regression comparison
 │   ├── memory_clustering.py      # CLO04 — 3-method clustering + PCA
 │   ├── association_rules.py      # CLO05 — Apriori + FP-Growth comparison
 │   ├── rl_router.py              # CLO05 — ε-greedy bandit + comparative report
-│   └── xai_explainer.py          # CLO02/06 Bonus — SHAP explanations
+│   ├── xai_explainer.py          # CLO02/06 Bonus — SHAP explanations
+│   └── voice_cloner.py           # Voice profile training & synthesis
+├── datagen/                      # Synthetic dataset generators (single source of truth)
+│   ├── commands.py               # 2.1 labelled commands (shared vocab + label noise)
+│   ├── action_logs.py            # 2.2/2.4/2.5 task + session logs
+│   └── generate.py               # `python -m datagen.generate` writes data/synthetic/
+├── common/                       # Shared io / metrics / preprocessing helpers
+├── core/
+│   ├── planner.py                # MasterPlanner — intent → RL route → agent dispatch
+│   ├── security.py               # Tier-1/Tier-2 risk gating + action audit log
+│   ├── autonomy.py               # Background proactive daemon
+│   ├── task_dag_engine.py        # Multi-step DAG execution
+│   ├── tool_registry.py          # Callable tool catalogue
+│   └── config.py                 # Paths & runtime flags
+├── agents/                       # Worker agents (browser, comms, computer, document,
+│                                 #   memory, coder, voice, vision, habit, public API, audio)
 ├── api/
-│   ├── __init__.py
-│   └── main.py                   # FastAPI demo server (all endpoints + /app UI)
+│   ├── main.py                   # FastAPI server (agent endpoints, 2.1, /app UI)
+│   └── ml_router.py              # /ml/* endpoints for components 2.2–2.5
+├── reports/                      # Generated CLO evidence (figures + metric CSVs)
+├── notebooks/                    # Exploratory notebooks
+├── tests/                        # Unit + integration suites
 ├── models/                       # Saved models (created at runtime)
-├── data/                         # Synthetic datasets (generated in-code)
+├── data/synthetic/               # Generated datasets (written by datagen/)
 ├── requirements.txt
 ├── .env.example
 ├── README.md                     # This file
@@ -115,7 +134,16 @@ pip install -r requirements.txt
 cp .env.example .env
 ```
 
-### 3. Run individual ML modules
+### 3. Generate the synthetic datasets
+
+```bash
+python -m datagen.generate
+```
+
+Writes `data/synthetic/{commands,action_tasks,action_sessions}.csv` — the
+documented corpora every ML component trains on. Safe to re-run; it is seeded.
+
+### 4. Run individual ML modules
 
 ```bash
 # Component 2.1 — Intent Classifier (CLO04)
@@ -137,7 +165,7 @@ python -m ml.rl_router
 python -m ml.xai_explainer
 ```
 
-### 4. Start the FastAPI demo server
+### 5. Start the FastAPI demo server
 
 ```bash
 uvicorn api.main:app --reload --host 0.0.0.0 --port 8000
@@ -149,22 +177,43 @@ Then open **http://localhost:8000/docs** for the interactive Swagger UI.
 
 ## API Endpoints
 
+### ML component endpoints (CLO evidence)
+
 | Method | Endpoint | Component | Description |
 |--------|----------|-----------|-------------|
-| `GET` | `/` | — | Health check |
-| `POST` | `/intent/classify` | 2.1 | Classify command intent |
-| `POST` | `/task/predict-eta` | 2.2 | Predict task completion time |
-| `GET` | `/memory/clusters` | 2.3 | Get memory topic clusters |
-| `GET` | `/workflows/rules` | 2.4 | Get top workflow rules |
-| `POST` | `/router/decide` | 2.5 | RL bandit routing decision |
-| `GET` | `/clo-map` | — | Academic CLO mapping reference |
+| `POST` | `/intent/classify` | 2.1 | Classify command intent (CLO04) |
+| `POST` | `/ml/eta/predict` | 2.2 | Predict task completion time (CLO03) |
+| `GET` | `/ml/memory/clusters` | 2.3 | Memory topic clusters + PCA (CLO04) |
+| `GET` | `/ml/workflows/rules` | 2.4 | Top workflow association rules (CLO05) |
+| `GET` | `/ml/router/policy` | 2.5 | RL bandit routing policy (CLO05) |
+| `GET` | `/ml/clo-map` | — | Academic CLO mapping reference |
+| `GET` | `/xai/explain` | 2.6 | SHAP explanation (bonus) |
+
+### Agent & system endpoints
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/` , `/health` | Health check |
+| `GET` | `/app` | Serves the WebGL desktop UI |
+| `POST` | `/agent/execute` | Full pipeline: intent → RL route → agent dispatch |
+| `POST` | `/agent/computer/organize` | Organise a folder by file extension |
+| `POST` | `/agent/computer/screenshot` | Capture the desktop to staging |
+| `GET` | `/agent/computer/health` | Live CPU / RAM / disk status |
+| `POST` | `/agent/document/summarize` | TF-IDF document summary |
+| `POST` | `/agent/browser/search` | Live web search |
+| `POST` | `/agent/memory/remember` | Store a memory |
+| `POST` | `/agent/memory/recall` | Retrieve memories |
+| `POST` | `/agent/voice/train` | Train the voice profile from the reference audio |
+| `POST` | `/agent/voice/toggle` | Enable/disable spoken replies |
+| `POST` | `/agent/voice/speak` | Speak a phrase |
+| `GET` | `/agent/voice/listen` | Listen on the microphone |
+| `GET` | `/agent/proactive` | Proactive suggestions |
+| `GET` | `/agent/history` | Action audit log |
 
 ### Example: Classify Intent
 
 ```bash
-curl -X POST http://localhost:8000/intent/classify \
-  -H "Content-Type: application/json" \
-  -d '{"command": "please summarize the quarterly report PDF", "confidence_threshold": 0.65}'
+curl -X POST http://localhost:8000/intent/classify -H "Content-Type: application/json" -d "{\"command\": \"please summarize the quarterly report PDF\", \"confidence_threshold\": 0.65}"
 ```
 
 Response:
@@ -172,19 +221,18 @@ Response:
 {
   "command": "please summarize the quarterly report PDF",
   "predicted_intent": "document_intel",
-  "confidence": 0.9213,
-  "llm_fallback_required": false,
-  "component": "2.1 — Intent Classifier",
-  "clo": "CLO04"
+  "confidence": 0.8767,
+  "llm_fallback": false,
+  "confidence_threshold": 0.65,
+  "clo": "CLO04",
+  "component": "2.1 Intent Classifier"
 }
 ```
 
 ### Example: Predict Task ETA
 
 ```bash
-curl -X POST http://localhost:8000/task/predict-eta \
-  -H "Content-Type: application/json" \
-  -d '{"task_type": "browser", "agent_involved": "browser", "step_count": 7, "time_of_day_h": 14.5}'
+curl -X POST http://localhost:8000/ml/eta/predict -H "Content-Type: application/json" -d "{\"task_type\": \"browser\", \"agent\": \"browser\", \"step_count\": 7, \"hour\": 14.5}"
 ```
 
 ---
@@ -192,9 +240,16 @@ curl -X POST http://localhost:8000/task/predict-eta \
 ## Evaluation Metrics (per module)
 
 ### Component 2.1 — Intent Classifier
-- **Confusion matrix** (6×6)
+- **Confusion matrix** (7×7 — six actionable intents plus `unclear`)
 - **Accuracy, Precision, Recall, F1** per class
 - **Macro-averaged F1** for model comparison
+
+> The training corpus comes from `datagen/commands.py`, which shares filler
+> vocabulary across intents and injects ~6% label noise. That overlap is
+> deliberate: without it the classes are separable on disjoint keywords alone
+> and every linear model scores ~100%, which tells you nothing. Current results
+> on the 3,500-row balanced sample: Logistic Regression and SVM tie at **0.929**
+> macro-F1, Random Forest 0.920, KNN 0.919, Decision Tree 0.761.
 
 ### Component 2.2 — Task ETA Regression
 - **MAE** (Mean Absolute Error)

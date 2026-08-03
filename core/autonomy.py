@@ -58,7 +58,17 @@ class AutonomyDaemon:
                     try:
                         os.rename(f, dest)
                         processed_count += 1
-                        total_spent += 90.0  # Extracted invoice total
+                        # Extract real total from PDF text if readable
+                        try:
+                            import pypdf
+                            reader = pypdf.PdfReader(str(dest))
+                            text = " ".join([page.extract_text() or "" for page in reader.pages])
+                            import re
+                            amounts = re.findall(r'\$\s*(\d+(?:\.\d{2})?)', text)
+                            if amounts:
+                                total_spent += float(amounts[0])
+                        except Exception:
+                            pass
                     except Exception:
                         pass
 

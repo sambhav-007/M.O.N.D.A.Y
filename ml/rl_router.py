@@ -90,14 +90,6 @@ OPTIMAL_ACTION = max(TRUE_REWARDS, key=TRUE_REWARDS.get)  # type: ignore
 class EpsilonGreedyBandit:
     """
     ε-greedy Multi-Armed Bandit for M.O.N.D.A.Y. agent routing.
-
-    Parameters
-    ----------
-    n_arms      : Number of routing strategies (arms)
-    epsilon     : Initial exploration rate (0-1)
-    epsilon_decay: Multiplicative decay per step (e.g., 0.995)
-    epsilon_min : Floor for epsilon (minimum exploration)
-    seed        : Random seed for reproducibility
     """
 
     def __init__(
@@ -378,6 +370,9 @@ def run() -> EpsilonGreedyBandit:
         f"RL bandit converged on [{bandit.get_policy()}] as optimal routing strategy.\n"
     )
     return bandit
+
+
+ContextualBanditRouter = EpsilonGreedyBandit
 
 
 if __name__ == "__main__":

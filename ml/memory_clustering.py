@@ -34,7 +34,7 @@ import os
 import sys
 import warnings
 from pathlib import Path
-from typing import Dict, List, Tuple
+from typing import Any, Dict, List, Tuple
 
 # Ensure project root is in sys.path
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
@@ -312,6 +312,21 @@ def run() -> Tuple[np.ndarray, np.ndarray]:
         f"Best clustering: [bold]{best_method}[/] — memory retrieval optimised.\n"
     )
     return best_labels, X_vis
+
+
+def generate_memory_clusters(n_clusters: int = 5) -> Dict[str, Any]:
+    """Generates K-Means/DBSCAN memory clusters for proactive suggestions."""
+    embeddings, true_labels, texts = generate_memory_embeddings(n_samples=n_clusters * 20, embedding_dim=64)
+    X_cluster, _, _ = apply_pca(embeddings, n_components=2, n_components_full=min(10, embeddings.shape[1]))
+    labels = cluster_kmeans(X_cluster, n_clusters=n_clusters)
+    score = evaluate_clustering(X_cluster, labels)
+    return {
+        "success": True,
+        "n_clusters": n_clusters,
+        "silhouette_score": round(score, 4),
+        "clusters": [int(x) for x in set(labels)],
+        "message": f"✓ Memory Clustering complete ({n_clusters} clusters, Silhouette: {score:.4f})."
+    }
 
 
 if __name__ == "__main__":

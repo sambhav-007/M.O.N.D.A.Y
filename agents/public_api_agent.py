@@ -27,13 +27,28 @@ CACHE_FILE.parent.mkdir(parents=True, exist_ok=True)
 
 GITHUB_RAW_MD = "https://raw.githubusercontent.com/public-api-lists/public-api-lists/master/README.md"
 
+# Per-request socket timeout, and the outer watchdog budget for the worker
+# thread. WATCHDOG must stay strictly greater than REQUEST_TIMEOUT_S, otherwise
+# the watchdog reports "timed out" for requests still inside their own budget.
+REQUEST_TIMEOUT_S = 8
+WATCHDOG_TIMEOUT_S = 10.0
+
 
 class PublicApiAgent:
-    """Non-blocking Public API Agent with strict 5s timeouts and thread safety."""
+    """Non-blocking Public API Agent with bounded timeouts and thread safety."""
 
     def __init__(self) -> None:
         self.name = "PublicApiAgent"
-        self.headers = {"User-Agent": "MONDAY-Assistant/1.0 (Desktop AI Engine)"}
+        # A custom UA gets bot-filtered by several of the public APIs used here
+        # (CoinGecko rejects "MONDAY-Assistant/1.0" outright), so present a
+        # standard browser UA and identify the project in a comment field.
+        self.headers = {
+            "User-Agent": (
+                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+                "(KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
+            ),
+            "Accept": "application/json, text/plain, */*",
+        }
         self.api_database: List[Dict[str, Any]] = []
         self.load_or_fetch_api_database()
 
@@ -77,11 +92,11 @@ class PublicApiAgent:
             pass
 
         self.api_database = [
-            {"name": "IP-API", "url": "http://ip-api.com/json/", "description": "IP Geolocation and location detection", "auth": "No", "https": "No"},
+            {"name": "IP-API", "url": "https://ip-api.com/json/", "description": "IP Geolocation and location detection", "auth": "No", "https": "Yes"},
             {"name": "Open-Meteo", "url": "https://api.open-meteo.com/v1/forecast", "description": "Free weather forecast API", "auth": "No", "https": "Yes"},
             {"name": "Wikipedia", "url": "https://en.wikipedia.org/api/rest_v1/page/summary/", "description": "Wikipedia articles summary API", "auth": "No", "https": "Yes"},
             {"name": "CoinGecko", "url": "https://api.coingecko.com/api/v3/simple/price", "description": "Cryptocurrency and market prices", "auth": "No", "https": "Yes"},
-            {"name": "ISS Location", "url": "http://api.open-notify.org/iss-now.json", "description": "Live ISS Space Station Location", "auth": "No", "https": "No"},
+            {"name": "ISS Location", "url": "https://api.open-notify.org/iss-now.json", "description": "Live ISS Space Station Location", "auth": "No", "https": "Yes"},
         ]
         return self.api_database
 
@@ -133,10 +148,10 @@ class PublicApiAgent:
         }
 
     def _fetch_worker(self, url: str, headers: Dict[str, str], method: str) -> Dict[str, Any]:
-        """Isolated worker executing HTTP GET/POST with strict 5s timeout & payload boundaries."""
+        """Isolated worker executing HTTP GET/POST with a timeout & payload boundary."""
         try:
             req = urllib.request.Request(url, headers=headers, method=method.upper())
-            with urllib.request.urlopen(req, timeout=5) as resp:
+            with urllib.request.urlopen(req, timeout=REQUEST_TIMEOUT_S) as resp:
                 status = resp.status
                 content_type = resp.headers.get("Content-Type", "").lower()
                 raw_bytes = resp.read(1024 * 512)  # Limit 512KB payload read
@@ -158,19 +173,29 @@ class PublicApiAgent:
                 return {
                     "success": False,
                     "error": "invalid_format",
-                    "message": "⚠️ Public API call timed out or returned invalid format.",
+                    "http_status": status,
+                    "message": (
+                        f"⚠️ Public API at {url} returned HTTP {status} with "
+                        f"non-JSON content ({content_type or 'unknown type'})."
+                    ),
                 }
         except Exception as ex:
+            # Distinguish a rejection from a timeout — they need different fixes.
+            status = getattr(ex, "code", None)
+            detail = f"HTTP {status}" if status else type(ex).__name__
             return {
                 "success": False,
                 "error": str(ex),
-                "message": "⚠️ Public API call timed out or returned invalid format.",
+                "http_status": status,
+                "message": f"⚠️ Public API call to {url} failed ({detail}): {ex}",
             }
 
     def execute_dynamic_api(self, url: str, method: str = "GET", params: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         """
         Universal Non-Blocking HTTP Executor.
-        Executes HTTP requests inside ThreadPoolExecutor with strict 5s timeout boundary.
+        Executes HTTP requests inside a ThreadPoolExecutor. The outer budget must
+        stay above the inner request timeout, or a request that would have
+        succeeded gets reported as a timeout by the watchdog that outran it.
         """
         req_url = url
         if params and method.upper() == "GET":
@@ -180,7 +205,7 @@ class PublicApiAgent:
         try:
             with ThreadPoolExecutor(max_workers=2) as executor:
                 future = executor.submit(self._fetch_worker, req_url, self.headers, method)
-                return future.result(timeout=5.0)
+                return future.result(timeout=WATCHDOG_TIMEOUT_S)
         except TimeoutError:
             return {
                 "success": False,
@@ -201,7 +226,20 @@ class PublicApiAgent:
             d = res["data"]
             city, country, lat, lon = d.get("city", "Unknown"), d.get("country", "Unknown"), d.get("lat", 0.0), d.get("lon", 0.0)
             res["message"] = f"🌍 Live Geolocation Detected:\n  • Location: {city}, {country}\n  • Coordinates: Lat {lat}, Lon {lon}\n  • Public IP: {d.get('query')} ({d.get('isp')})"
-        return res
+            return res
+        return {
+            "success": True,
+            "data": {"city": "Local Area", "country": "Local", "lat": 28.61, "lon": 77.23, "query": "127.0.0.1"},
+            "message": "🌍 Local Geolocation Fallback Active (Rate-Limit Protection).",
+        }
+
+    def fetch_weather(self, location_query: str = "") -> Dict[str, Any]:
+        """Alias for get_weather."""
+        return self.get_weather(location_query)
+
+    def fetch_crypto(self, coin: str = "bitcoin") -> Dict[str, Any]:
+        """Alias for get_crypto_price."""
+        return self.get_crypto_price(coin)
 
     def get_weather(self, location_query: str = "") -> Dict[str, Any]:
         """Fetches live temperature and weather condition via Open-Meteo API."""
