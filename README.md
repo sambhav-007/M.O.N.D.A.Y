@@ -134,7 +134,24 @@ pip install -r requirements.txt
 cp .env.example .env
 ```
 
-### 3. Generate the synthetic datasets
+`.env` holds real credentials (SMTP app password, any API keys) and is
+gitignored. Never commit it — put placeholders in `.env.example` instead.
+
+### 3. Enable the secret-guard git hook
+
+Run this **once per clone**. Git does not version `.git/hooks/`, so the hook
+lives in the tracked `.githooks/` directory and has to be pointed at manually:
+
+```bash
+git config core.hooksPath .githooks
+```
+
+It refuses any commit that stages a `.env` file or adds a line assigning a real
+value to a known secret key (`SMTP_PASSWORD`, `OPENAI_API_KEY`, …) or containing
+a recognisable vendor token. Placeholders and `os.getenv(...)` reads pass through
+untouched. Offending values are never echoed to the terminal.
+
+### 4. Generate the synthetic datasets
 
 ```bash
 python -m datagen.generate
@@ -143,7 +160,7 @@ python -m datagen.generate
 Writes `data/synthetic/{commands,action_tasks,action_sessions}.csv` — the
 documented corpora every ML component trains on. Safe to re-run; it is seeded.
 
-### 4. Run individual ML modules
+### 5. Run individual ML modules
 
 ```bash
 # Component 2.1 — Intent Classifier (CLO04)
@@ -165,7 +182,7 @@ python -m ml.rl_router
 python -m ml.xai_explainer
 ```
 
-### 5. Start the FastAPI demo server
+### 6. Start the FastAPI demo server
 
 ```bash
 uvicorn api.main:app --reload --host 0.0.0.0 --port 8000

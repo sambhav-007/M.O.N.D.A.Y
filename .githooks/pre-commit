@@ -1,0 +1,92 @@
+#!/bin/sh
+#
+# M.O.N.D.A.Y. — pre-commit secret guard
+#
+# Blocks two classes of mistake that .gitignore alone cannot stop, because
+# `git add -f` and some IDE "stage all" actions bypass ignore rules:
+#
+#   1. Staging a real environment file (.env, .env.local, ...). Only
+#      .env.example is allowed through.
+#   2. Staging a line that assigns a real value to a known secret key, or a
+#      recognisable vendor token, anywhere in the tree.
+#
+# Placeholder values (commented lines, <angle brackets>, you@example.com,
+# "abcd efgh ijkl mnop", ...) are allowed so .env.example stays committable.
+#
+# Install once per clone:   git config core.hooksPath .githooks
+# Emergency bypass:         git commit --no-verify   (please don't)
+
+RED=''
+YEL=''
+OFF=''
+if [ -t 2 ]; then
+    RED='\033[0;31m'
+    YEL='\033[0;33m'
+    OFF='\033[0m'
+fi
+
+fail=0
+
+report_header() {
+    if [ "$fail" -eq 0 ]; then
+        printf "${RED}✖ pre-commit: refusing to commit — possible secret detected${OFF}\n\n" >&2
+    fi
+}
+
+# ── 1. Environment files ─────────────────────────────────────────────────────
+staged=$(git diff --cached --name-only --diff-filter=ACM)
+
+for path in $staged; do
+    base=$(basename "$path")
+    case "$base" in
+        .env.example|.env.sample|.env.template)
+            continue
+            ;;
+        .env|.env.*)
+            report_header
+            printf "  ${YEL}%s${OFF} — environment file must never be committed\n" "$path" >&2
+            fail=1
+            ;;
+    esac
+done
+
+# ── 2. Secret-looking added lines ────────────────────────────────────────────
+# Only added lines (leading '+') in the staged diff are scanned, so pre-existing
+# content never blocks an unrelated commit.
+
+SECRET_KEYS='SMTP_PASSWORD|SMTP_PASS|EMAIL_PASSWORD|GMAIL_APP_PASSWORD|OPENAI_API_KEY|ANTHROPIC_API_KEY|GEMINI_API_KEY|GOOGLE_API_KEY|AWS_SECRET_ACCESS_KEY|CLIENT_SECRET'
+VENDOR_TOKENS='sk-[A-Za-z0-9_-]{20,}|AIza[0-9A-Za-z_-]{35}|GOCSPX-[A-Za-z0-9_-]{20,}|gh[pousr]_[A-Za-z0-9]{36,}|xox[baprs]-[A-Za-z0-9-]{10,}'
+
+# Values that are obviously not real credentials.
+PLACEHOLDER='<[^>]*>|\$\{|your[-_ ]?|you@|example\.com|changeme|xxxx|\.\.\.|abcd efgh|REDACTED|os\.getenv|os\.environ|getenv\(|process\.env'
+
+hits=$(
+    git diff --cached -U0 --diff-filter=ACM |
+    grep -E '^\+' |
+    grep -vE '^\+\+\+' |
+    sed 's/^+//' |
+    grep -vE "^[[:space:]]*[#/]" |
+    grep -EI "(${SECRET_KEYS})[[:space:]]*[:=][[:space:]]*[^[:space:]\"']|(${VENDOR_TOKENS})" |
+    grep -vEi "${PLACEHOLDER}"
+)
+
+if [ -n "$hits" ]; then
+    report_header
+    printf "  ${YEL}A staged line assigns a value to a secret key:${OFF}\n" >&2
+    # Show only the key, never the value, so the secret does not end up in
+    # terminal scrollback or CI logs.
+    printf '%s\n' "$hits" |
+        sed -E "s/((${SECRET_KEYS})[[:space:]]*[:=]).*/\1 <value hidden>/" |
+        sed -E "s/(${VENDOR_TOKENS})/<token hidden>/" |
+        sed 's/^/    /' >&2
+    fail=1
+fi
+
+if [ "$fail" -ne 0 ]; then
+    printf "\n  Fix: unstage the file (${YEL}git restore --staged <path>${OFF}) and keep the\n" >&2
+    printf "  value in .env, which is gitignored. Document the key name in\n" >&2
+    printf "  .env.example with a placeholder instead.\n\n" >&2
+    exit 1
+fi
+
+exit 0

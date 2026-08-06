@@ -1,0 +1,4 @@
+# Git hooks are executed by sh. A CRLF line ending on the shebang line makes
+# the interpreter path unresolvable ("bad interpreter: /bin/sh^M"), so these
+# must stay LF regardless of the checkout platform.
+.githooks/* text eol=lf

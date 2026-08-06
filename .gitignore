@@ -18,6 +18,12 @@ data/action_history.*.tmp
 data/action_history.corrupt-*.json
 models/monday_voice_profile.joblib
 
+# Runtime calendar store. The agent appends an event on every scheduling call
+# (the test suite adds one per run), so a tracked copy is pure churn and would
+# conflict on every merge exactly as action_history.json did. Both call sites
+# in agents/comms_agent.py create it on demand when absent.
+data/calendar.json
+
 # Python runtime & byte-code
 __pycache__/
 *.py[cod]
@@ -33,6 +39,13 @@ venv.bak/
 # Environment files
 .env
 .env.local
+.env.*
+!.env.example
+
+# Runtime logs. Nothing here is reproducible and agent logs can echo command
+# text (recipients, draft bodies), so they must never be committed.
+logs/
+*.log
 
 # IDE & OS files
 .vscode/
