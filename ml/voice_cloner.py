@@ -153,8 +153,11 @@ class MondayVoiceModel:
         if not self.voice_profile.get("trained", False):
             self.train_from_reference(self.ref_audio_path)
 
-        # 1. Play reference mondayvoice.mp3 audio signature
-        self.play_monday_audio_reference()
+        # NOTE: do not play `mondayvoice.mp3` here. It is the *reference* sample
+        # the profile is trained from, not synthesised output — playing it on
+        # every utterance made the assistant recite the same recorded lines
+        # before each reply. Call play_monday_audio_reference() explicitly if
+        # you want to preview the reference clip.
 
         rate = self.voice_profile.get("rate_wpm", 165)
         volume = self.voice_profile.get("volume", 1.0)

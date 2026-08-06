@@ -5,7 +5,11 @@
 
 # ── Core ML / Data Science ───────────────────────────────────────────────────
 scikit-learn>=1.4.0
-pandas>=2.1.0
+# Upper bound is deliberate: Windows Smart App Control blocks freshly-published
+# binaries by reputation, and pandas 3.0.5 was blocked on this machine with
+# "An Application Control policy has blocked this file" when loading
+# pandas/_libs/index.*.pyd. 2.3.3 is the floor mlxtend requires.
+pandas>=2.3.3,<3.0
 numpy>=1.26.0
 
 # ── Association Rule Mining (Apriori & FP-Growth) ────────────────────────────

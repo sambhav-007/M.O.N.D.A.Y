@@ -499,12 +499,9 @@
     }
 
     function speakText(text) {
-      try {
-        const mondayAudio = new Audio('mondayvoice.mp3');
-        mondayAudio.volume = 1.0;
-        mondayAudio.play().catch(e => {});
-      } catch(e) {}
-
+      // Do NOT play mondayvoice.mp3 here. It is the fixed reference recording,
+      // so playing it on every reply made the same lines repeat endlessly on
+      // top of the actual spoken response.
       if (!('speechSynthesis' in window)) return;
       window.speechSynthesis.cancel();
       const clean = text.replace(/[✓❌🔒🤖🗣️🎙️🖥️\[\]]/g, '').trim();

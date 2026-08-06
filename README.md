@@ -248,8 +248,8 @@ curl -X POST http://localhost:8000/ml/eta/predict -H "Content-Type: application/
 > vocabulary across intents and injects ~6% label noise. That overlap is
 > deliberate: without it the classes are separable on disjoint keywords alone
 > and every linear model scores ~100%, which tells you nothing. Current results
-> on the 3,500-row balanced sample: Logistic Regression and SVM tie at **0.929**
-> macro-F1, Random Forest 0.920, KNN 0.919, Decision Tree 0.761.
+> on the 3,500-row balanced sample: Logistic Regression and SVM tie at **0.920**
+> macro-F1, Random Forest and KNN 0.909, Decision Tree 0.720.
 
 ### Component 2.2 — Task ETA Regression
 - **MAE** (Mean Absolute Error)

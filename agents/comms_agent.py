@@ -10,6 +10,8 @@ Executes email drafting and desktop notification dispatch:
 from __future__ import annotations
 
 import json
+import smtplib
+from email.message import EmailMessage
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional
@@ -180,6 +182,67 @@ def fetch_google_people_api_contacts(q_clean: str) -> List[Dict[str, str]]:
     return results
 
 
+def _load_env_value(*names: str) -> Optional[str]:
+    """Reads a value from the environment, falling back to the project .env file."""
+    for name in names:
+        val = os.environ.get(name)
+        if val and val.strip():
+            return val.strip()
+
+    env_path = Path(__file__).resolve().parent.parent / ".env"
+    if env_path.exists():
+        try:
+            with open(env_path, "r", encoding="utf-8") as f:
+                for line in f:
+                    line = line.strip()
+                    if not line or line.startswith("#") or "=" not in line:
+                        continue
+                    key, _, raw = line.partition("=")
+                    if key.strip() in names:
+                        val = raw.strip().strip('"\'')
+                        if val:
+                            return val
+        except Exception:
+            pass
+    return None
+
+
+def _smtp_config() -> Optional[Dict[str, Any]]:
+    """Returns SMTP settings if credentials are configured, else None.
+
+    Defaults target Gmail, which needs an App Password (16 chars, 2FA on) —
+    a normal account password is refused by the server.
+    """
+    user = _load_env_value("SMTP_USER", "EMAIL_USER", "GMAIL_ADDRESS")
+    password = _load_env_value("SMTP_PASSWORD", "SMTP_PASS", "EMAIL_PASSWORD", "GMAIL_APP_PASSWORD")
+    if not user or not password:
+        return None
+
+    host = _load_env_value("SMTP_HOST") or "smtp.gmail.com"
+    port = int(_load_env_value("SMTP_PORT") or 587)
+    return {
+        "host": host,
+        "port": port,
+        "user": user,
+        # Gmail shows App Passwords in groups of four; the spaces are display-only.
+        "password": password.replace(" ", ""),
+        "from_addr": _load_env_value("SMTP_FROM", "EMAIL_FROM") or user,
+        "use_ssl": port == 465,
+    }
+
+
+def _load_saved_draft(draft_id: str) -> Optional[Dict[str, Any]]:
+    """Loads a draft previously written by draft_email()."""
+    draft_file = STAGING_DIR / f"{draft_id}.json"
+    if not draft_file.exists():
+        return None
+    try:
+        with open(draft_file, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except Exception:
+        return None
+
+
 def search_local_contacts(query: str) -> List[Dict[str, str]]:
     """
     Scans Google People API (OAuth2), Outlook MAPI COM store, Local Windows Contacts,
@@ -267,6 +330,18 @@ class CommunicationAgent:
             "status": "DRAFT_SAVED",
         }
 
+        # Save the local draft FIRST. Everything below can fail (no Gmail creds,
+        # no googleapiclient, no network) and the composed message must survive
+        # regardless — the returned file_path has to point at a real file.
+        local_saved = False
+        try:
+            STAGING_DIR.mkdir(parents=True, exist_ok=True)
+            with open(draft_file, "w", encoding="utf-8") as f:
+                json.dump(draft_content, f, indent=2)
+            local_saved = True
+        except Exception:
+            pass
+
         # Execute Live Google Gmail v1 API Draft Creation
         gmail_res = create_google_gmail_draft(to_email, subject, body)
 
@@ -301,17 +376,38 @@ class CommunicationAgent:
         else:
             # Surface raw Google API error directly to UI — zero premature success
             log_action("draft_email", to_email, 1, "failed", self.name, {"error": gmail_res.get("message")})
+            local_note = (
+                f" The draft was saved locally at {draft_file}."
+                if local_saved else " The draft could not be saved locally either."
+            )
             return {
                 "success": False,
+                "draft_id": draft_id if local_saved else None,
+                "local_draft_saved": local_saved,
                 "to": to_email,
                 "subject": subject,
+                "file_path": str(draft_file) if local_saved else None,
+                "gmail_compose_url": gmail_url if browser_launched else None,
                 "error": gmail_res.get("raw_error", "GMAIL_API_ERROR"),
-                "message": gmail_res.get("message", "❌ Failed to create draft on Google Cloud."),
+                "message": gmail_res.get(
+                    "message", "❌ Failed to create draft on Google Cloud."
+                ) + local_note,
             }
 
-    def send_email(self, draft_id_or_email: str, user_approved: bool = False) -> Dict[str, Any]:
+    def send_email(
+        self,
+        draft_id_or_email: str,
+        user_approved: bool = False,
+        subject: Optional[str] = None,
+        body: Optional[str] = None,
+    ) -> Dict[str, Any]:
         """
-        Sends an email. Tier 2 Irreversible action — requires user confirmation!
+        Sends an email for real over SMTP. Tier 2 irreversible action — the
+        caller must pass user_approved=True, which the planner only does after
+        the user explicitly confirms.
+
+        `draft_id_or_email` may be a recipient address or a saved draft id; in
+        the latter case the subject/body are loaded back off disk.
         """
         perm = evaluate_action_permission(
             "send_email", draft_id_or_email, "communication", "communication", step_count=2
@@ -328,23 +424,90 @@ class CommunicationAgent:
                 "message": "🔒 Tier-2 Action Gated: Explicit user approval required to send email.",
             }
 
-        # Honest status: the draft is real (Gmail API), but no real send transport
-        # is wired here. Do NOT claim a delivery that did not happen. Enabling real
-        # delivery requires the Gmail send scope / SMTP credentials configured by the
-        # user — an irreversible Tier-2 action that must not be faked.
-        creds = _get_google_credentials()
-        if not creds:
-            log_action("send_email", draft_id_or_email, 2, "unconfigured", self.name)
+        # Recover the composed message when handed a draft id.
+        to_email = draft_id_or_email
+        if "@" not in to_email:
+            draft = _load_saved_draft(draft_id_or_email)
+            if draft:
+                to_email = draft.get("to", to_email)
+                subject = subject if subject is not None else draft.get("subject")
+                body = body if body is not None else draft.get("body")
+
+        if "@" not in to_email:
+            log_action("send_email", draft_id_or_email, 2, "failed", self.name)
+            return {
+                "success": False,
+                "delivered": False,
+                "error": "NO_RECIPIENT_ADDRESS",
+                "message": f"Cannot send: '{draft_id_or_email}' is not an email address.",
+            }
+
+        smtp = _smtp_config()
+        if not smtp:
+            log_action("send_email", to_email, 2, "unconfigured", self.name)
             return {
                 "success": False,
                 "delivered": False,
                 "approved": True,
-                "target": draft_id_or_email,
+                "target": to_email,
                 "error": "EMAIL_SERVICE_NOT_CONFIGURED",
                 "message": (
-                    f"Cannot send email to '{draft_id_or_email}': Google OAuth / SMTP "
-                    "is not configured. (Draft saved in Web Composer.)"
+                    f"Cannot send to '{to_email}': no SMTP credentials configured. "
+                    "Set SMTP_USER and SMTP_PASSWORD in .env (for Gmail, use a "
+                    "16-character App Password, not your account password). "
+                    "The draft is saved."
                 ),
+            }
+
+        try:
+            msg = EmailMessage()
+            msg["From"] = smtp["from_addr"]
+            msg["To"] = to_email
+            msg["Subject"] = subject or "(no subject)"
+            msg.set_content(body or "")
+
+            if smtp["use_ssl"]:
+                server = smtplib.SMTP_SSL(smtp["host"], smtp["port"], timeout=20)
+            else:
+                server = smtplib.SMTP(smtp["host"], smtp["port"], timeout=20)
+            with server:
+                server.ehlo()
+                if not smtp["use_ssl"]:
+                    server.starttls()
+                    server.ehlo()
+                server.login(smtp["user"], smtp["password"])
+                server.send_message(msg)
+
+            log_action("send_email", to_email, 2, "success", self.name,
+                       {"subject": subject or "", "transport": "smtp"})
+            return {
+                "success": True,
+                "delivered": True,
+                "approved": True,
+                "to": to_email,
+                "subject": subject or "(no subject)",
+                "transport": f"smtp://{smtp['host']}:{smtp['port']}",
+                "message": f"✓ Email sent to {to_email} — subject '{subject or '(no subject)'}'.",
+            }
+        except smtplib.SMTPAuthenticationError as ex:
+            log_action("send_email", to_email, 2, "failed", self.name, {"error": str(ex)})
+            return {
+                "success": False,
+                "delivered": False,
+                "error": "SMTP_AUTH_FAILED",
+                "message": (
+                    f"❌ SMTP rejected the login for {smtp['user']}. For Gmail this "
+                    "usually means you need an App Password (with 2FA enabled) "
+                    f"rather than the normal account password. Details: {ex}"
+                ),
+            }
+        except Exception as ex:
+            log_action("send_email", to_email, 2, "failed", self.name, {"error": str(ex)})
+            return {
+                "success": False,
+                "delivered": False,
+                "error": f"SMTP_SEND_FAILED: {type(ex).__name__}",
+                "message": f"❌ Could not send to {to_email}: {ex}",
             }
 
         log_action("send_email", draft_id_or_email, 2, "not_sent", self.name)

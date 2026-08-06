@@ -354,6 +354,51 @@ class MasterPlanner:
         c_type = clarification.get("type", "contact_disambiguation")
         c_step = clarification.get("step", "resolve_contact")
 
+        if c_step == "confirm_send":
+            answer = raw_ans.lower().strip(" .!")
+            affirmative = {"send", "send it", "yes", "y", "yeah", "yep", "ok", "okay",
+                           "confirm", "confirmed", "go", "go ahead", "do it", "sure",
+                           "send the mail", "send the email", "send mail", "send email"}
+            negative = {"no", "n", "cancel", "stop", "abort", "don't", "dont",
+                        "nope", "not now", "later", "discard"}
+
+            to_email = clarification["to_email"]
+            subject = clarification.get("subject", "(no subject)")
+            body = clarification.get("body", "")
+            draft_id = clarification.get("draft_id")
+
+            if answer in affirmative or answer.startswith("send"):
+                result = self._send_confirmed_email(to_email, subject, body, draft_id)
+            elif answer in negative or answer.startswith(("no", "cancel", "don")):
+                result = {
+                    "success": True,
+                    "delivered": False,
+                    "cancelled": True,
+                    "to": to_email,
+                    "draft_id": draft_id,
+                    "message": f"Cancelled — nothing was sent. The draft for {to_email} is still saved.",
+                }
+            else:
+                # Unrecognised answer: re-arm rather than guess about a send.
+                self.pending_clarification = clarification
+                result = {
+                    "success": False,
+                    "pending_clarification": True,
+                    "awaiting_send_confirmation": True,
+                    "message": (
+                        f"I didn't catch that. Reply 'send' to deliver the email to "
+                        f"{to_email}, or 'cancel' to keep it as a draft."
+                    ),
+                }
+
+            return {
+                "user_command": user_response,
+                "clarification_resumed": True,
+                "intent_classification": {"predicted_intent": "communication", "confidence": 1.0, "llm_fallback": False, "clo": "CLO04"},
+                "rl_routing": {"strategy": "email_send_confirm", "clo": "CLO05"},
+                "execution_result": result,
+            }
+
         if c_step == "get_subject":
             subject_val = user_response.strip()
             self.pending_clarification = {
@@ -383,6 +428,19 @@ class MasterPlanner:
             self.pending_clarification = None  # Clear wizard state
 
             res = self.comms_agent.draft_email(to_email, subject_val, body_val)
+
+            # Hand straight over to the send confirmation instead of stopping
+            # at a draft the user then has no way to send.
+            self.pending_clarification = {
+                "type": "email_send_confirm",
+                "step": "confirm_send",
+                "to_email": to_email,
+                "subject": subject_val,
+                "body": body_val,
+                "draft_id": res.get("draft_id"),
+                "original_command": clarification.get("original_command", ""),
+            }
+            preview = body_val if len(body_val) <= 160 else body_val[:160] + "…"
             return {
                 "user_command": user_response,
                 "clarification_resumed": True,
@@ -390,12 +448,20 @@ class MasterPlanner:
                 "rl_routing": {"strategy": "email_wizard_complete", "clo": "CLO05"},
                 "execution_result": {
                     "success": True,
+                    "pending_clarification": True,
+                    "awaiting_send_confirmation": True,
                     "draft_id": res.get("draft_id"),
                     "to": to_email,
                     "subject": subject_val,
                     "body": body_val,
                     "gmail_compose_url": res.get("gmail_compose_url"),
-                    "message": f"✓ Email draft prepared for '{to_email}' with subject '{subject_val}' & opened in Gmail Web Composer!",
+                    "message": (
+                        f"📧 Draft ready.\n"
+                        f"  To      : {to_email}\n"
+                        f"  Subject : {subject_val}\n"
+                        f"  Body    : {preview}\n\n"
+                        f"Send it? Reply 'send' to deliver, or 'cancel' to keep it as a draft."
+                    ),
                 }
             }
 
@@ -468,6 +534,160 @@ class MasterPlanner:
         "i mentioned", "i told you", "who are you", "your name", "are you an ai",
         "how are you", "what can you do",
     )
+
+    # "send mail to a@b.com subject: "Hi" body: "There"" and friends. Quotes may
+    # be straight or curly; subject/body may also run unquoted to the next keyword.
+    _EMAIL_RE = re.compile(r'[\w.+-]+@[\w-]+\.[\w.-]+')
+    # The separator is optional when the value is quoted, so both
+    # `subject: "Hi"` and `subject "Hi"` work. Unquoted values still require a
+    # ':' or '=' — otherwise "subject" would swallow the rest of the sentence.
+    _SUBJECT_RE = re.compile(
+        r'subject\s*(?:[:=]\s*)?["“‘\']([^"”’\']*)["”’\']'
+        r'|subject\s*[:=]\s*([^"\n]+?)(?=\s+(?:body|message|content)\b|$)',
+        re.IGNORECASE,
+    )
+    _BODY_RE = re.compile(
+        r'(?:body|message|content)\s*(?:[:=]\s*)?["“‘\']([^"”’\']*)["”’\']'
+        r'|(?:body|message|content)\s*[:=]\s*([^"\n]+?)$',
+        re.IGNORECASE,
+    )
+
+    def _parse_email_command(self, command: str) -> Dict[str, str]:
+        """Pulls recipient, subject and body out of a free-form email command.
+
+        Returns a dict with 'recipient' (an address, or a bare name to resolve
+        against contacts), 'subject' and 'body' — each '' when absent.
+        """
+        recipient = ""
+        addr = self._EMAIL_RE.search(command)
+        if addr:
+            recipient = addr.group(0)
+        else:
+            # "to <name>" — stop before the subject/body keywords.
+            name = re.search(
+                r'\bto\s+([^\n,]+?)(?=\s+(?:subject|body|message|content)\b|$)',
+                command, re.IGNORECASE,
+            )
+            if name:
+                recipient = name.group(1).strip()
+
+        def _first(match) -> str:
+            if not match:
+                return ""
+            return (match.group(1) or match.group(2) or "").strip()
+
+        return {
+            "recipient": recipient,
+            "subject": _first(self._SUBJECT_RE.search(command)),
+            "body": _first(self._BODY_RE.search(command)),
+        }
+
+    def _handle_send_email(self, command: str, user_approved: bool) -> Dict[str, Any]:
+        """Parses a 'send mail ...' command and runs the draft → send sequence.
+
+        Previously the whole raw command was handed to send_email() as the
+        recipient, so errors read "Cannot send email to 'send mail to a@b.com
+        subject: ...'" and neither subject nor body was ever captured.
+        """
+        parsed = self._parse_email_command(command)
+        recipient = parsed["recipient"]
+
+        if not recipient:
+            return {
+                "success": False,
+                "error": "NO_RECIPIENT",
+                "message": (
+                    "I couldn't find a recipient in that command. Try: "
+                    'send mail to name@example.com subject: "Hi" body: "Hello"'
+                ),
+            }
+
+        # A bare name has to be resolved against real contacts first.
+        if "@" not in recipient:
+            from agents.comms_agent import search_local_contacts
+            matches = search_local_contacts(recipient)
+            if len(matches) == 1:
+                recipient = matches[0]["email"]
+            elif len(matches) > 1:
+                self.pending_clarification = {
+                    "type": "contact_disambiguation",
+                    "target_name": recipient,
+                    "candidates": matches,
+                    "original_command": command,
+                }
+                c_str = ", ".join(
+                    f"({i+1}) {c['name']} ({c['email']})" for i, c in enumerate(matches)
+                )
+                return {
+                    "success": False,
+                    "contact_unresolved": True,
+                    "pending_clarification": True,
+                    "candidates": matches,
+                    "target_name": recipient,
+                    "message": f"🔒 Multiple Contacts Found: {c_str}. Which one did you mean?",
+                }
+            else:
+                return {
+                    "success": False,
+                    "contact_unresolved": True,
+                    "target_name": recipient,
+                    "message": (
+                        f"🔒 Contact Unresolved: no email address found for "
+                        f"'{recipient}'. Give me the address directly."
+                    ),
+                }
+
+        subject = parsed["subject"] or "(no subject)"
+        body = parsed["body"] or ""
+
+        # Persist the draft before the Tier-2 send, so a composed message
+        # survives an unconfigured or failing transport.
+        draft_res = self.comms_agent.draft_email(recipient, subject, body)
+
+        # Sending is irreversible, so ALWAYS confirm — deliberately ignoring
+        # `user_approved` here. The UI posts user_approved=true on every command,
+        # so honouring it would silently fire the mail off the first message.
+        # _resolve_clarification performs the send only on an explicit yes.
+        self.pending_clarification = {
+            "type": "email_send_confirm",
+            "step": "confirm_send",
+            "to_email": recipient,
+            "subject": subject,
+            "body": body,
+            "draft_id": draft_res.get("draft_id"),
+            "original_command": command,
+        }
+        preview = body if len(body) <= 160 else body[:160] + "…"
+        return {
+            "success": True,
+            "pending_clarification": True,
+            "awaiting_send_confirmation": True,
+            "to": recipient,
+            "subject": subject,
+            "body": body,
+            "draft_id": draft_res.get("draft_id"),
+            "message": (
+                f"📧 Draft ready.\n"
+                f"  To      : {recipient}\n"
+                f"  Subject : {subject}\n"
+                f"  Body    : {preview}\n\n"
+                f"Send it? Reply 'send' to deliver, or 'cancel' to keep it as a draft."
+            ),
+        }
+
+    def _send_confirmed_email(
+        self, recipient: str, subject: str, body: str, draft_id: Optional[str]
+    ) -> Dict[str, Any]:
+        """Performs the approved Tier-2 send and annotates the result."""
+        send_res = self.comms_agent.send_email(
+            recipient, user_approved=True, subject=subject, body=body
+        )
+        send_res["to"] = recipient
+        send_res["subject"] = subject
+        send_res["body"] = body
+        if draft_id:
+            send_res["draft_id"] = draft_id
+        return send_res
 
     def _is_knowledge_question(self, cmd_lower: str, intent: str) -> bool:
         """True for general-knowledge questions that should be answered from the web."""
@@ -640,10 +860,16 @@ class MasterPlanner:
             return launch_res
 
         # ── 00. Email Communication Priority Handler ─────────────────────────────
-        if any(v in cmd_lower for v in ["draft email", "send email", "write email", "email to", "gmail", "compose email"]):
+        # "mail"/"mail to" matter: without them "send mail to a@outlook.com" fell
+        # through to the chitchat block and got a greeting. It only ever appeared
+        # to work because "gmail" happens to be a substring of a Gmail address.
+        if any(v in cmd_lower for v in ["draft email", "send email", "write email",
+                                        "email to", "gmail", "compose email",
+                                        "send mail", "mail to", "draft mail",
+                                        "write mail", "compose mail"]):
             # Pass directly to Communication Agent Email Wizard
             if "send" in cmd_lower:
-                return self.comms_agent.send_email(command, user_approved=user_approved)
+                return self._handle_send_email(command, user_approved)
             else:
                 to_match = re.search(r'to\s+([^\s,"]+(?:\s+[^\s,"]+)?)', command, re.IGNORECASE)
                 raw_target = to_match.group(1).strip() if to_match else ""
@@ -808,7 +1034,7 @@ class MasterPlanner:
         # ── 5. Communication Agent (Bug 3 Fix: Contact Resolution Gating) ─────
         elif intent == "communication" or "email" in cmd_lower or "draft" in cmd_lower or "message" in cmd_lower:
             if "send" in cmd_lower:
-                return self.comms_agent.send_email(command, user_approved=user_approved)
+                return self._handle_send_email(command, user_approved)
             else:
                 to_match = re.search(r'to\s+([^\s,"]+)', command, re.IGNORECASE)
                 raw_target = to_match.group(1).strip() if to_match else ""

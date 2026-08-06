@@ -74,6 +74,16 @@ TEMPLATES = {
         "restart {app}", "kill the process on port 3000", "clear the cache in {app}",
         "update {app} to the latest version", "back up the folder to my drive",
         "rename the files in the downloads folder", "open {app} and load {topic}",
+        # System-settings control. The assistant ships these as headline
+        # features, so leaving them out of the corpus made "change the volume
+        # to 100%" classify as communication.
+        "change the volume to 100%", "set the volume to 40", "turn the volume up",
+        "turn the volume down", "mute the volume", "unmute the sound",
+        "take a screenshot", "capture the current window",
+        "turn up the brightness", "lower the screen brightness",
+        "enable dark mode", "turn on wifi", "turn off bluetooth",
+        "show me the system health", "check cpu and ram usage",
+        "organize my downloads folder", "empty the recycle bin",
     ],
     "memory_query": [
         "what did I save about {topic}", "remember that the wifi password is on the fridge",

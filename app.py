@@ -29,6 +29,7 @@ if sys.stderr and hasattr(sys.stderr, "reconfigure"):
 
 import uvicorn
 from pathlib import Path
+from typing import Optional
 
 # Ensure M.O.N.D.A.Y root is in sys.path
 PROJECT_ROOT = Path(__file__).resolve().parent
@@ -50,11 +51,21 @@ def free_port_if_occupied(port: int = 8000) -> None:
         pass
 
 
+# Set by the server thread when it dies, so main() can report the real cause
+# instead of opening a window onto an engine that never started.
+SERVER_STARTUP_ERROR: Optional[BaseException] = None
+
+
 def start_fastapi_server(host: str = "127.0.0.1", port: int = 8000) -> None:
     """Runs uvicorn FastAPI server in background thread after clearing port bindings."""
-    free_port_if_occupied(port)
-    from api.main import app
-    uvicorn.run(app, host=host, port=port, log_level="error")
+    global SERVER_STARTUP_ERROR
+    try:
+        free_port_if_occupied(port)
+        from api.main import app
+        uvicorn.run(app, host=host, port=port, log_level="error")
+    except BaseException as ex:  # noqa: BLE001 - must not vanish into the thread
+        SERVER_STARTUP_ERROR = ex
+        raise
 
 
 def launch_native_tkinter_gui(app_url: str) -> None:
@@ -242,13 +253,33 @@ def main() -> None:
     # Wait until FastAPI engine server is active and serving requests
     import urllib.request
     app_url = f"http://{args.host}:{args.port}/app"
+    engine_up = False
     for _ in range(30):
+        if SERVER_STARTUP_ERROR is not None:
+            break
         try:
             with urllib.request.urlopen(f"http://{args.host}:{args.port}/health", timeout=1) as resp:
                 if resp.status == 200:
+                    engine_up = True
                     break
         except Exception:
             time.sleep(0.3)
+
+    # Never open a window onto a dead engine — that looks like the app works
+    # while every command silently fails.
+    if not engine_up:
+        print("\n❌ The M.O.N.D.A.Y. engine failed to start; not opening the UI.")
+        if SERVER_STARTUP_ERROR is not None:
+            print(f"   Cause: {type(SERVER_STARTUP_ERROR).__name__}: {SERVER_STARTUP_ERROR}")
+            if "Application Control policy" in str(SERVER_STARTUP_ERROR):
+                print(
+                    "   Windows Smart App Control blocked a dependency's binary. This "
+                    "usually hits freshly-published wheels;\n   reinstalling that package "
+                    "at a slightly older version normally clears it."
+                )
+        else:
+            print(f"   No response from http://{args.host}:{args.port}/health after ~9s.")
+        sys.exit(1)
 
     if args.test:
         print("✓ Native Desktop Application verified cleanly.")

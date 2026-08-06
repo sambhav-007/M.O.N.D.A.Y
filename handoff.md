@@ -1,6 +1,6 @@
 # M.O.N.D.A.Y — Session Handoff
 
-_Last updated: 2026-08-03. Machine: Windows 11 Home, user `sambh`._
+_Last updated: 2026-08-06. Machine: Windows 11 Home, user `sambh`._
 
 This captures the state of work so anyone (teammate or future session) can pick up
 without re-deriving the hard-won environment knowledge.
@@ -76,6 +76,46 @@ POST /agent/execute          full pipeline (intent → RL route → agent)
 | `.gitignore` | Ignore `data/action_history.json`, `models/monday_voice_profile.joblib` | Both are machine-generated and caused the merge conflicts; the voice profile embeds an absolute path to the training machine. |
 | `tests/` | Updated 5 stale assertions | They asserted the fabricated-success behaviour that was deliberately removed. |
 
+## 2c. Changes made 2026-08-06 (NOT yet committed)
+
+| File | Change | Why |
+|------|--------|-----|
+| `requirements.txt` | `pandas>=2.3.3,<3.0` | Smart App Control blocked pandas **3.0.5** (`pandas/_libs/index.*.pyd`, "An Application Control policy has blocked this file"), killing the engine at import. SAC blocks freshly-published binaries by reputation. 2.3.3 is also the floor `mlxtend` needs — 2.2.3 imports fine but breaks component 2.4. |
+| `app.py` | Server thread records its exception; `main()` refuses to open the UI if the engine never came up | The engine ran on a daemon thread, so its `ImportError` vanished; the health-check loop then *ignored its own result* and opened a window onto a dead engine. |
+| `core/planner.py` | New `_parse_email_command()` + shared `_handle_send_email()` | The raw command was passed to `send_email()` as the recipient ("Cannot send email to 'send mail to a@b.com subject: ...'"), and subject/body were dropped. Two duplicated branches both did this; the `"gmail"` keyword matched *inside the address*, so the first one won. |
+| `agents/comms_agent.py` | `draft_email` writes the local draft before calling Gmail | It built `draft_content`/`draft_file`, returned `file_path`, and claimed "(Draft saved in Web Composer)" — but never wrote the file. A Gmail failure lost the message. |
+| `datagen/commands.py` | Added system-settings templates to `desktop_automation` | No volume/brightness/screenshot vocabulary existed, so "change the volume to 100%" classified as `communication`. Now `desktop_automation` at 85.6%. Macro-F1 0.929 → 0.920 (broader, more realistic class). |
+| `agents/browser_agent.py` | `_unwrap_ddg_redirect` | The lite endpoint wraps results in `//duckduckgo.com/l/?uddg=…`, so citations showed a redirect instead of the source. |
+| `ml/voice_cloner.py`, `ui/index.html` | Stopped replaying `mondayvoice.mp3` on every reply | The reference recording was played before every spoken response from both the backend and the UI, so the same lines repeated endlessly. |
+| `agents/comms_agent.py` | **Real SMTP sending** (`smtplib` + `EmailMessage`), plus `_smtp_config()` / `_load_env_value()` / `_load_saved_draft()` | `send_email()` had no `subject`/`body` parameters at all — it structurally could not send anything. Now delivers for real; STARTTLS on 587, implicit SSL on 465. |
+| `core/planner.py` | Draft → **confirm** → send state machine (`confirm_send`) | Requested behaviour: ask before sending, send on "send". |
+| `core/planner.py` | Email handler ignores `user_approved` | `ui/index.html:584` hardcodes `user_approved: true` on **every** command, which skipped the confirmation and fired a real email on the first message. |
+| `core/planner.py` | Subject/body separator optional when quoted | `subject "Greetings"` (no colon) silently parsed as empty — a real email went out with `(no subject)` and no body. |
+| `core/planner.py` | Added `send mail`/`mail to`/`draft mail`… to the email keyword guard | `send mail to a@outlook.com` fell through to the chitchat block and returned a greeting. It only appeared to work because `"gmail"` is a substring of a Gmail address. |
+| `.env.example` | Documented `SMTP_USER` / `SMTP_PASSWORD` / `SMTP_HOST` / `SMTP_PORT` / `SMTP_FROM` | Gmail needs a 16-char **App Password** (2FA on), not the account password. |
+
+### Email flow (as built)
+
+```
+send mail to a@b.com subject "Greetings" body "hello"
+  → draft written to data/staging/email_draft_*.json
+  → "📧 Draft ready. … Send it? Reply 'send' or 'cancel'."
+      'send'    → real SMTP delivery
+      'cancel'  → nothing sent, draft kept
+      anything else → re-asks (never guesses at a send)
+```
+
+Accepts `subject:` and `subject "…"`; unquoted values still need `:` or `=`.
+Without SMTP credentials it composes and saves the draft, then says plainly that
+sending is not configured — it does not fake a delivery.
+
+> ⚠️ **Open safety issue:** `ui/index.html:584` sends `user_approved: true` for every
+> command. Email now ignores that flag, but every *other* Tier-2 action
+> (`delete_file`, `overwrite_file`, …) still auto-approves from the UI, so the PRD §9
+> risk-tier model is not actually enforced there. The fix is to route all Tier-2 gates
+> through the same confirm-then-act pattern; flipping the flag alone would gate those
+> actions with no way to approve them.
+
 ---
 
 ## 3. Voice
@@ -84,6 +124,10 @@ POST /agent/execute          full pipeline (intent → RL route → agent)
   with a mic + internet (Google Web Speech). Use the mic/press-to-talk in the app.
 - **Speaking (current)**: UI uses the browser's robotic `speechSynthesis`; backend
   `speak()` uses gTTS. Neither uses the `ui/mondayvoice.mp3` voice.
+- **Replies are still spoken twice** — once by the UI's `speechSynthesis` and once by
+  the backend's gTTS through pygame, in two different voices. Collapsing to one is a
+  behaviour choice: backend-only keeps `cli.py` talking but needs network; UI-only is
+  instant and offline but silences the CLI.
 - **Real cloning of mondayvoice.mp3**: attempted, **blocked** — see §5.
 
 ---
@@ -145,14 +189,22 @@ the current browser TTS) — just route UI speech through `POST /agent/voice/spe
   data source for 2.1. Decide whether to adopt or remove `common/`.
 - ~~**Questions misclassify**~~ — FIXED 2026-08-03. Wikipedia first, live web search
   as fallback. See `MasterPlanner._is_knowledge_question`.
-- **DuckDuckGo rate-limits this machine** after heavy use — it returns HTTP 202/403 or
-  refuses the connection. `web_search` now reports this as a structured failure
-  (`WEB_SEARCH_HTTP_202`) instead of a bogus empty success. The `lite.duckduckgo.com`
-  fallback parser is **not yet verified against a live 200 response** — DDG was
-  blocking throughout the session. Re-run `tests/test_100_ruthless.py -k browser`
-  from an unblocked network to confirm.
-- **Test suite: 139 passed, 2 failed** — both failures are the DDG block above, not
-  code defects. `pytest` is not in `requirements.txt`; it was installed ad hoc.
+- **DuckDuckGo rate-limits this machine** under heavy use — HTTP 202/403 or a refused
+  connection. `web_search` reports this as a structured failure (`WEB_SEARCH_HTTP_202`)
+  instead of a bogus empty success. The `lite.duckduckgo.com` fallback parser was
+  **verified against a live 200 response on 2026-08-06** once the block lifted; that
+  check also exposed that lite wraps every result in a `//duckduckgo.com/l/?uddg=`
+  redirect, now unwrapped by `BrowserAgent._unwrap_ddg_redirect`.
+- **Test suite: 140 passed, 1 failed** (2026-08-06). The failure is
+  `test_agent_public_api_fetch_iss_location` — `api.open-notify.org` is unreachable
+  from this network (a direct 15s urllib call with a browser UA also times out, while
+  CoinGecko returns 200). Not a code defect. `pytest` is now in `requirements.txt`.
+- **Several tests depend on live third-party APIs** (DuckDuckGo, open-notify,
+  CoinGecko) and so fail whenever those are down or rate-limiting. Worth marking them
+  `@pytest.mark.network` so a red suite means a real regression.
+- **`data/calendar.json` is tracked but is runtime churn** — the suite appends a
+  "Project Review" event on every run. It will conflict on the next merge exactly like
+  `data/action_history.json` did; gitignoring it is the same fix.
 - **No conversational memory** (no LLM) — "show those results you just found" can't
   work. Genuine multi-turn needs an LLM planner (user-provided API key).
 - **README** overstates structure/endpoints vs reality (single-file modules; `monday-site/`

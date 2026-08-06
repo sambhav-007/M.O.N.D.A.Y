@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import re
 from typing import Any, Dict, List, Optional
-from urllib.parse import quote_plus
+from urllib.parse import parse_qs, quote_plus, unquote, urlparse
 
 import httpx
 from bs4 import BeautifulSoup
@@ -109,13 +109,33 @@ class BrowserAgent:
         return results
 
     @staticmethod
+    def _unwrap_ddg_redirect(href: str) -> str:
+        """Turns `//duckduckgo.com/l/?uddg=https%3A%2F%2Fexample.com` into the real URL.
+
+        The lite endpoint wraps every result in a redirect, so the raw href is
+        useless as a citation.
+        """
+        if not href:
+            return ""
+        if "uddg=" in href:
+            try:
+                target = parse_qs(urlparse(href if "//" not in href[:2] else "https:" + href).query).get("uddg")
+                if target and target[0]:
+                    return unquote(target[0])
+            except Exception:
+                pass
+        if href.startswith("//"):
+            return "https:" + href
+        return href
+
+    @staticmethod
     def _parse_ddg_lite(html: str, num_results: int) -> List[Dict[str, str]]:
         """Parses the `lite.duckduckgo.com` table layout (title row + snippet row)."""
         soup = BeautifulSoup(html, "html.parser")
         results: List[Dict[str, str]] = []
         for link in soup.select("a.result-link")[:num_results]:
             title = link.get_text(strip=True)
-            url = link.get("href", "")
+            url = BrowserAgent._unwrap_ddg_redirect(link.get("href", ""))
 
             snippet = ""
             row = link.find_parent("tr")
