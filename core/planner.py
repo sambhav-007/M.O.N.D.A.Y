@@ -544,17 +544,54 @@ class MasterPlanner:
                     "message": f"Cancelled — nothing was sent. The draft for {to_email} is still saved.",
                 }
             else:
-                # Unrecognised answer: re-arm rather than guess about a send.
-                self.pending_clarification = clarification
-                result = {
-                    "success": False,
-                    "pending_clarification": True,
-                    "awaiting_send_confirmation": True,
-                    "message": (
-                        f"I didn't catch that. Reply 'send' to deliver the email to "
-                        f"{to_email}, or 'cancel' to keep it as a draft."
-                    ),
-                }
+                # Before giving up: the reply may be an edit rather than an
+                # answer. Someone shown "(no subject)" naturally types
+                # `subject: hello body: hii`, and answering that with "I didn't
+                # catch that" strands them — the draft cannot be corrected and
+                # the only ways out are sending it empty or cancelling.
+                edit = self._parse_email_command(user_response)
+                if edit["subject"] or edit["body"]:
+                    subject = edit["subject"] or subject
+                    body = edit["body"] or body
+                    draft_res = self.comms_agent.draft_email(to_email, subject, body)
+                    draft_id = draft_res.get("draft_id", draft_id)
+                    self.pending_clarification = {
+                        **clarification,
+                        "subject": subject,
+                        "body": body,
+                        "draft_id": draft_id,
+                    }
+                    preview = body if len(body) <= 160 else body[:160] + "…"
+                    result = {
+                        "success": True,
+                        "pending_clarification": True,
+                        "awaiting_send_confirmation": True,
+                        "updated": True,
+                        "to": to_email,
+                        "subject": subject,
+                        "body": body,
+                        "draft_id": draft_id,
+                        "message": (
+                            f"📧 Draft updated.\n"
+                            f"  To      : {to_email}\n"
+                            f"  Subject : {subject}\n"
+                            f"  Body    : {preview}\n\n"
+                            f"Send it? Reply 'send' to deliver, or 'cancel' to keep it as a draft."
+                        ),
+                    }
+                else:
+                    # Genuinely unrecognised: re-arm rather than guess about a send.
+                    self.pending_clarification = clarification
+                    result = {
+                        "success": False,
+                        "pending_clarification": True,
+                        "awaiting_send_confirmation": True,
+                        "message": (
+                            f"I didn't catch that. Reply 'send' to deliver the email to "
+                            f"{to_email}, 'cancel' to keep it as a draft, or give me the "
+                            f'missing parts, e.g. subject "Hi" body "Hello".'
+                        ),
+                    }
 
             return {
                 "user_command": user_response,
@@ -940,6 +977,32 @@ class MasterPlanner:
                     ),
                 }
 
+        # "send mail to someone@example.com" with no subject or body used to jump
+        # straight to "Send it? (no subject), empty body" — offering to send an
+        # empty email, and leaving the user no way to supply the missing parts.
+        # Collect them first instead; the wizard ends at the same confirmation.
+        if not parsed["subject"] and not parsed["body"]:
+            self.pending_clarification = {
+                "type": "email_wizard",
+                "step": "get_subject",
+                "to_email": recipient,
+                "subject": None,
+                "body": None,
+                "original_command": command,
+            }
+            return {
+                "success": True,
+                "pending_clarification": True,
+                "awaiting_subject": True,
+                "to": recipient,
+                "message": (
+                    f"📧 Composing an email to {recipient}.\n"
+                    f"What should the subject be?\n\n"
+                    f"(Or give it all at once: send mail to {recipient} "
+                    f'subject "Hi" body "Hello")'
+                ),
+            }
+
         subject = parsed["subject"] or "(no subject)"
         body = parsed["body"] or ""
 
@@ -1181,14 +1244,32 @@ class MasterPlanner:
 
         # ── 0. WhatsApp Priority Handler (Fixes "open whatsapp message...") ──────
         if "whatsapp" in cmd_lower:
-            match = re.search(r'(?:message|send to|text)\s+([^\s,"]+(?:\s+[^\s,"]+)?)(?:\s+(?:say|with text|saying)\s+(.*))?', command, re.IGNORECASE)
-            contact = match.group(1).strip() if match else ""
-            text_msg = match.group(2).strip() if (match and match.group(2)) else ""
+            # This handler launches WhatsApp. It does NOT select a contact and it
+            # does NOT send a message — there is no WhatsApp send implementation
+            # anywhere in the codebase. It used to answer "open whatsapp and
+            # message bhumi hi" with "✓ Opened WhatsApp for contact 'bhumi hi'",
+            # which both mis-parsed the message into the contact name and implied
+            # a delivery that never happened. Say what actually occurred.
+            match = re.search(
+                r'(?:message|send to|text|msg)\s+(?P<contact>[^\s,"]+)'
+                r'(?:\s+(?:say|saying|with text)\s+)?(?P<text>.*)?',
+                command, re.IGNORECASE,
+            )
+            contact = (match.group("contact") or "").strip() if match else ""
+            text_msg = (match.group("text") or "").strip() if match else ""
 
             launch_res = self.computer_agent.launch_application("whatsapp")
-            if contact:
-                msg_str = f" with message: '{text_msg}'" if text_msg else ""
-                launch_res["message"] = f"✓ Opened WhatsApp for contact '{contact}'{msg_str}."
+            if contact and launch_res.get("success"):
+                wanted = f" and send \"{text_msg}\"" if text_msg else ""
+                launch_res["message"] = (
+                    f"✓ Opened WhatsApp. I can't pick out '{contact}'{wanted} for you "
+                    f"— I don't have WhatsApp messaging, only the app launcher. "
+                    f"Search for the contact in the window I just opened."
+                )
+                launch_res["message_sent"] = False
+                launch_res["requested_contact"] = contact
+                if text_msg:
+                    launch_res["requested_text"] = text_msg
             return launch_res
 
         # ── 00. Email Communication Priority Handler ─────────────────────────────

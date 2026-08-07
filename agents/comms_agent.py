@@ -140,6 +140,21 @@ def create_google_gmail_draft(to_email: str, subject: str, body: str) -> Dict[st
         else:
             return {"success": False, "message": "⚠️ Google Gmail API returned empty response with no draft ID."}
 
+    except ImportError as ex:
+        # The Google client libraries are optional and are not declared in
+        # requirements.txt. Their absence is the normal configuration here, not a
+        # failure, and printing "❌ Raw Google Gmail API Error" on every single
+        # draft made a routine fallback look like something had broken.
+        raw_err = str(ex)
+        return {
+            "success": False,
+            "unavailable": True,
+            "raw_error": raw_err,
+            "message": (
+                "Google Gmail API not available (client libraries not installed) "
+                "— using the local draft instead."
+            ),
+        }
     except Exception as ex:
         # Surface exact raw Google API exception message directly
         raw_err = str(ex)
