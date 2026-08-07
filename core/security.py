@@ -64,6 +64,7 @@ TIER_2_ACTIONS = {
     "overwrite_file",
     "send_email",
     "send_notification",
+    "send_whatsapp",
     "execute_shell",
     "submit_form",
     "modify_system_settings",
@@ -75,6 +76,7 @@ TIER_2_ACTIONS = {
 # explicit so the report and the demo can state exactly what is enforced.
 TIER_2_IMPLEMENTED = {
     "send_email",
+    "send_whatsapp",
     "terminate_process",
 }
 

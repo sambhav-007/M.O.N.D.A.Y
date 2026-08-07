@@ -26,6 +26,14 @@ mlxtend>=0.23.0
 # `pip install -r requirements.txt` either fail or silently break component 2.4.
 # Equivalence to shap.LinearExplainer is verified in reports/2_6_shap_equivalence.md.
 
+# ── Optional: WhatsApp auto-send ─────────────────────────────────────────────
+# Only needed to have M.O.N.D.A.Y. press Enter for you after opening a WhatsApp
+# chat. Without it, messages are still composed and the chat still opens with the
+# text typed — you press Enter yourself, which is the default behaviour anyway.
+# WhatsApp has no send API; simulating the keypress is the only way, and it sends
+# to whatever window has focus, so it is Tier-2 gated.
+pyautogui>=0.9.54
+
 # ── Visualisation & Console UI ───────────────────────────────────────────────
 matplotlib>=3.8.0
 seaborn>=0.13.0

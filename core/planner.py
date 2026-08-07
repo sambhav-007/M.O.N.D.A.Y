@@ -131,6 +131,11 @@ Type these in plain English. Every example below works as written.
    send mail to a@b.com subject "Hi" body "Hello"
         ⚠️ Tier 2 — I draft it, show you, then ask. Reply 'send'
         to deliver or 'cancel' to keep it as a draft.
+   message +919876543210 saying hi   opens WhatsApp with it typed;
+                                     you press Enter to send
+   send whatsapp to bhumi saying hi  ⚠️ Tier 2 — I ask, then press
+                                     Enter for you. Needs a number:
+                                     remember bhumi's number is +91…
    schedule meeting tomorrow 3pm     add a calendar event
    notify me the build finished      desktop notification
 
@@ -334,6 +339,7 @@ class MasterPlanner:
         # this table can ever be resumed by a confirmation.
         self._tier2_executors: Dict[str, Any] = {
             "terminate_process": self._exec_terminate_process,
+            "send_whatsapp": self._exec_send_whatsapp,
         }
 
         # Boot-up System Context Scanner
@@ -922,6 +928,135 @@ class MasterPlanner:
         """Approved executor for terminate_process. Only reachable post-approval."""
         return self.computer_agent.terminate_process(process, user_approved=True)
 
+    def _exec_send_whatsapp(self, phone: str, text: str) -> Dict[str, Any]:
+        """Approved executor for send_whatsapp. Only reachable post-approval."""
+        return self.comms_agent.send_whatsapp_now(phone, text)
+
+    # ── WhatsApp helpers ─────────────────────────────────────────────────────
+    def _resolve_phone_number(self, target: str) -> Dict[str, Any]:
+        """
+        Turns "+919876543210" or a remembered name into a WhatsApp number.
+
+        Contact lookup (`search_local_contacts`) carries emails only — there is no
+        phone field — so names are resolved from the memory store instead:
+        "remember bhumi's number is +91..." then "message bhumi saying hi".
+        """
+        direct = self.comms_agent.normalise_phone(target)
+        if direct:
+            return {"phone": direct, "source": "given directly"}
+
+        # Look for a remembered number belonging to this name.
+        try:
+            recalled = self.memory_agent.recall(target, limit=5)
+        except Exception:
+            recalled = {"matches": []}
+
+        for match in recalled.get("matches", []):
+            key = str(match.get("key", "")).lower()
+            if target.lower() not in key and target.lower() not in str(match.get("value", "")).lower():
+                continue
+            phone = self.comms_agent.normalise_phone(str(match.get("value", "")))
+            if phone:
+                return {"phone": phone, "source": f"remembered as '{match.get('key')}'"}
+
+        return {
+            "phone": None,
+            "error": "NO_NUMBER",
+            "message": (
+                f"I don't have a phone number for '{target}'. Either give it "
+                f"directly (message +919876543210 saying hi) or teach me first: "
+                f"remember {target}'s number is +919876543210"
+            ),
+        }
+
+    # "message/text +91… " — a literal phone number after a messaging verb.
+    _WHATSAPP_PHONE_RE = re.compile(
+        r'\b(?:message|msg|text|send to)\s+\+?\d[\d\s\-()]{7,}', re.IGNORECASE
+    )
+
+    # Leading verbs and filler stripped before the target is read. Done stepwise
+    # rather than as one regex: "send whatsapp to bhumi saying hi", "open whatsapp
+    # and message bhumi hi" and "message +91… saying hi" are all natural phrasings,
+    # and a single pattern that covers them is unreadable and fragile.
+    _WA_PREFIX_RE = re.compile(
+        r'^\s*(?:please\s+)?(?:open|send|shoot|fire|write|start)?\s*'
+        r'(?:a\s+)?(?:whats\s?app|whatsapp)?\s*(?:and\s+)?'
+        r'(?:message|msg|text|send)?\s*(?:on\s+)?(?:whats\s?app|whatsapp)?\s*'
+        r'(?:to\s+)?',
+        re.IGNORECASE,
+    )
+    _WA_LEADING_PHONE_RE = re.compile(r'^\+?\d[\d\s\-()]{6,}\d')
+    _WA_CONNECTOR_RE = re.compile(
+        r'^(?:saying|say|that\s+says|that|with\s+text|:|-)\s+', re.IGNORECASE
+    )
+
+    def _parse_whatsapp_command(self, command: str) -> Tuple[str, str]:
+        """Returns (target, text). Either may be '' when absent."""
+        rest = self._WA_PREFIX_RE.sub("", command or "", count=1).strip()
+        if not rest:
+            return "", ""
+
+        # A phone number may contain spaces, so match it as a unit first.
+        phone_match = self._WA_LEADING_PHONE_RE.match(rest)
+        if phone_match:
+            target = phone_match.group(0).strip()
+            rest = rest[phone_match.end():].strip()
+        else:
+            parts = rest.split(None, 1)
+            target = parts[0].strip(",:")
+            rest = parts[1].strip() if len(parts) > 1 else ""
+
+        text = self._WA_CONNECTOR_RE.sub("", rest, count=1).strip()
+        return target, text
+
+    def _handle_whatsapp(self, command: str, cmd_lower: str) -> Dict[str, Any]:
+        """
+        Routes a WhatsApp request.
+
+        Preparing a message is Tier 1 — it opens the chat with the text typed and
+        nothing leaves the machine. Actually sending it is Tier 2 and goes through
+        the approval gate, because it is irreversible and outward-facing.
+        """
+        target, text = self._parse_whatsapp_command(command)
+        if not target:
+            res = self.computer_agent.launch_application("whatsapp")
+            if res.get("success"):
+                res["message"] = (
+                    "✓ Opened WhatsApp. To have me prepare a message, try: "
+                    "message +919876543210 saying hello"
+                )
+            return res
+
+        resolved = self._resolve_phone_number(target)
+        if not resolved.get("phone"):
+            return {
+                "success": False,
+                "error": resolved.get("error", "NO_NUMBER"),
+                "requested_contact": target,
+                "message": resolved.get("message", f"No number for '{target}'."),
+            }
+        phone = resolved["phone"]
+
+        # "send ..." asks for delivery; anything else just prepares it.
+        wants_send = bool(re.match(r'^\s*(send|shoot|fire)\b', cmd_lower))
+        if wants_send and text:
+            return self.require_tier2_approval(
+                action_name="send_whatsapp",
+                target=f"+{phone}",
+                executor="send_whatsapp",
+                executor_kwargs={"phone": phone, "text": text},
+                original_command=command,
+                task_type="communication",
+                agent="comms",
+                detail_lines=[
+                    f'Message : "{text}"',
+                    f"Number  : +{phone} ({resolved['source']})",
+                    "I'll open the chat and press Enter. Keep that window focused.",
+                ],
+            )
+
+        return self.comms_agent.open_whatsapp_chat(phone, text)
+
     def _handle_send_email(self, command: str, user_approved: bool) -> Dict[str, Any]:
         """Parses a 'send mail ...' command and runs the draft → send sequence.
 
@@ -1243,34 +1378,12 @@ class MasterPlanner:
             return self.vision_agent.analyze_screen_context(command)
 
         # ── 0. WhatsApp Priority Handler (Fixes "open whatsapp message...") ──────
-        if "whatsapp" in cmd_lower:
-            # This handler launches WhatsApp. It does NOT select a contact and it
-            # does NOT send a message — there is no WhatsApp send implementation
-            # anywhere in the codebase. It used to answer "open whatsapp and
-            # message bhumi hi" with "✓ Opened WhatsApp for contact 'bhumi hi'",
-            # which both mis-parsed the message into the contact name and implied
-            # a delivery that never happened. Say what actually occurred.
-            match = re.search(
-                r'(?:message|send to|text|msg)\s+(?P<contact>[^\s,"]+)'
-                r'(?:\s+(?:say|saying|with text)\s+)?(?P<text>.*)?',
-                command, re.IGNORECASE,
-            )
-            contact = (match.group("contact") or "").strip() if match else ""
-            text_msg = (match.group("text") or "").strip() if match else ""
-
-            launch_res = self.computer_agent.launch_application("whatsapp")
-            if contact and launch_res.get("success"):
-                wanted = f" and send \"{text_msg}\"" if text_msg else ""
-                launch_res["message"] = (
-                    f"✓ Opened WhatsApp. I can't pick out '{contact}'{wanted} for you "
-                    f"— I don't have WhatsApp messaging, only the app launcher. "
-                    f"Search for the contact in the window I just opened."
-                )
-                launch_res["message_sent"] = False
-                launch_res["requested_contact"] = contact
-                if text_msg:
-                    launch_res["requested_text"] = text_msg
-            return launch_res
+        # Either the user named WhatsApp, or they asked to message a literal
+        # phone number — "message +919876543210 saying hi" has no other sensible
+        # destination, and it is what /help tells them to type. A bare name
+        # ("message bhumi") stays out of this: it is too easily an email.
+        if "whatsapp" in cmd_lower or self._WHATSAPP_PHONE_RE.search(command):
+            return self._handle_whatsapp(command, cmd_lower)
 
         # ── 00. Email Communication Priority Handler ─────────────────────────────
         # "mail"/"mail to" matter: without them "send mail to a@outlook.com" fell

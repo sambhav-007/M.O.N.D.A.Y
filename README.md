@@ -350,9 +350,32 @@ Written down deliberately, so nothing in this README claims more than the code d
 |------|--------|
 | Components 2.1–2.6 | All run; evidence in `reports/` and `reports/figures/` |
 | FastAPI engine | 24 endpoints, verified against the live OpenAPI schema |
-| Tier-2 approval gate | Enforced for `send_email` and `terminate_process` |
+| Tier-2 approval gate | Enforced for `send_email`, `send_whatsapp`, `terminate_process` |
+| WhatsApp | Opens a chat with the message pre-typed; auto-send is Tier-2 gated (see below) |
 | Audit log | Lossless within one process; records the full Tier-2 lifecycle |
 | Test suite | 169 tests passing |
+
+### WhatsApp — what it can and cannot do
+
+WhatsApp has **no API a desktop script may send through**. The official deep link
+(`whatsapp://send?phone=…&text=…`) opens the chat with the message already typed
+but deliberately will not send it — anti-spam design, not a gap in this code.
+So there are two behaviours:
+
+| Command | Tier | What happens |
+|---------|------|--------------|
+| `message +919876543210 saying hi` | 1 | Opens the chat with `hi` typed. **You press Enter.** Nothing leaves the machine. |
+| `send whatsapp to bhumi saying hi` | 2 | Asks for approval, then opens the chat *and presses Enter for you*. |
+
+Auto-send simulates a keypress, so it goes to whatever window has focus — if
+WhatsApp is slow to load or focus shifts, the Enter lands elsewhere. It also
+cannot read WhatsApp back, so it reports that **Enter was pressed**, never that
+the message was delivered. It needs the optional `pyautogui`; without it, the
+chat still opens pre-filled and says so.
+
+Numbers come from the command directly, or from memory —
+`remember bhumi's number is +919876543210`. Contact lookup carries emails only,
+so a bare name cannot otherwise resolve to a number.
 
 ### Implemented but inactive
 

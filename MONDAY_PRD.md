@@ -48,8 +48,8 @@ takes no `user_approved` parameter at all, so the bypass cannot be reintroduced
 by a caller passing one through. `ExecuteRequest.user_approved` survives for
 backwards compatibility and is ignored by Tier-2 actions.
 
-> **Scope of enforcement.** Two Tier-2 actions actually exist and are gated:
-> `send_email` and `terminate_process`. The other names in
+> **Scope of enforcement.** Three Tier-2 actions actually exist and are gated:
+> `send_email`, `send_whatsapp` and `terminate_process`. The other names in
 > `core/security.py::TIER_2_ACTIONS` — `delete_file`, `overwrite_file`,
 > `execute_shell`, `submit_form`, `modify_system_settings`, `kill_process` — have
 > **no implementation**. They are listed so that any future implementation is

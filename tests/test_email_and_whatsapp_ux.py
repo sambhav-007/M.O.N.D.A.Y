@@ -95,34 +95,18 @@ def test_genuinely_unclear_reply_still_reasks(planner):
     assert planner.pending_clarification is not None
 
 
-# ── WhatsApp must not claim to have messaged anyone ─────────────────────────
-@pytest.fixture
-def no_launch(planner, monkeypatch):
-    """Stub the launcher — only the reported outcome is under test."""
-    monkeypatch.setattr(
-        planner.computer_agent,
-        "launch_application",
-        lambda app: {"success": True, "message": f"Opened {app}"},
-    )
+# ── WhatsApp ────────────────────────────────────────────────────────────────
+# The third screenshot bug was fixed twice over: first by making the handler
+# report honestly, then by actually implementing messaging. Its coverage now
+# lives in tests/test_whatsapp.py, which tests parsing, number resolution and
+# the Tier-1 (prepare) / Tier-2 (send) split against stubbed agent calls.
+#
+# The one assertion kept here is the original regression, because it is the bug
+# the screenshot showed: the message text must not be swallowed into the contact
+# name. "message bhumi hi" once produced contact "bhumi hi".
 
 
-def test_whatsapp_does_not_claim_to_have_sent_a_message(planner, no_launch):
-    res = _exec(planner.process_command("open whatsapp and message bhumi hi"))
-    assert res.get("message_sent") is False
-    msg = res["message"].lower()
-    assert "can't" in msg or "cannot" in msg
-    # Must not imply delivery.
-    assert "with message:" not in msg
-
-
-def test_whatsapp_parses_contact_and_text_separately(planner, no_launch):
-    """'message bhumi hi' previously captured 'bhumi hi' as the contact name."""
-    res = _exec(planner.process_command("open whatsapp and message bhumi hi"))
-    assert res.get("requested_contact") == "bhumi"
-    assert res.get("requested_text") == "hi"
-
-
-def test_plain_whatsapp_launch_is_unchanged(planner, no_launch):
-    res = _exec(planner.process_command("open whatsapp"))
-    assert res.get("success") is True
-    assert res.get("message_sent") is None  # no messaging was requested
+def test_message_text_is_not_swallowed_into_contact_name(planner):
+    target, text = planner._parse_whatsapp_command("open whatsapp and message bhumi hi")
+    assert target == "bhumi"
+    assert text == "hi"
