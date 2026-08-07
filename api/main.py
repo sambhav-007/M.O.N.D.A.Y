@@ -106,7 +106,15 @@ app.include_router(ml_component_router)
 # ── Request Schemas ────────────────────────────────────────────────────────────
 class ExecuteRequest(BaseModel):
     command: str = Field(..., example="organize my Downloads folder", description="Natural language command")
-    user_approved: bool = Field(default=False, description="Set True to approve Tier-2 gated actions")
+    user_approved: bool = Field(
+        default=False,
+        description=(
+            "Deprecated for Tier-2 actions and ignored by them. Per PRD §9 an "
+            "irreversible action is approved only by replying to its "
+            "confirmation prompt in a following request (e.g. send the command, "
+            "then send 'yes'). This flag cannot grant that approval."
+        ),
+    )
 
 
 class OrganizeRequest(BaseModel):

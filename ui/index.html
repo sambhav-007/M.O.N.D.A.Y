@@ -581,7 +581,12 @@
             res = await fetch(`${baseUrl}/agent/execute`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ command: cmd, user_approved: true }),
+              // No user_approved flag. A Tier-2 action (PRD §9) is approved by
+              // the user replying to the confirmation prompt in its own turn —
+              // never by a flag the client sets on every request. This used to
+              // send user_approved:true unconditionally, which answered a
+              // question the user was never asked.
+              body: JSON.stringify({ command: cmd }),
               signal: controller.signal
             });
             if (res.ok) break;

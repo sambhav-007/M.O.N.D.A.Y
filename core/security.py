@@ -48,6 +48,17 @@ TIER_1_ACTIONS = {
     "get_system_health",
 }
 
+# The risk policy. This is deliberately broader than what the agents can
+# currently do: classification is a default-deny list, so naming an action here
+# before it exists means a future implementation is gated from its first commit
+# rather than shipping unguarded.
+#
+# Of these, only the following are actually implemented and reachable today:
+#   • send_email       — agents/comms_agent.py, gated via planner confirm_send
+#   • terminate_process— agents/computer_agent.py, gated via require_tier2_approval
+# The rest (delete_file, overwrite_file, execute_shell, submit_form,
+# modify_system_settings, kill_process) have no implementation anywhere in the
+# codebase. Do not cite them as working safety features.
 TIER_2_ACTIONS = {
     "delete_file",
     "overwrite_file",
@@ -58,6 +69,13 @@ TIER_2_ACTIONS = {
     "modify_system_settings",
     "terminate_process",
     "kill_process",
+}
+
+# Subset of TIER_2_ACTIONS that has a real implementation behind it. Kept
+# explicit so the report and the demo can state exactly what is enforced.
+TIER_2_IMPLEMENTED = {
+    "send_email",
+    "terminate_process",
 }
 
 

@@ -462,9 +462,24 @@ class ComputerAgent:
                     "terminated": terminated,
                     "message": f"✓ Terminated process(es): {', '.join(terminated)}.",
                 }
-            return {"success": False, "error": f"Process '{process_name_or_pid}' not found."}
+            # An approved Tier-2 action that found nothing to do is still an
+            # audited outcome, and it needs a `message` — the UI renders that key
+            # and would otherwise show nothing at all after the user approved.
+            log_action("terminate_process", target_str, 2, "not_found", self.name)
+            return {
+                "success": False,
+                "target": target_str,
+                "error": f"Process '{process_name_or_pid}' not found.",
+                "message": f"No running process matched '{process_name_or_pid}' — nothing was terminated.",
+            }
         except Exception as e:
-            return {"success": False, "error": str(e)}
+            log_action("terminate_process", target_str, 2, "error", self.name, {"error": str(e)})
+            return {
+                "success": False,
+                "target": target_str,
+                "error": str(e),
+                "message": f"Could not terminate '{process_name_or_pid}': {e}",
+            }
 
     def get_desktop_environment_snapshot(self) -> Dict[str, Any]:
         """Compiles screenshot, processes, hardware health, and active window into unified context snapshot."""

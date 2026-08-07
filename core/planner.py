@@ -49,6 +49,44 @@ from ml.intent_classifier import get_trained_classifier, predict_intent
 from ml.rl_router import EpsilonGreedyBandit, ROUTING_ACTIONS
 
 
+# ── Tier-2 confirmation vocabulary (PRD §9) ──────────────────────────────────
+# Shared by every gated action so "yes" means the same thing everywhere. An
+# answer that is neither affirmative nor negative is deliberately NOT treated as
+# either: the gate re-asks. Guessing in an irreversible path is the one failure
+# mode this whole mechanism exists to prevent.
+_AFFIRMATIVE = {
+    "yes", "y", "yeah", "yep", "yup", "ok", "okay", "sure", "confirm",
+    "confirmed", "approve", "approved", "go", "go ahead", "do it", "proceed",
+    "send", "send it", "send the mail", "send the email", "send mail",
+    "send email",
+}
+_NEGATIVE = {
+    "no", "n", "nope", "cancel", "stop", "abort", "don't", "dont", "not now",
+    "later", "discard", "nevermind", "never mind", "reject", "deny",
+}
+
+
+def parse_confirmation(answer: str) -> str:
+    """
+    Classifies a reply to a Tier-2 confirmation prompt.
+
+    Returns "yes", "no", or "unclear". Anything not clearly affirmative or
+    clearly negative is "unclear" — the caller must re-ask rather than assume.
+    """
+    a = (answer or "").lower().strip().strip(" .!?")
+    if a in _AFFIRMATIVE:
+        return "yes"
+    if a in _NEGATIVE:
+        return "no"
+    # Allow natural prefixes ("yes please", "cancel that") but never a bare
+    # substring match, so "don't send it" cannot read as affirmative.
+    if a.startswith(("yes ", "yeah ", "confirm", "approve", "go ahead", "do it", "proceed")):
+        return "yes"
+    if a.startswith(("no ", "cancel", "stop", "abort", "don't", "dont", "never")):
+        return "no"
+    return "unclear"
+
+
 class CognitiveResponseDict(dict):
     """Dict response that also stringifies nicely as a string if treated as text.
 
@@ -187,6 +225,15 @@ class MasterPlanner:
 
         # Multi-Turn Conversation State Machine
         self.pending_clarification: Optional[Dict[str, Any]] = None
+
+        # Tier-2 executor registry (PRD §9). A gated action parks its *name* and
+        # arguments in pending_clarification, never a callable — the state has to
+        # stay plain data so it can be logged and inspected, and so nothing can
+        # smuggle an arbitrary function into the approval path. Only actions in
+        # this table can ever be resumed by a confirmation.
+        self._tier2_executors: Dict[str, Any] = {
+            "terminate_process": self._exec_terminate_process,
+        }
 
         # Boot-up System Context Scanner
         self.boot_context: Dict[str, Any] = {}
@@ -354,22 +401,20 @@ class MasterPlanner:
         c_type = clarification.get("type", "contact_disambiguation")
         c_step = clarification.get("step", "resolve_contact")
 
+        if c_step == "confirm_action":
+            return self._resolve_tier2_approval(clarification, raw_ans)
+
         if c_step == "confirm_send":
-            answer = raw_ans.lower().strip(" .!")
-            affirmative = {"send", "send it", "yes", "y", "yeah", "yep", "ok", "okay",
-                           "confirm", "confirmed", "go", "go ahead", "do it", "sure",
-                           "send the mail", "send the email", "send mail", "send email"}
-            negative = {"no", "n", "cancel", "stop", "abort", "don't", "dont",
-                        "nope", "not now", "later", "discard"}
+            verdict = parse_confirmation(raw_ans)
 
             to_email = clarification["to_email"]
             subject = clarification.get("subject", "(no subject)")
             body = clarification.get("body", "")
             draft_id = clarification.get("draft_id")
 
-            if answer in affirmative or answer.startswith("send"):
+            if verdict == "yes":
                 result = self._send_confirmed_email(to_email, subject, body, draft_id)
-            elif answer in negative or answer.startswith(("no", "cancel", "don")):
+            elif verdict == "no":
                 result = {
                     "success": True,
                     "delivered": False,
@@ -581,6 +626,144 @@ class MasterPlanner:
             "subject": _first(self._SUBJECT_RE.search(command)),
             "body": _first(self._BODY_RE.search(command)),
         }
+
+    # ── Tier-2 approval gate (PRD §9) ────────────────────────────────────────
+    def require_tier2_approval(
+        self,
+        action_name: str,
+        target: str,
+        executor: str,
+        executor_kwargs: Dict[str, Any],
+        original_command: str,
+        task_type: str = "desktop_automation",
+        agent: str = "computer",
+        step_count: int = 1,
+        detail_lines: Optional[List[str]] = None,
+    ) -> Dict[str, Any]:
+        """
+        Blocks an irreversible action and asks the user first.
+
+        This is the generic form of the draft → confirm → send sequence that the
+        email path proved out. It deliberately takes no `user_approved`
+        parameter: approval for a Tier-2 action can only come from an explicit
+        confirming turn, never from a flag on the original request. `ui/index.html`
+        used to post `user_approved: true` on *every* command, which meant a flag
+        the user never set was answering a question they were never asked.
+
+        Component 2.2's ETA regression supplies the "Est. Ns" in the prompt,
+        which is the production role the PRD assigns it.
+        """
+        if executor not in self._tier2_executors:
+            return {
+                "success": False,
+                "error": "UNKNOWN_TIER2_EXECUTOR",
+                "message": f"Refusing to gate an unregistered action '{executor}'.",
+            }
+
+        perm = evaluate_action_permission(
+            action_name,
+            target,
+            task_type=task_type,
+            agent=agent,
+            step_count=step_count,
+            user_approved=False,
+        )
+        eta = perm.get("predicted_eta_seconds", 3.0)
+
+        self.pending_clarification = {
+            "type": "tier2_approval",
+            "step": "confirm_action",
+            "action_name": action_name,
+            "target": target,
+            "executor": executor,
+            "executor_kwargs": executor_kwargs,
+            "predicted_eta_seconds": eta,
+            "original_command": original_command,
+        }
+
+        log_action(action_name, target, 2, "awaiting_approval", "planner",
+                   {"predicted_eta_seconds": eta})
+
+        details = "\n".join(f"  {line}" for line in (detail_lines or []))
+        if details:
+            details = "\n" + details
+        return {
+            "success": True,
+            "pending_clarification": True,
+            "awaiting_tier2_approval": True,
+            "risk_tier": 2,
+            "action_name": action_name,
+            "target": target,
+            "predicted_eta_seconds": eta,
+            "message": (
+                f"⚠️ This is a Tier-2 action — it cannot be undone.\n"
+                f"  Action  : {action_name}\n"
+                f"  Target  : {target}{details}\n"
+                f"  Est.    : {int(eta)}s\n\n"
+                f"Approve? Reply 'yes' to proceed, or 'no' to cancel."
+            ),
+        }
+
+    def _resolve_tier2_approval(
+        self, clarification: Dict[str, Any], user_response: str
+    ) -> Dict[str, Any]:
+        """Runs, cancels, or re-asks a pending Tier-2 action."""
+        action_name = clarification.get("action_name", "unknown_action")
+        target = clarification.get("target", "")
+        verdict = parse_confirmation(user_response)
+
+        if verdict == "yes":
+            executor = self._tier2_executors.get(clarification.get("executor", ""))
+            if executor is None:
+                result = {
+                    "success": False,
+                    "error": "UNKNOWN_TIER2_EXECUTOR",
+                    "message": f"Cannot execute '{action_name}' — no registered handler.",
+                }
+            else:
+                result = executor(**clarification.get("executor_kwargs", {}))
+                result.setdefault("approved_by_user", True)
+                result.setdefault("risk_tier", 2)
+        elif verdict == "no":
+            log_action(action_name, target, 2, "cancelled_by_user", "planner")
+            result = {
+                "success": True,
+                "executed": False,
+                "cancelled": True,
+                "risk_tier": 2,
+                "action_name": action_name,
+                "message": f"Cancelled — {action_name} was not performed on {target}.",
+            }
+        else:
+            # Neither yes nor no. Re-arm and ask again; never infer approval.
+            self.pending_clarification = clarification
+            result = {
+                "success": False,
+                "pending_clarification": True,
+                "awaiting_tier2_approval": True,
+                "risk_tier": 2,
+                "message": (
+                    f"I didn't catch that. Reply 'yes' to approve {action_name} "
+                    f"on {target}, or 'no' to cancel."
+                ),
+            }
+
+        return {
+            "user_command": user_response,
+            "clarification_resumed": True,
+            "intent_classification": {
+                "predicted_intent": "tier2_confirmation",
+                "confidence": 1.0,
+                "llm_fallback": False,
+                "clo": "CLO04",
+            },
+            "rl_routing": {"strategy": "tier2_approval", "clo": "CLO05"},
+            "execution_result": result,
+        }
+
+    def _exec_terminate_process(self, process: str) -> Dict[str, Any]:
+        """Approved executor for terminate_process. Only reachable post-approval."""
+        return self.computer_agent.terminate_process(process, user_approved=True)
 
     def _handle_send_email(self, command: str, user_approved: bool) -> Dict[str, Any]:
         """Parses a 'send mail ...' command and runs the draft → send sequence.
@@ -1019,6 +1202,30 @@ class MasterPlanner:
             elif "open" in cmd_lower or "launch" in cmd_lower:
                 app_name = re.sub(r'^(open|launch)\s+', '', command, flags=re.IGNORECASE).strip()
                 return self.computer_agent.launch_application(app_name)
+            elif re.match(r'^(kill|terminate|force\s+close|end)\s+', cmd_lower):
+                # Killing a process loses unsaved work, so it is Tier 2 and must
+                # be approved in its own turn (PRD §9). Note "close" alone is not
+                # matched: it is far too easy to say by accident.
+                proc_name = re.sub(
+                    r'^(kill|terminate|force\s+close|end)\s+', "", command, flags=re.IGNORECASE
+                ).strip()
+                proc_name = re.sub(r'\s+(process|app|application|task)$', "", proc_name, flags=re.IGNORECASE).strip()
+                if not proc_name:
+                    return {
+                        "success": False,
+                        "error": "NO_PROCESS",
+                        "message": "Which process should I terminate?",
+                    }
+                return self.require_tier2_approval(
+                    action_name="terminate_process",
+                    target=proc_name,
+                    executor="terminate_process",
+                    executor_kwargs={"process": proc_name},
+                    original_command=command,
+                    task_type="desktop_automation",
+                    agent="computer",
+                    detail_lines=["Unsaved work in this process will be lost."],
+                )
             else:
                 return self.coder_agent.generate_and_execute_script(command)
 
