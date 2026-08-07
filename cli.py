@@ -27,7 +27,7 @@ from rich.prompt import Confirm, Prompt
 from rich.table import Table
 from rich import box
 
-from core.planner import MasterPlanner
+from core.planner import MasterPlanner, build_help_text, is_help_request
 from core.security import get_action_history
 
 console = Console()
@@ -63,27 +63,22 @@ def print_banner() -> None:
 
 
 def print_help() -> None:
-    """Prints command cheat sheet."""
-    table = Table(title="[bold gold1]M.O.N.D.A.Y. Command Reference[/]", box=box.ROUNDED, header_style="bold cyan")
-    table.add_column("Category", style="bold white", min_width=16)
-    table.add_column("Example Command", min_width=36)
-    table.add_column("Target Agent / Tool", style="dim")
+    """
+    Prints the capability menu.
 
-    table.add_row("Voice Engine", "speak M.O.N.D.A.Y. online", "VoiceAgent — Text-to-Speech synthesis")
-    table.add_row("Desktop OS", "organize C:\\path\\to\\folder", "ComputerAgent — Sort by extension")
-    table.add_row("Desktop OS", "screenshot", "ComputerAgent — Capture primary screen")
-    table.add_row("Desktop OS", "open vscode (or notepad, calc)", "ComputerAgent — Launch app")
-    table.add_row("Desktop OS", "health", "ComputerAgent — CPU/RAM/Disk stats")
-    table.add_row("Document RAG", "summarize sample.pdf (or path)", "DocumentAgent — Extractive summary")
-    table.add_row("Web Research", "search Next.js 16 features", "BrowserAgent — Live DDG web search")
-    table.add_row("Web Research", "research AI agent architectures", "BrowserAgent — Multi-source report")
-    table.add_row("Memory Matrix", "remember professor's email is priyanka@vitbhopal.ac.in", "MemoryAgent — Store fact")
-    table.add_row("Memory Matrix", "recall professor", "MemoryAgent — TF-IDF recall")
-    table.add_row("Proactive ML", "proactive", "Memory (2.3) + Habit (2.4) suggestions")
-    table.add_row("Communication", "draft email to professor@vit.ac.in", "CommsAgent — Prepare email draft")
-    table.add_row("Audit Logs", "history", "Security Engine — Audit action log")
-
-    console.print(table)
+    Renders core.planner.build_help_text() rather than keeping a second copy.
+    The CLI and the app used to maintain separate lists, which is exactly how a
+    help menu drifts out of step with what the code actually does.
+    """
+    console.print(
+        Panel(
+            build_help_text(),
+            title="[bold gold1]M.O.N.D.A.Y. Command Reference[/]",
+            border_style="gold1",
+            box=box.ROUNDED,
+            padding=(1, 2),
+        )
+    )
 
 
 def run_interactive_shell() -> None:
@@ -106,7 +101,7 @@ def run_interactive_shell() -> None:
                 console.print("\n[bold gold1]Shutting down M.O.N.D.A.Y. Goodbye![/]")
                 break
 
-            if cmd_lower in ["help", "?", "commands"]:
+            if is_help_request(user_input):
                 print_help()
                 continue
 

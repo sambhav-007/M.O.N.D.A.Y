@@ -66,6 +66,107 @@ _NEGATIVE = {
 }
 
 
+# ── /help ────────────────────────────────────────────────────────────────────
+# Matched exactly, never as a substring. The previous intercept tested
+# `"help" in cmd_lower`, so "help me summarize sample.pdf" printed the menu
+# instead of summarising the file.
+HELP_TRIGGERS = {
+    "/help", "/?", "help", "help me", "?", "commands", "list commands",
+    "capabilities", "features", "what can you do", "what can u do",
+    "what can you perform", "what are your features", "show help", "menu",
+}
+
+
+def is_help_request(command: str) -> bool:
+    """True only for a bare help request, not for a task that mentions help."""
+    raw = (command or "").lower().strip()
+    if raw in HELP_TRIGGERS:          # checked first so bare "?" and "/?" survive
+        return True
+    return raw.strip(".!?") in HELP_TRIGGERS
+
+
+def build_help_text() -> str:
+    """
+    The capability list shown by /help.
+
+    Deliberately describes only what the code actually does. Anything that needs
+    setup is labelled rather than omitted or overstated — a help menu that
+    promises features the system does not have is worse than no help menu.
+    """
+    from core.security import TIER_2_IMPLEMENTED
+
+    # Lines are kept under 72 characters so the whole menu fits inside the CLI's
+    # bordered panel on an 80-column terminal without re-wrapping, which would
+    # break the two-column alignment.
+    gated = ", ".join(sorted(TIER_2_IMPLEMENTED))
+    return f"""🤖 M.O.N.D.A.Y. — what I can do
+
+Type these in plain English. Every example below works as written.
+
+🖥️  APPS & SYSTEM
+   open notepad             launch an app (web fallback)
+   screenshot               capture the screen to data/staging
+   health                   live CPU / RAM / disk
+   battery                  charge level and power status
+   set volume to 40         also: mute, volume
+   my ip                    local network details
+   what time is it          also: what is the date
+   kill <process>           ⚠️ Tier 2 — I ask first
+
+📁  FILES & DOCUMENTS
+   organize <folder path>   sort a folder by file type
+   summarize report.pdf     summarise a PDF or text file
+
+🌐  WEB & KNOWLEDGE
+   search <anything>        live web search, with sources
+   research <topic>         multi-source synthesised report
+   what is the capital of France     looked up, not guessed
+
+🧠  MEMORY
+   remember my prof is Dr. Gupta     store a fact
+   recall prof              retrieve it later
+   proactive                suggestions from 2.3 + 2.4
+
+📧  COMMUNICATION
+   send mail to a@b.com subject "Hi" body "Hello"
+        ⚠️ Tier 2 — I draft it, show you, then ask. Reply 'send'
+        to deliver or 'cancel' to keep it as a draft.
+   schedule meeting tomorrow 3pm     add a calendar event
+   notify me the build finished      desktop notification
+
+📊  LIVE INFO
+   weather in Delhi · bitcoin price · where am i · iss location
+
+🗣️  VOICE
+   speak hello world        say something out loud
+   Spacebar (in the app)    push-to-talk
+
+🔍  DIAGNOSTICS
+   history                  the action audit log
+   /help                    this menu
+
+🔒  SAFETY — how approval works
+   Reversible actions (Tier 1) run straight away and are logged.
+   Irreversible ones (Tier 2) stop and ask first, with an ETA from
+   the regression model: "Est. 12s — approve?". Nothing irreversible
+   happens without your explicit yes.
+   Currently gated: {gated}.
+
+🎓  THE ML INSIDE (course components)
+   2.1 intent classifier    routes your command
+   2.2 ETA regression       supplies the "Est. 12s"
+   2.3 memory clustering    groups what you save
+   2.4 association rules    finds repeated habits
+   2.5 RL router            learns which route works
+   2.6 XAI                  explains 2.1 and 2.2
+
+⚙️  NEEDS SETUP (inactive right now)
+   Sending email needs SMTP_USER / SMTP_PASSWORD in .env
+   (for Gmail, an App Password).
+   Screen vision needs a Gemini API key.
+   Spoken replies use gTTS, which needs the network."""
+
+
 def parse_confirmation(answer: str) -> str:
     """
     Classifies a reply to a Tier-2 confirmation prompt.
@@ -309,6 +410,25 @@ class MasterPlanner:
         cmd = command.strip()
         if not cmd:
             return {"success": False, "error": "Command is empty."}
+
+        # /help is answerable at any time and changes nothing, so it is handled
+        # before the multi-turn check. A pending confirmation stays armed: asking
+        # what the options are must not silently drop a Tier-2 prompt, nor count
+        # as an answer to it.
+        if is_help_request(cmd):
+            result = {"success": True, "intent": "help_menu", "message": build_help_text()}
+            if self.pending_clarification is not None:
+                result["pending_clarification"] = True
+                result["message"] += "\n\n(You still have a pending confirmation — answer it above.)"
+            return {
+                "user_command": cmd,
+                "intent_classification": {
+                    "predicted_intent": "help_menu", "confidence": 1.0,
+                    "llm_fallback": False, "clo": "CLO04",
+                },
+                "rl_routing": {"strategy": "help_intercept", "clo": "CLO05"},
+                "execution_result": result,
+            }
 
         # Step 0: Auto-Memory Extraction & Context Pre-fetching
         self.memory_agent.auto_extract_and_remember(cmd)
@@ -893,23 +1013,52 @@ class MasterPlanner:
                 "message": f"❌ Security Refusal: Command '{command}' violates M.O.N.D.A.Y. Moral Firewall safety rules."
             }
 
-        # ── 00000. Capabilities & Features Menu Intercept ───────────────────────
-        if any(k in cmd_lower for k in ["what can you do", "what can u do", "what can you perform", "capabilities", "features", "help", "commands"]):
-            capabilities_menu = (
-                "🤖 M.O.N.D.A.Y. Omni-Capable Desktop Assistant Features:\n\n"
-                "1. 🚀 Smart Local-App Launcher: Opens native desktop binaries (WhatsApp, Spotify, Calculator, VS Code, Notepad) first before web fallbacks.\n"
-                "2. 📧 Communication & Email Wizard: Interactive Email Wizard & WhatsApp Messaging.\n"
-                "3. 👁️ Multimodal Screen Vision: Live Gemini 1.5 Flash Vision screen capture & visual analysis.\n"
-                "4. 🗣️ Speech & Voice Engine: Speech recognition & signature mondayvoice.mp3 speech output.\n"
-                "5. 📄 Document Intelligence: PDF parsing & document summarization.\n"
-                "6. 🧠 Long-Term Vector Memory: SQLite TF-IDF vector memory matrix for semantic recall across sessions.\n"
-                "7. 🤖 Proactive Background Autonomy: Monitors Downloads folder, extracts invoice totals, renames by date & sends notifications.\n"
-                "8. ⚡ Self-Evolution Plugin System: Synthesizes generalized Python scripts & compiles permanent domain plugins."
-            )
+        # ── 00000. /help — capability menu ──────────────────────────────────────
+        if is_help_request(command):
             return {
                 "success": True,
-                "intent": "capabilities_menu",
-                "message": capabilities_menu,
+                "intent": "help_menu",
+                "message": build_help_text(),
+            }
+
+        # ── 00000. Audit log & proactive suggestions ────────────────────────────
+        # cli.py handled these itself, so they worked in the terminal but fell
+        # through to "I'm not sure how to do that yet" in the app. /help offers
+        # them, so they have to work on every surface.
+        if cmd_lower.strip(".!?") in ("history", "log", "audit", "action history", "audit log"):
+            from core.security import get_action_history
+            entries = get_action_history(limit=10)
+            if not entries:
+                return {"success": True, "intent": "audit_log", "entries": [],
+                        "message": "The action audit log is empty."}
+            lines = [
+                f"  {e.get('timestamp','')[:19].replace('T',' ')}  "
+                f"T{e.get('tier','?')}  {e.get('action','')}  →  "
+                f"{str(e.get('target',''))[:40]}  [{e.get('status','')}]"
+                for e in entries
+            ]
+            return {
+                "success": True,
+                "intent": "audit_log",
+                "entries": entries,
+                "message": "🔍 Recent actions (newest last):\n" + "\n".join(lines),
+            }
+
+        if cmd_lower.strip(".!?") in ("proactive", "suggestions", "proactive suggestions"):
+            sug_mem = self.memory_agent.get_proactive_suggestions()
+            sug_hab = self.habit_agent.detect_habits_and_suggest()
+            mem = [s.get("prompt") for s in sug_mem.get("suggestions", []) if s.get("prompt")]
+            hab = [h.get("prompt") for h in sug_hab.get("suggestions", []) if h.get("prompt")]
+            parts = ["🧠 Memory topics (Component 2.3 — clustering):"]
+            parts += [f"  • {m}" for m in mem] or ["  (nothing yet — save a few memories first)"]
+            parts.append("\n⚡ Workflow habits (Component 2.4 — association mining):")
+            parts += [f"  • {h}" for h in hab] or ["  (no repeated patterns detected yet)"]
+            return {
+                "success": True,
+                "intent": "proactive_suggestions",
+                "memory_suggestions": mem,
+                "habit_suggestions": hab,
+                "message": "\n".join(parts),
             }
 
         # ── 00000. Live Zero-Auth Public REST API Intercepts ─────────────────────

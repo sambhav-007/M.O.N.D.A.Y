@@ -105,11 +105,19 @@ class TestFullSystemArchitecture:
             assert res.get("results") == []
 
     def test_master_planner_capabilities_menu(self):
-        """Verifies MasterPlanner handles capabilities request cleanly."""
+        """Verifies MasterPlanner answers a capabilities request with the help menu.
+
+        Asserts structure rather than marketing strings: this previously matched
+        "Omni-Capable", which belonged to a menu that advertised a voice clone
+        that was abandoned and a plugin system that does not exist.
+        """
         res = self.planner.process_command("what can you do")
-        assert res.get("execution_result", {}).get("success") is True
-        msg = res.get("execution_result", {}).get("message", "")
-        assert "Features" in msg or "Omni-Capable" in msg
+        exec_res = res.get("execution_result", {})
+        assert exec_res.get("success") is True
+        assert exec_res.get("intent") == "help_menu"
+        msg = exec_res.get("message", "")
+        for section in ("APPS & SYSTEM", "MEMORY", "SAFETY"):
+            assert section in msg
 
     def test_auto_memory_retention_and_fact_extraction(self):
         """Verifies automatic memory retention extracts facts and recalls them across commands."""

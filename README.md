@@ -199,6 +199,28 @@ Then open **http://localhost:8000/docs** for the interactive Swagger UI.
 
 ---
 
+## What can it do? — `/help`
+
+Type **`/help`** in the desktop app, the CLI, or `POST /agent/execute` for the
+full capability menu. It lists every command category with literal working
+examples, marks which actions are Tier-2 gated, and states plainly what needs
+setup and is therefore inactive.
+
+```bash
+python cli.py          # then type: /help
+```
+
+Also accepts `help`, `?`, `commands`, `capabilities`, and `what can you do`. The
+match is exact, so `help me summarize report.pdf` summarises the file rather than
+printing the menu.
+
+One source of truth: `core.planner.build_help_text()` backs the app, the CLI and
+the API, so the menu cannot drift between surfaces. `tests/test_help_command.py`
+asserts that every offline example in it actually runs, and that it does not
+advertise features the system lacks.
+
+---
+
 ## API Endpoints
 
 ### ML component endpoints (CLO evidence)
