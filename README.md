@@ -33,7 +33,7 @@ This repository contains the complete Python ML backend, the multi-agent runtime
 | 2.3 | [`memory_clustering.py`](ml/memory_clustering.py) | **CLO04** | K-Means / DBSCAN / Hierarchical + PCA | Organises Memory Agent, enables proactive suggestions |
 | 2.4 | [`association_rules.py`](ml/association_rules.py) | **CLO05** | Apriori / FP-Growth | Detects repetitive workflows, suggests automation |
 | 2.5 | [`rl_router.py`](ml/rl_router.py) | **CLO05** | ε-greedy Multi-Armed Bandit | Learns optimal agent routing from task outcomes |
-| 2.6 | [`xai_explainer.py`](ml/xai_explainer.py) | **CLO02/CLO06** (Bonus) | SHAP | Explains classifier and regressor predictions |
+| 2.6 | [`xai_explainer.py`](ml/xai_explainer.py) | **CLO02/CLO06** (Bonus) | Exact Shapley values (closed form) | Explains classifier and regressor predictions |
 
 ---
 
@@ -65,7 +65,7 @@ M.O.N.D.A.Y/
 │   ├── memory_clustering.py      # CLO04 — 3-method clustering + PCA
 │   ├── association_rules.py      # CLO05 — Apriori + FP-Growth comparison
 │   ├── rl_router.py              # CLO05 — ε-greedy bandit + comparative report
-│   ├── xai_explainer.py          # CLO02/06 Bonus — SHAP explanations
+│   ├── xai_explainer.py          # CLO02/06 Bonus — exact Shapley attributions
 │   └── voice_cloner.py           # Voice profile training & synthesis
 ├── datagen/                      # Synthetic dataset generators (single source of truth)
 │   ├── commands.py               # 2.1 labelled commands (shared vocab + label noise)
@@ -105,9 +105,16 @@ M.O.N.D.A.Y. features a **Python + WebGL Native Desktop Application Shell (`app.
 - **Dual Presentation Modes**:
   - **Presence Mode** (Default): Fullscreen 3D WebGL Living Entity with zero app chrome. Entity states (`idle`, `listening`, `thinking`, `speaking`) are communicated 100% visually through an audio-reactive particle field and GLSL Fresnel rim lighting shader. Push-to-talk via Spacebar.
   - **Console Mode**: Full developer diagnostic console with real-time multi-agent execution logs and command input. Toggleable via `Ctrl+``.
-- **Multi-Turn Clarification Engine (`pending_clarification`)**: Interactive task pausing, candidate disambiguation, SQLite memory caching, and task resumption.
-- **Live Google People API & Outlook COM Contacts**: Native OAuth2 Google Contacts sync (`data/google_token.json`) and Windows Outlook MAPI contacts resolution with zero hardcoded/mock fallback data.
+- **Multi-Turn Clarification Engine (`pending_clarification`)**: Interactive task pausing, candidate disambiguation, SQLite memory caching, and task resumption. Also carries the Tier-2 approval turn — see below.
+- **Tier-2 Approval Gate (PRD §9)**: Irreversible actions stop and ask before executing, quoting the ETA predicted by Component 2.2 (*"Est. 12s — approve?"*). Approval only ever comes from an explicit confirming reply; there is no flag a client can set to skip it.
 - **WebGL 3D Engine & LOD Performance Control**: 8,000 particle fields, GLSL Fresnel rim-light core, and torus energy ring. Toggle between High (8,000 p), Balanced (4,000 p), and Battery Saver (1,800 p) with real-time FPS monitoring.
+
+> **Contacts integration is code-complete but inactive.** `agents/comms_agent.py`
+> contains working code paths for Google People API (OAuth2) and Outlook MAPI via
+> `win32com`, but `googleapiclient`, `google_auth_oauthlib` and `pywin32` are
+> neither installed nor declared in `requirements.txt`. Contact resolution
+> therefore falls back to local/SQLite lookup. Do not present this as a working
+> feature — see [Status & Known Limitations](#status--known-limitations).
 
 ---
 
@@ -204,7 +211,7 @@ Then open **http://localhost:8000/docs** for the interactive Swagger UI.
 | `GET` | `/ml/workflows/rules` | 2.4 | Top workflow association rules (CLO05) |
 | `GET` | `/ml/router/policy` | 2.5 | RL bandit routing policy (CLO05) |
 | `GET` | `/ml/clo-map` | — | Academic CLO mapping reference |
-| `GET` | `/xai/explain` | 2.6 | SHAP explanation (bonus) |
+| `GET` | `/xai/explain` | 2.6 | Shapley attribution for a command (bonus) |
 
 ### Agent & system endpoints
 
@@ -302,9 +309,61 @@ All libraries are within the course-approved ecosystem:
 | `pandas` | ≥2.1 | Data manipulation and feature engineering |
 | `numpy` | ≥1.26 | Numerical computation |
 | `mlxtend` | ≥0.23 | Apriori and FP-Growth |
-| `shap` | ≥0.44 | XAI explanations (bonus) |
 | `fastapi` | ≥0.111 | Demo REST API server |
+| `matplotlib` | ≥3.8 | CLO evidence figures |
 | `rich` | ≥13.7 | Beautiful console output |
+
+Component 2.6 deliberately has **no** XAI dependency: it computes exact Shapley
+values in closed form. See [Status & Known Limitations](#status--known-limitations).
+
+---
+
+## Status & Known Limitations
+
+Written down deliberately, so nothing in this README claims more than the code does.
+
+### Working and verified
+
+| Area | Status |
+|------|--------|
+| Components 2.1–2.6 | All run; evidence in `reports/` and `reports/figures/` |
+| FastAPI engine | 24 endpoints, verified against the live OpenAPI schema |
+| Tier-2 approval gate | Enforced for `send_email` and `terminate_process` |
+| Audit log | Lossless within one process; records the full Tier-2 lifecycle |
+| Test suite | 169 tests passing |
+
+### Implemented but inactive
+
+- **Google People API / Outlook MAPI contacts** — code exists in
+  `agents/comms_agent.py`; `googleapiclient`, `google_auth_oauthlib` and
+  `pywin32` are not installed or declared. Falls back to local/SQLite lookup.
+- **Voice cloning of the reference sample** — evaluated with Coqui XTTS and
+  rejected: Windows Smart App Control blocks the FFmpeg binary XTTS needs to
+  decode audio, and disabling it is a one-way system security change. Speech uses
+  gTTS / browser `speechSynthesis` instead.
+
+### Declared in policy but not implemented
+
+`core/security.py` classifies `delete_file`, `overwrite_file`, `execute_shell`,
+`submit_form`, `modify_system_settings` and `kill_process` as Tier 2. **None of
+these have an implementation anywhere in the codebase.** The list is a
+default-deny policy so that a future implementation is gated from its first
+commit — it is not a description of existing capability. `TIER_2_IMPLEMENTED`
+names the two that are real.
+
+### Constraints on this machine
+
+- **`shap` cannot be installed.** It hard-imports `numba`; numba 0.66 (the only
+  build supporting the `numpy>=2.3.5` that `mlxtend`/2.4 needs) is blocked by
+  Smart App Control, and the numba that does load pins `numpy<2.2` and breaks
+  `mlxtend`. Component 2.6 computes Shapley values directly instead, and the
+  result is verified bit-for-bit identical to `shap.LinearExplainer` —
+  see [`reports/2_6_shap_equivalence.md`](reports/2_6_shap_equivalence.md).
+- **Some tests depend on live third-party APIs** (DuckDuckGo, open-notify,
+  CoinGecko) and fail when those rate-limit or go down. A red suite is not
+  automatically a code regression.
+- **No LLM is configured.** `core/planner.py` has a Gemini code path gated on an
+  API key; without one there is no conversational memory across turns.
 
 ---
 

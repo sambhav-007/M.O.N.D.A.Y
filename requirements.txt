@@ -16,7 +16,15 @@ numpy>=1.26.0
 mlxtend>=0.23.0
 
 # ── Explainable AI (XAI Bonus — CLO02/CLO06) ─────────────────────────────────
-shap>=0.44.0
+# No dependency by design. Component 2.6 computes exact Shapley values in closed
+# form (ml/xai_explainer.py) because both explained models are linear.
+#
+# Do NOT add `shap` back. It hard-imports numba, and numba 0.66 — the only build
+# supporting the numpy>=2.3.5 that mlxtend (component 2.4) requires — is blocked
+# by Windows Smart App Control on the build machine. The numba that does load
+# pins numpy<2.2 and breaks mlxtend. Adding shap here makes
+# `pip install -r requirements.txt` either fail or silently break component 2.4.
+# Equivalence to shap.LinearExplainer is verified in reports/2_6_shap_equivalence.md.
 
 # ── Visualisation & Console UI ───────────────────────────────────────────────
 matplotlib>=3.8.0

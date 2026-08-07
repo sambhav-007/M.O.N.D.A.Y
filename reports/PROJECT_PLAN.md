@@ -58,7 +58,20 @@ Each component ships three things:
 
 ## Open items for the team
 
-- [ ] Install Python 3.11+ (not currently on the build machine).
-- [ ] Confirm `MONDAY_PRD.md` lives in the repo (referenced but not yet present).
-- [ ] Decide 2.3 embeddings: TF-IDF (safe) vs sentence-transformers (stretch).
-- [ ] Gather real docs/notes for 2.3 into `data/raw/`.
+- [x] Install Python 3.11+ — done. 3.12.10 via the Python Install Manager MSIX;
+      the classic MSI is broken on this machine (`0x80070003`). Use `py -3.12`.
+- [x] Confirm `MONDAY_PRD.md` lives in the repo — present.
+- [x] Decide 2.3 embeddings — TF-IDF. sentence-transformers was not pursued.
+- [x] Gather real docs/notes for 2.3 — done; 2.3 ships with evidence.
+
+## Scope note (added 2026-08-07)
+
+The "scope decision" above — five ML components plus a thin harness, with the
+agent product as optional stretch — was overtaken by events. The full multi-agent
+product was built as well. The graded deliverable is unchanged, but the repo now
+contains considerably more than this plan describes; `README.md` is the accurate
+description of what exists, and its *Status & Known Limitations* section is the
+authoritative list of what does not.
+
+`common/` is **not** orphaned, contrary to an earlier note: it is imported by
+`datagen/generate.py` and by `notebooks/2_1_intent_classifier.ipynb`.

@@ -1,6 +1,36 @@
 # M.O.N.D.A.Y — Session Handoff
 
-_Last updated: 2026-08-06. Machine: Windows 11 Home, user `sambh`._
+_Last updated: 2026-08-07. Machine: Windows 11 Home, user `sambh`._
+
+> **Read this first.** `README.md` § *Status & Known Limitations* is the
+> authoritative statement of what works and what does not. This file is a running
+> log and parts of it age badly — several items below are struck through because
+> they turned out to be stale or simply wrong.
+
+## 0. Changes 2026-08-07
+
+| Area | Change |
+|------|--------|
+| Secrets | Pre-commit guard in `.githooks/` blocks staging `.env` or a real secret value. Enable per clone: `git config core.hooksPath .githooks`. **Verified: no credential was ever committed** — `.env` is untracked and the password appears in no blob on any ref. |
+| Ignores | `logs/`, `*.log`, `.env.*` (keeping `.env.example`), and `data/calendar.json` (untracked). |
+| **2.6 XAI** | Rewritten to compute **exact Shapley values in closed form** — `shap` is uninstallable here (§8). Verified bit-for-bit identical to `shap.LinearExplainer`. Emits 2 CSVs + 3 figures. Fixed a fabricated `explain_command_intent()` that was live on an API endpoint. |
+| **Tier-2 gate** | Now genuinely enforced (PRD §9). See the resolved note in §2c. |
+| Docs | README / PRD / MONDAY_ACADEMIC / PROJECT_PLAN reconciled against the code. |
+| Tests | 169 passing (28 new for the Tier-2 gate). |
+
+## 8. Environment constraints discovered 2026-08-07
+
+- **`shap` cannot be installed.** It hard-imports `numba`. numba 0.66 (the only
+  build supporting `numpy>=2.3.5`, which `mlxtend`/2.4 requires) is blocked by
+  Smart App Control; numba 0.61.2 loads but pins `numpy<2.2` and breaks `mlxtend`.
+  No version satisfies both. Do not retry — see `reports/2_6_shap_equivalence.md`.
+- **Known-good env:** numpy 2.5.1, pandas 2.3.3, sklearn 1.9.0, scipy 1.18.0,
+  mlxtend 0.25.0, starlette 1.3.1. Check with `py -3.12 -m pip check`.
+- **SAC blocks lift over time.** pandas 3.0.5 was blocked on 2026-08-06 and
+  imported fine on 2026-08-07. Reputation-based blocks are not permanent.
+- **`app.routes` is unreliable for introspection** in FastAPI 0.140.13 — routes
+  added via `include_router` do not appear there but *do* serve. Use
+  `app.openapi()['paths']`, or the endpoint will look missing when it is not.
 
 This captures the state of work so anyone (teammate or future session) can pick up
 without re-deriving the hard-won environment knowledge.
@@ -15,7 +45,7 @@ This machine has **no working system Python installer** — the classic MSI fail
 | What | Where | Notes |
 |------|-------|-------|
 | **Real Python (use this)** | `C:\Users\sambh\AppData\Local\Python\pythoncore-3.12-64\python.exe` | 3.12.10, **has tkinter**. Installed via the **Python Install Manager** MSIX (`py`, `python`, `pymanager` on PATH). Reachable as `py -3.12`. |
-| App/ML deps | (in the real Python above) | numpy/pandas/scikit-learn/rich/mlxtend/fastapi/uvicorn/pydantic/psutil/pypdf/pillow/pygame/**pywebview 6.2.1**/**sounddevice**/**SpeechRecognition**. `shap` intentionally NOT installed (heavy, not needed to run). |
+| App/ML deps | (in the real Python above) | numpy/pandas/scikit-learn/rich/mlxtend/fastapi/uvicorn/pydantic/psutil/pypdf/pillow/pygame/**pywebview 6.2.1**/**sounddevice**/**SpeechRecognition**. `shap` **cannot** be installed here — see §8. |
 | Voice-clone venv (parked) | `C:\Users\sambh\monday-tts\` | Isolated venv with torch 2.13+cpu, coqui-tts 0.27.5, torchaudio. **Blocked — see §5.** |
 | Old embeddable (obsolete) | `C:\Users\sambh\Python312emb\` | Lacks tkinter. Ignore/​delete. |
 
@@ -109,12 +139,16 @@ Accepts `subject:` and `subject "…"`; unquoted values still need `:` or `=`.
 Without SMTP credentials it composes and saves the draft, then says plainly that
 sending is not configured — it does not fake a delivery.
 
-> ⚠️ **Open safety issue:** `ui/index.html:584` sends `user_approved: true` for every
-> command. Email now ignores that flag, but every *other* Tier-2 action
-> (`delete_file`, `overwrite_file`, …) still auto-approves from the UI, so the PRD §9
-> risk-tier model is not actually enforced there. The fix is to route all Tier-2 gates
-> through the same confirm-then-act pattern; flipping the flag alone would gate those
-> actions with no way to approve them.
+> ✅ **Resolved 2026-08-07** (was: `ui/index.html:584` sends `user_approved: true`
+> for every command, so every Tier-2 action except email auto-approved).
+> `MasterPlanner.require_tier2_approval()` now gates all Tier-2 actions through the
+> same confirm-then-act pattern, the UI no longer sends the flag, and the method
+> takes no `user_approved` parameter so the bypass cannot be reintroduced.
+> Covered by `tests/test_tier2_gate.py`.
+>
+> Worth knowing: the Tier-2 actions the original note listed (`delete_file`,
+> `overwrite_file`, …) **do not exist** in the codebase. The genuinely reachable
+> Tier-2 surface was `send_email` and `terminate_process`. See PRD §3.
 
 ---
 
@@ -132,12 +166,26 @@ sending is not configured — it does not fake a delivery.
 
 ---
 
-## 4. ⚠️ Git state — merge RESOLVED, still uncommitted
+## 4. Git state — RESOLVED AND COMMITTED
 
-The merge (`bc920d7` ← `12df00c`) was **resolved on 2026-08-03**. All three conflicts
-are staged and the tree is conflict-free, but the merge commit has **not** been made.
+> **Updated 2026-08-07.** This section previously said the merge was unstaged and
+> uncommitted. That is no longer true: the merge was committed, and work has
+> continued on top of it. `git log` is the authority, not this file.
 
-How each conflict was resolved:
+Recent history:
+
+```
+c17d4ed feat(security): enforce the Tier-2 approval gate (PRD §9)
+fbce7e7 feat(2.6): real XAI layer via exact closed-form Shapley values
+16157ee chore(security): add pre-commit secret guard, ignore runtime logs and calendar
+23aa4e9 feat(email): confirm-then-send over SMTP; fix parsing, routing and startup
+```
+
+Still untracked and undecided: `voice/` and `ui/_monday_ref_22k.wav`. The `.wav`
+is a resampled copy of the voice reference made for the abandoned XTTS work and
+is probably deletable.
+
+How each merge conflict was originally resolved:
 - `agents/comms_agent.py` — kept the honest "not sent" branch; folded in the other
   side's credentials check. Their branch built a Gmail service object and returned
   `"✓ Email transmission initiated"` **without ever calling `.send()`**.
@@ -146,7 +194,7 @@ How each conflict was resolved:
 - `models/monday_voice_profile.joblib` — regenerated locally. Neither side was usable
   (ours was stale `v2.0`; theirs hardcoded `C:\Users\Siddhant\...`).
 
-To finish: `git commit --no-edit`.
+(That commit has since been made — see above.)
 
 Cleaned up:
 - 13 fabricated `data/plugins/plugin_*.py` deleted; the 3 real ones kept
@@ -185,8 +233,10 @@ the current browser TTS) — just route UI speech through `POST /agent/voice/spe
 
 - ~~**Intent classifier ~99.8% accuracy**~~ — FIXED 2026-08-03. Now sourced from
   `datagen/`; LR/SVM 0.929, RF 0.920, KNN 0.919, DT 0.761 macro-F1.
-- **`common/`** is still orphaned — nothing imports it. `datagen/` is now the single
-  data source for 2.1. Decide whether to adopt or remove `common/`.
+- ~~**`common/`** is still orphaned~~ — **WRONG, corrected 2026-08-07.** It is
+  imported by `datagen/generate.py:16` (`common.io.save_csv`) and by
+  `notebooks/2_1_intent_classifier.ipynb` (`common.preprocessing`,
+  `common.metrics`). Do not delete it.
 - ~~**Questions misclassify**~~ — FIXED 2026-08-03. Wikipedia first, live web search
   as fallback. See `MasterPlanner._is_knowledge_question`.
 - **DuckDuckGo rate-limits this machine** under heavy use — HTTP 202/403 or a refused
@@ -195,20 +245,24 @@ the current browser TTS) — just route UI speech through `POST /agent/voice/spe
   **verified against a live 200 response on 2026-08-06** once the block lifted; that
   check also exposed that lite wraps every result in a `//duckduckgo.com/l/?uddg=`
   redirect, now unwrapped by `BrowserAgent._unwrap_ddg_redirect`.
-- **Test suite: 140 passed, 1 failed** (2026-08-06). The failure is
-  `test_agent_public_api_fetch_iss_location` — `api.open-notify.org` is unreachable
-  from this network (a direct 15s urllib call with a browser UA also times out, while
-  CoinGecko returns 200). Not a code defect. `pytest` is now in `requirements.txt`.
+- **Test suite: 169 passed, 0 failed** (2026-08-07). The previously-failing
+  `test_agent_public_api_fetch_iss_location` now passes — that network recovered on
+  its own; nothing was changed to fix it. It will fail again whenever
+  `api.open-notify.org` is unreachable, which is the point of the marker item below.
 - **Several tests depend on live third-party APIs** (DuckDuckGo, open-notify,
   CoinGecko) and so fail whenever those are down or rate-limiting. Worth marking them
   `@pytest.mark.network` so a red suite means a real regression.
-- **`data/calendar.json` is tracked but is runtime churn** — the suite appends a
-  "Project Review" event on every run. It will conflict on the next merge exactly like
-  `data/action_history.json` did; gitignoring it is the same fix.
+- ~~**`data/calendar.json` is tracked but is runtime churn**~~ — FIXED 2026-08-07.
+  Untracked and gitignored; both call sites in `agents/comms_agent.py` create it on
+  demand. A fresh clone reports an empty calendar until an event is scheduled.
 - **No conversational memory** (no LLM) — "show those results you just found" can't
   work. Genuine multi-turn needs an LLM planner (user-provided API key).
-- **README** overstates structure/endpoints vs reality (single-file modules; `monday-site/`
-  referenced but not present; API table wrong). Reconcile.
+- ~~**README** overstates structure/endpoints vs reality~~ — RECONCILED 2026-08-07.
+  Two parts of this item were themselves wrong: the README never referenced
+  `monday-site/` (only this file did), and the API tables were already accurate —
+  all 24 endpoints verified against the live OpenAPI schema. What *was* overstated
+  (Google People API / Outlook contacts) is now marked inactive, and the README has
+  a **Status & Known Limitations** section that is the authoritative list.
 - Voice "listening" and "speaking" need a real mic + audio device to verify end-to-end.
 
 ---

@@ -36,6 +36,25 @@ Rather than a single global confirm/no-confirm switch, every action any agent ca
 | **Tier 1 — Reversible / Low-Risk** | Open app, read file, take screenshot, search web, move file to recoverable/staging location, draft message | Executes **autonomously**, no prompt. Always logged. |
 | **Tier 2 — Irreversible / High-Risk** | Delete file, overwrite document, send email/message, submit form, payment/checkout | **Blocks and requests explicit user approval** with estimated ETA before executing. No exceptions. |
 
+### Implementation status
+
+Enforced by `MasterPlanner.require_tier2_approval()` (`core/planner.py`). A gated
+action is parked, the user is asked with the ETA predicted by Component 2.2, and
+it runs only after an explicitly affirmative reply in a following turn. An
+ambiguous answer re-asks rather than guessing.
+
+Approval **cannot** be granted by a flag on the original request. The method
+takes no `user_approved` parameter at all, so the bypass cannot be reintroduced
+by a caller passing one through. `ExecuteRequest.user_approved` survives for
+backwards compatibility and is ignored by Tier-2 actions.
+
+> **Scope of enforcement.** Two Tier-2 actions actually exist and are gated:
+> `send_email` and `terminate_process`. The other names in
+> `core/security.py::TIER_2_ACTIONS` — `delete_file`, `overwrite_file`,
+> `execute_shell`, `submit_form`, `modify_system_settings`, `kill_process` — have
+> **no implementation**. They are listed so that any future implementation is
+> gated from its first commit, not as a claim of existing capability.
+
 ---
 
 ## 4. System Architecture & Agents
@@ -90,9 +109,12 @@ User Input / CLI / API
 - **Multi-Turn Clarification Engine (`pending_clarification`)**:
   - Pauses task execution on ambiguous inputs or unresolved contacts.
   - Prompts the user with numbered candidate options, caches confirmed choices to persistent SQLite memory (`memories.db`), and resumes the paused task seamlessly.
-- **Multi-Source Contact Resolution Engine**:
-  - Live Google People API (OAuth2 `InstalledAppFlow` storing `data/google_token.json`).
-  - Microsoft Outlook MAPI COM store (`win32com.client.Dispatch("Outlook.Application")`).
-  - Local Windows Contacts (`%USERPROFILE%\Contacts`).
-  - SQLite persistent memory matrix with zero hardcoded/mock fallback data.
+- **Multi-Source Contact Resolution Engine** — ⚠️ **partially active**. The code
+  paths exist in `agents/comms_agent.py`, but the first two require dependencies
+  that are neither installed nor declared in `requirements.txt`, so at runtime
+  resolution falls through to the local sources:
+  - Live Google People API (OAuth2 `InstalledAppFlow` storing `data/google_token.json`) — **inactive**, needs `googleapiclient` + `google_auth_oauthlib`.
+  - Microsoft Outlook MAPI COM store (`win32com.client.Dispatch("Outlook.Application")`) — **inactive**, needs `pywin32`.
+  - Local Windows Contacts (`%USERPROFILE%\Contacts`) — active.
+  - SQLite persistent memory matrix — active.
 - **Level of Detail (LOD) Quality Selector**: Dynamic runtime particle density switching (High: 8,000 p, Balanced: 4,000 p, Battery Saver: 1,800 p) with integrated FPS counter to ensure smooth performance across all GPU environments.
