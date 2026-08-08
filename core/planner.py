@@ -131,13 +131,12 @@ Type these in plain English. Every example below works as written.
    send mail to a@b.com subject "Hi" body "Hello"
         ⚠️ Tier 2 — I draft it, show you, then ask. Reply 'send'
         to deliver or 'cancel' to keep it as a draft.
-   message 9876543210 saying hi      opens WhatsApp with it typed;
-                                     you press Enter. 10 digits is
-                                     fine — I'll assume +91
+   message 9876543210 saying hi      ⚠️ Tier 2 — I show you the
+                                     message and ask; say 'yes' and
+                                     I send it. 10 digits is fine,
+                                     I'll assume +91
    papa's number is 9876543210       saves a contact, then just say
                                      "message papa saying hi"
-   send whatsapp to papa saying hi   ⚠️ Tier 2 — I ask, then press
-                                     Enter for you
    schedule meeting tomorrow 3pm     add a calendar event
    notify me the build finished      desktop notification
 
@@ -807,6 +806,7 @@ class MasterPlanner:
         agent: str = "computer",
         step_count: int = 1,
         detail_lines: Optional[List[str]] = None,
+        question: str = "Approve? Reply 'yes' to proceed, or 'no' to cancel.",
     ) -> Dict[str, Any]:
         """
         Blocks an irreversible action and asks the user first.
@@ -868,7 +868,7 @@ class MasterPlanner:
                 f"  Action  : {action_name}\n"
                 f"  Target  : {target}{details}\n"
                 f"  Est.    : {int(eta)}s\n\n"
-                f"Approve? Reply 'yes' to proceed, or 'no' to cancel."
+                f"{question}"
             ),
         }
 
@@ -946,7 +946,6 @@ class MasterPlanner:
         """
         name = clarification.get("name", "that contact")
         pending_text = clarification.get("pending_text", "")
-        wants_send = bool(clarification.get("wants_send"))
 
         # Accept a bare number, or a full "papa's number is +91..." restatement.
         phone = self.comms_agent.normalise_phone(reply)
@@ -990,27 +989,14 @@ class MasterPlanner:
                 "message": f"✓ Saved {name}'s number as +{phone}.",
             })
 
-        if wants_send:
-            result = self.require_tier2_approval(
-                action_name="send_whatsapp",
-                target=f"+{phone}",
-                executor="send_whatsapp",
-                executor_kwargs={"phone": phone, "text": pending_text},
-                original_command=clarification.get("original_command", ""),
-                task_type="communication",
-                agent="comms",
-                detail_lines=[
-                    f'Message : "{pending_text}"',
-                    f"Number  : +{phone} (just saved for {name})",
-                    "I'll open the chat and press Enter. Keep that window focused.",
-                ],
-            )
-            result["message"] = f"✓ Saved {name}'s number as +{phone}.\n\n" + result["message"]
-            return self._wrap_contact_result(reply, result)
-
-        opened = self.comms_agent.open_whatsapp_chat(phone, pending_text)
-        opened["message"] = f"✓ Saved {name}'s number as +{phone}.\n" + opened.get("message", "")
-        return self._wrap_contact_result(reply, opened)
+        result = self._ask_to_send_whatsapp(
+            phone,
+            pending_text,
+            clarification.get("original_command", ""),
+            source=f"just saved for {name}",
+        )
+        result["message"] = f"✓ Saved {name}'s number as +{phone}.\n\n" + result["message"]
+        return self._wrap_contact_result(reply, result)
 
     def _wrap_contact_result(self, reply: str, result: Dict[str, Any]) -> Dict[str, Any]:
         return {
@@ -1302,7 +1288,6 @@ class MasterPlanner:
                 "step": "get_contact_number",
                 "name": target,
                 "pending_text": text,
-                "wants_send": bool(re.match(r'^\s*(send|shoot|fire)\b', cmd_lower)),
                 "original_command": command,
             }
             return {
@@ -1318,25 +1303,38 @@ class MasterPlanner:
             }
         phone = resolved["phone"]
 
-        # "send ..." asks for delivery; anything else just prepares it.
-        wants_send = bool(re.match(r'^\s*(send|shoot|fire)\b', cmd_lower))
-        if wants_send and text:
-            return self.require_tier2_approval(
-                action_name="send_whatsapp",
-                target=f"+{phone}",
-                executor="send_whatsapp",
-                executor_kwargs={"phone": phone, "text": text},
-                original_command=command,
-                task_type="communication",
-                agent="comms",
-                detail_lines=[
-                    f'Message : "{text}"',
-                    f"Number  : +{phone} ({resolved['source']})",
-                    "I'll open the chat and press Enter. Keep that window focused.",
-                ],
+        # Any message with text goes through the approval gate and is then sent
+        # for real. Leaving the user to press Enter themselves was needless: they
+        # had already said what to send and to whom, so the only thing worth
+        # asking is whether to go ahead — which is exactly what Tier 2 is for.
+        if text:
+            return self._ask_to_send_whatsapp(
+                phone, text, command, source=resolved.get("source", "")
             )
 
-        return self.comms_agent.open_whatsapp_chat(phone, text)
+        # No message text — nothing to send, so just open the chat (Tier 1).
+        return self.comms_agent.open_whatsapp_chat(phone, "")
+
+    def _ask_to_send_whatsapp(
+        self, phone: str, text: str, command: str, source: str = ""
+    ) -> Dict[str, Any]:
+        """Puts a WhatsApp message through the Tier-2 gate before sending it."""
+        # Only worth showing when the number came from somewhere the user might
+        # want to double-check. "given directly" is just an echo of what they typed.
+        origin = [f"Number  : +{phone} — {source}"] if source and source != "given directly" else []
+        return self.require_tier2_approval(
+            action_name="send_whatsapp",
+            target=f"+{phone}",
+            executor="send_whatsapp",
+            executor_kwargs={"phone": phone, "text": text},
+            original_command=command,
+            task_type="communication",
+            agent="comms",
+            detail_lines=[f'Message : "{text}"'] + origin + [
+                "I'll open the chat and send it — keep that window focused.",
+            ],
+            question="Send it? Reply 'yes' to send now, or 'no' to cancel.",
+        )
 
     def _handle_send_email(self, command: str, user_approved: bool) -> Dict[str, Any]:
         """Parses a 'send mail ...' command and runs the draft → send sequence.

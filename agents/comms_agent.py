@@ -708,15 +708,18 @@ class CommunicationAgent:
         try:
             import pyautogui
         except ImportError:
-            return {
-                "success": False,
-                "error": "PYAUTOGUI_MISSING",
-                "message": (
-                    "Auto-send needs the optional 'pyautogui' package "
-                    "(pip install pyautogui). Without it I can open the chat with "
-                    "your message typed, but you'll press Enter yourself."
-                ),
-            }
+            # Approval was already given, so do as much as is possible rather
+            # than dead-ending: open the chat with the message typed and say
+            # exactly which part could not be done.
+            opened = self.open_whatsapp_chat(number, text)
+            opened["error"] = "PYAUTOGUI_MISSING"
+            opened["message_sent"] = False
+            opened["message"] = (
+                f"✓ Opened the chat for +{number} with your message typed.\n"
+                f"  I couldn't press Enter for you — that needs the optional "
+                f"'pyautogui' package (pip install pyautogui). Press Enter to send."
+            )
+            return opened
 
         opened = self.open_whatsapp_chat(number, text)
         if not opened.get("success"):

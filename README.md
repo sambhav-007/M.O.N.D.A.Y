@@ -364,18 +364,25 @@ So there are two behaviours:
 
 | Command | Tier | What happens |
 |---------|------|--------------|
-| `message +919876543210 saying hi` | 1 | Opens the chat with `hi` typed. **You press Enter.** Nothing leaves the machine. |
-| `send whatsapp to bhumi saying hi` | 2 | Asks for approval, then opens the chat *and presses Enter for you*. |
+| `message 9876543210 saying hi` | **2** | Shows you the message and asks *"Send it?"*. On `yes` it opens the chat **and sends it**. |
+| `whatsapp +919876543210` | 1 | No message text, so it just opens the chat. |
 
-Auto-send simulates a keypress, so it goes to whatever window has focus — if
-WhatsApp is slow to load or focus shifts, the Enter lands elsewhere. It also
+Every message with text goes through the approval gate and is then sent for
+real — you have already said what to send and to whom, so the only thing worth
+asking is whether to go ahead.
+
+Sending simulates the Enter keypress, so it goes to whatever window has focus —
+if WhatsApp is slow to load or focus shifts, the Enter lands elsewhere. It also
 cannot read WhatsApp back, so it reports that **Enter was pressed**, never that
-the message was delivered. It needs the optional `pyautogui`; without it, the
-chat still opens pre-filled and says so.
+the message was delivered. It needs the optional `pyautogui`; without it the
+chat still opens pre-filled and it says exactly which part it couldn't do.
 
-Numbers come from the command directly, or from memory —
-`remember bhumi's number is +919876543210`. Contact lookup carries emails only,
-so a bare name cannot otherwise resolve to a number.
+**Numbers** default to `+91` (set `DEFAULT_COUNTRY_CODE` in `.env` to change),
+so a bare 10-digit mobile works. Lengths are validated, not just bounded — a
+9-digit number is rejected rather than dialled. Names resolve from saved
+contacts (`papa's number is 9876543210`); if a name is unknown, it asks for the
+number, saves it, and resumes the message you originally asked for. Contact
+lookup carries emails only, so a bare name has no other route to a number.
 
 ### Implemented but inactive
 
