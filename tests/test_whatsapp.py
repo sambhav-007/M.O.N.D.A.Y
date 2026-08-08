@@ -75,6 +75,31 @@ def test_normalise_phone_rejects_non_numbers(raw):
     assert CommunicationAgent.normalise_phone(raw) is None
 
 
+@pytest.mark.parametrize(
+    "prose",
+    [
+        "+919876543210 saying hello there",
+        "call me at +919876543210 tomorrow",
+        "order 12345678 shipped",
+        "user said message +919876543210 saying hi",
+    ],
+)
+def test_normalise_phone_rejects_prose_containing_a_number(prose):
+    """
+    The number-from-prose bug. normalise_phone used to strip every non-digit and
+    treat the residue as a phone number, so a stored sentence became a valid
+    recipient — that is how a chat was once opened with a number the user never
+    typed.
+    """
+    assert CommunicationAgent.normalise_phone(prose) is None
+
+
+def test_extract_phone_is_the_deliberate_prose_search():
+    assert CommunicationAgent.extract_phone("her number is +91 98765 43210") == "919876543210"
+    # Requires an explicit '+', so IDs and order numbers are not recipients.
+    assert CommunicationAgent.extract_phone("order 12345678 shipped") is None
+
+
 # ── Command parsing ──────────────────────────────────────────────────────────
 @pytest.mark.parametrize(
     "command,target,text",
@@ -99,6 +124,67 @@ def test_message_text_is_not_swallowed_into_the_contact(planner):
     target, text = planner._parse_whatsapp_command("open whatsapp and message bhumi hi")
     assert target == "bhumi"
     assert text == "hi"
+
+
+# ── The wrong-recipient bug ──────────────────────────────────────────────────
+@pytest.mark.parametrize(
+    "command,target,text",
+    [
+        ('open whatsapp and send message "Hello" to +917988280245', "+917988280245", "Hello"),
+        ('send message "Hi there" to bhumi', "bhumi", "Hi there"),
+        ('whatsapp "Good morning" to +917988280245', "+917988280245", "Good morning"),
+    ],
+)
+def test_trailing_recipient_is_read_correctly(planner, command, target, text):
+    """
+    English puts the recipient last as often as first. Reading only the leading
+    form made the literal word "message" the recipient, and the real number was
+    left inside the message body.
+    """
+    got_target, got_text = planner._parse_whatsapp_command(command)
+    assert got_target == target
+    assert got_text == text
+
+
+@pytest.mark.parametrize("filler", ["message", "msg", "send", "whatsapp", "text", "to"])
+def test_filler_words_are_never_treated_as_a_recipient(planner, filler):
+    assert planner._clean_wa_target(filler) == ""
+    assert planner._resolve_phone_number(filler)["phone"] is None
+
+
+def test_conversation_transcripts_cannot_supply_a_recipient(planner, monkeypatch):
+    """
+    recall() is a TF-IDF similarity search and returns loosely related rows,
+    including saved conversation turns. Lifting a number out of one is exactly
+    how a message was addressed to a stranger.
+    """
+    monkeypatch.setattr(
+        planner.memory_agent, "recall",
+        lambda q, limit=8: {"matches": [
+            {"key": "turn_20260808_001132", "value": "user said message +919876543210 saying hi"},
+            {"key": "my favourite editor", "value": "VSCode, call +919876543210 for support"},
+        ]},
+    )
+    assert planner._resolve_phone_number("bhumi")["phone"] is None
+
+
+def test_only_contact_shaped_memories_resolve(planner, monkeypatch):
+    """The key must name the person AND read like a contact record."""
+    monkeypatch.setattr(
+        planner.memory_agent, "recall",
+        lambda q, limit=8: {"matches": [
+            # Mentions bhumi, but is not a contact record.
+            {"key": "bhumi's favourite food", "value": "pasta, table +919876543210"},
+        ]},
+    )
+    assert planner._resolve_phone_number("bhumi")["phone"] is None
+
+
+def test_end_to_end_uses_the_number_the_user_typed(planner, stub_whatsapp):
+    """The reported bug, end to end."""
+    planner.process_command('open whatsapp and send message "Hello" to +917988280245')
+    assert stub_whatsapp["opened"] == [("917988280245", "Hello")]
+    assert stub_whatsapp["sent"] == []
 
 
 # ── Number resolution ────────────────────────────────────────────────────────

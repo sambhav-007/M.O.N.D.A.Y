@@ -552,23 +552,51 @@ class CommunicationAgent:
     #                           really does send, so it is Tier 2, and it cannot
     #                           confirm delivery. See the warning in its docstring.
 
-    _PHONE_CLEAN_RE = re.compile(r"[^\d+]")
+    # The WHOLE string must be a phone number — digits with optional +, spaces,
+    # dashes, dots or parentheses. Anchored deliberately.
+    _PHONE_ONLY_RE = re.compile(r"^\+?[\d\s\-().]{7,25}$")
+    _PHONE_CLEAN_RE = re.compile(r"[^\d]")
+    # For pulling a number out of prose, which is a different and more dangerous
+    # operation — see extract_phone().
+    _PHONE_IN_TEXT_RE = re.compile(r"\+\d[\d\s\-().]{6,20}\d")
 
     @staticmethod
     def normalise_phone(raw: str) -> Optional[str]:
         """
-        Reduces a phone number to the digits WhatsApp expects (country code, no
-        '+', no separators). Returns None if it does not look like a number.
+        Reduces a string that *is* a phone number to the digits WhatsApp expects.
+
+        Strict on purpose. This used to strip every non-digit from arbitrary text
+        and treat whatever survived as a number, so the stored sentence
+        "+919876543210 saying hello there" normalised to a valid number — which is
+        how a message was once addressed to a number the user never typed.
+        Anything containing letters is rejected; use extract_phone() when you
+        genuinely mean to search prose.
         """
         if not raw:
             return None
-        cleaned = CommunicationAgent._PHONE_CLEAN_RE.sub("", str(raw))
-        digits = cleaned.lstrip("+")
-        # Shorter than 8 digits cannot carry a country code plus a subscriber
+        text = str(raw).strip()
+        if not CommunicationAgent._PHONE_ONLY_RE.match(text):
+            return None
+        digits = CommunicationAgent._PHONE_CLEAN_RE.sub("", text)
+        # Fewer than 8 digits cannot carry a country code plus a subscriber
         # number, and WhatsApp requires the country code.
-        if not digits.isdigit() or not (8 <= len(digits) <= 15):
+        if not (8 <= len(digits) <= 15):
             return None
         return digits
+
+    @staticmethod
+    def extract_phone(text: str) -> Optional[str]:
+        """
+        Finds an explicitly international (+…) number inside free text.
+
+        Only for values the caller already believes are contact records. Requires
+        the leading '+' so that order numbers, dates and IDs are not mistaken for
+        phone numbers.
+        """
+        if not text:
+            return None
+        found = CommunicationAgent._PHONE_IN_TEXT_RE.search(str(text))
+        return CommunicationAgent.normalise_phone(found.group(0)) if found else None
 
     def _whatsapp_url(self, phone: str, text: str = "") -> str:
         from urllib.parse import quote

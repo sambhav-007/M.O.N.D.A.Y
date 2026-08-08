@@ -945,19 +945,39 @@ class MasterPlanner:
         if direct:
             return {"phone": direct, "source": "given directly"}
 
-        # Look for a remembered number belonging to this name.
+        name = (target or "").strip().lower()
+        if not name:
+            return {"phone": None, "error": "NO_TARGET", "message": "Who should I message?"}
+
         try:
-            recalled = self.memory_agent.recall(target, limit=5)
+            recalled = self.memory_agent.recall(target, limit=8)
         except Exception:
             recalled = {"matches": []}
 
+        # `recall` is a TF-IDF similarity search, so it happily returns loosely
+        # related rows — including stored conversation transcripts. Picking a
+        # recipient out of those is how "send message to +917988280245" once
+        # opened a chat with a number lifted from an unrelated saved turn. A row
+        # is only accepted as a contact record when ALL of the following hold.
         for match in recalled.get("matches", []):
-            key = str(match.get("key", "")).lower()
-            if target.lower() not in key and target.lower() not in str(match.get("value", "")).lower():
+            key = str(match.get("key", ""))
+            key_l = key.lower()
+            value = str(match.get("value", ""))
+
+            # 1. Not a conversation transcript or other machine-written record.
+            if key_l.startswith(("turn_", "conversation", "session_", "log_")):
                 continue
-            phone = self.comms_agent.normalise_phone(str(match.get("value", "")))
+            # 2. The key must actually name the person asked for.
+            if name not in key_l:
+                continue
+            # 3. The key must read like a contact record, not an arbitrary fact
+            #    that happens to mention them.
+            if not any(w in key_l for w in ("number", "phone", "mobile", "cell", "whatsapp", "contact")):
+                continue
+            # 4. The value must be a phone number, or contain an explicit +… one.
+            phone = self.comms_agent.normalise_phone(value) or self.comms_agent.extract_phone(value)
             if phone:
-                return {"phone": phone, "source": f"remembered as '{match.get('key')}'"}
+                return {"phone": phone, "source": f"remembered as '{key}'"}
 
         return {
             "phone": None,
@@ -990,24 +1010,70 @@ class MasterPlanner:
         r'^(?:saying|say|that\s+says|that|with\s+text|:|-)\s+', re.IGNORECASE
     )
 
-    def _parse_whatsapp_command(self, command: str) -> Tuple[str, str]:
-        """Returns (target, text). Either may be '' when absent."""
-        rest = self._WA_PREFIX_RE.sub("", command or "", count=1).strip()
-        if not rest:
-            return "", ""
+    # "... to +917988280245" / "... to bhumi" at the END of the command. English
+    # puts the recipient last as often as first ("send message "Hi" to +91…"),
+    # and reading only the leading form made "message" itself the recipient.
+    _WA_TRAILING_TARGET_RE = re.compile(
+        r'\s+to\s+(?P<target>\+?[\d][\d\s\-().]{6,20}|[^\s,"]+)\s*$', re.IGNORECASE
+    )
+    _WA_QUOTED_RE = re.compile(r'["“‘\']([^"”’\']+)["”’\']')
 
-        # A phone number may contain spaces, so match it as a unit first.
-        phone_match = self._WA_LEADING_PHONE_RE.match(rest)
-        if phone_match:
-            target = phone_match.group(0).strip()
-            rest = rest[phone_match.end():].strip()
-        else:
-            parts = rest.split(None, 1)
-            target = parts[0].strip(",:")
-            rest = parts[1].strip() if len(parts) > 1 else ""
+    def _parse_whatsapp_command(self, command: str) -> Tuple[str, str]:
+        """
+        Returns (target, text). Either may be '' when absent.
+
+        Handles both orders, because both are natural:
+            message +919876543210 saying hi          target first
+            send message "Hi" to +919876543210       target last
+        """
+        work = (command or "").strip()
+
+        # 1. A trailing "to <target>" is the recipient — take it before anything
+        #    else, so it cannot be mistaken for part of the message.
+        target = ""
+        trailing = self._WA_TRAILING_TARGET_RE.search(work)
+        if trailing:
+            target = trailing.group("target").strip()
+            work = work[:trailing.start()].strip()
+
+        rest = self._WA_PREFIX_RE.sub("", work, count=1).strip()
+
+        # 2. A quoted span is the message, wherever it sits.
+        quoted = self._WA_QUOTED_RE.search(rest)
+        if quoted:
+            text = quoted.group(1).strip()
+            leftover = (rest[:quoted.start()] + " " + rest[quoted.end():]).strip()
+            if not target:
+                target = self._WA_CONNECTOR_RE.sub("", leftover, count=1).strip()
+            return self._clean_wa_target(target), text
+
+        if not rest:
+            return self._clean_wa_target(target), ""
+
+        # 3. Otherwise: leading target, then the message.
+        if not target:
+            phone_match = self._WA_LEADING_PHONE_RE.match(rest)
+            if phone_match:
+                target = phone_match.group(0).strip()
+                rest = rest[phone_match.end():].strip()
+            else:
+                parts = rest.split(None, 1)
+                target = parts[0]
+                rest = parts[1].strip() if len(parts) > 1 else ""
 
         text = self._WA_CONNECTOR_RE.sub("", rest, count=1).strip()
-        return target, text
+        return self._clean_wa_target(target), text
+
+    # Filler that must never be treated as a recipient. "message" reaching the
+    # contact lookup is what let an unrelated saved transcript supply a number.
+    _WA_NON_TARGETS = {
+        "message", "msg", "text", "send", "whatsapp", "whats", "app", "a", "the",
+        "and", "on", "to", "saying", "say", "that", "with", "please", "open",
+    }
+
+    def _clean_wa_target(self, target: str) -> str:
+        target = (target or "").strip().strip(",:;\"'")
+        return "" if target.lower() in self._WA_NON_TARGETS else target
 
     def _handle_whatsapp(self, command: str, cmd_lower: str) -> Dict[str, Any]:
         """
