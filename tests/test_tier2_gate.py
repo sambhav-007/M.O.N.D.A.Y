@@ -49,6 +49,11 @@ def _exec(result):
         ("never mind", "no"), ("stop", "no"),
         ("maybe", "unclear"), ("", "unclear"), ("what?", "unclear"),
         ("i guess so", "unclear"),
+        # A comma is punctuation, not hesitation.
+        ("yes, send it", "yes"), ("no, cancel that", "no"),
+        ("yes, show me the result", "yes"), ("no, show me something else", "no"),
+        # …but it must not manufacture a decision out of one.
+        ("maybe, yes", "unclear"), ("not sure, ask me later", "unclear"),
     ],
 )
 def test_parse_confirmation(reply, expected):
@@ -126,6 +131,51 @@ def test_affirmative_reply_executes(planner):
     assert res.get("awaiting_tier2_approval") is not True
     assert res.get("message")  # never silent after an approval
     assert planner.pending_clarification is None
+
+
+# ── Abandoning the gate for a new command ────────────────────────────────────
+# `process_command` clears a pending clarification when the next turn looks like
+# a new topic. That heuristic used to run *before* the confirmation was parsed
+# and said nothing when it fired, so an armed gate could vanish in silence.
+def test_new_topic_cancels_the_gate_but_says_so(planner):
+    """Walking away from an approval is allowed. Doing it silently is not."""
+    planner.process_command("kill notepad")
+    assert planner.pending_clarification is not None
+
+    res = _exec(planner.process_command("what time is it"))
+
+    assert planner.pending_clarification is None          # gate released
+    assert res.get("cancelled_pending_approval") is True  # and announced
+    assert "cancelled the pending approval" in res.get("message", "").lower()
+    assert res.get("executed") is not True                # nothing ran
+
+
+def test_confirmation_wins_over_the_new_topic_heuristic(planner):
+    """
+    'show'/'what'/'how' are new-topic markers, but a reply that parses as a
+    clear yes or no is an answer to the question on the table. Before the fix,
+    "no, show me something else" was read as a new command and the gate was
+    dropped rather than declined.
+    """
+    planner.process_command("kill notepad")
+    res = _exec(planner.process_command("no, show me something else"))
+
+    assert res.get("cancelled") is True                   # declined, not dropped
+    assert res.get("cancelled_pending_approval") is not True
+    assert planner.pending_clarification is None
+
+
+def test_low_stakes_clarification_still_clears_quietly(planner):
+    """
+    The announcement is reserved for approval gates. A "which contact did you
+    mean?" prompt carries no authorisation, so abandoning it needs no notice —
+    and test_100_ruthless.py asserts that clearing behaviour.
+    """
+    planner.pending_clarification = {"type": "select_email"}
+    res = _exec(planner.process_command("what time is it"))
+
+    assert planner.pending_clarification is None
+    assert res.get("cancelled_pending_approval") is not True
 
 
 # ── The executor registry ────────────────────────────────────────────────────

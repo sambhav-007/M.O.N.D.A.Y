@@ -353,7 +353,7 @@ Written down deliberately, so nothing in this README claims more than the code d
 | Tier-2 approval gate | Enforced for `send_email`, `send_whatsapp`, `terminate_process` |
 | WhatsApp | Opens a chat with the message pre-typed; auto-send is Tier-2 gated (see below) |
 | Audit log | Lossless within one process; records the full Tier-2 lifecycle |
-| Test suite | 169 tests passing |
+| Test suite | 308 passing, offline and deterministic (`py -3.12 -m pytest`) in ~70s |
 
 ### WhatsApp — what it can and cannot do
 
@@ -411,9 +411,13 @@ names the two that are real.
   `mlxtend`. Component 2.6 computes Shapley values directly instead, and the
   result is verified bit-for-bit identical to `shap.LinearExplainer` —
   see [`reports/2_6_shap_equivalence.md`](reports/2_6_shap_equivalence.md).
-- **Some tests depend on live third-party APIs** (DuckDuckGo, open-notify,
-  CoinGecko) and fail when those rate-limit or go down. A red suite is not
-  automatically a code regression.
+- ~~**Some tests depend on live third-party APIs**~~ — FIXED 2026-08-08. The
+  default suite runs with `--block-network`: HTTP-dependent tests replay
+  recorded cassettes from `tests/cassettes/`, and the four that genuinely need
+  the internet are marked `network` and deselected. A red suite now means a code
+  regression. Run the live ones deliberately with `py -3.12 -m pytest -m network`
+  (expect failures when DuckDuckGo rate-limits this machine — that is the point
+  of separating them).
 - **No LLM is configured.** `core/planner.py` has a Gemini code path gated on an
   API key; without one there is no conversational memory across turns.
 

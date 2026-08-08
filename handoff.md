@@ -31,6 +31,35 @@ Ten commits, `16157ee` … `81b06f7`. All committed; nothing is left staged.
 | Noise | Stopped printing `❌ Raw Google Gmail API Error: No module named 'googleapiclient'` on every draft; the Google client libs are optional and undeclared, so their absence is normal. |
 | Tests | **276 passing**, up from 140. New files: `test_tier2_gate.py` (28), `test_help_command.py` (34), `test_whatsapp.py` (67), `test_email_and_whatsapp_ux.py` (7). |
 
+### 2026-08-08 (later) — UPGRADE_PLAN Phase 1
+
+See `UPGRADE_PLAN.md` for the full five-phase plan this belongs to.
+
+| Area | Change |
+|------|--------|
+| **Test suite** | **308 passing, 0 failing, offline, in ~70s** (was 276 + 1 flaky failure in 187s). `pytest-recording` replays cassettes from `tests/cassettes/`; `--block-network` is on by default; the 4 genuinely-live tests are `@pytest.mark.network` and deselected. A red suite now means a regression. |
+| **2.5 bandit** | `core/planner.py` credited `direct_dispatch` on *both* reward branches regardless of the arm selected, so three of four arms never left Q=0 and `get_policy()`'s argmax was decided by array initialisation. Now credits `routed_arm`. `tests/test_rl_reward_credit.py`. |
+| **Tier-2 gate** | An armed gate was silently discarded when the next turn contained "what"/"show"/etc. Now: a clear yes/no resolves the gate first, and abandoning one is announced (`cancelled_pending_approval`). Low-stakes clarifications still clear quietly. |
+| **`parse_confirmation`** | `"no, cancel that"` parsed as *unclear* — the prefix test is whitespace-delimited and a comma defeated it. Commas are now normalised. Exact-match and negation behaviour unchanged. |
+| **Cassette hygiene** | `tests/test_cassette_hygiene.py` — cassettes are committed, and the first recording carried the user's real IP, city, postcode, ISP, coordinates and elevation. Scrubbed in `conftest.py`; the guard tests were verified against a deliberately leaky decoy. |
+| Speed | `test_100_ruthless.py` built a fresh `MasterPlanner` per test (~106×), each loading the ML pipelines and starting an `AutonomyDaemon` thread. Now class-scoped with per-test state reset. |
+
+**Three things worth knowing:**
+
+1. **`--block-network` cannot see subprocesses.** `test_planner_process_command_search`
+   took 40s because "search current AI news" classifies as `desktop_automation`
+   at **0.33 confidence**, routes to `CoderAgent`, which writes a `web_scraper`
+   script and runs it via `subprocess.run` — a live fetch the blocker never sees,
+   timing out at 20s, twice. Marked `network`. **The routing is the real defect**
+   (UPGRADE_PLAN §1.2): a low-confidence classification reaching generated-code
+   execution is Phase 3's problem to remove.
+2. **No cassette yet for open-notify or DuckDuckGo.** Both were unreachable /
+   rate-limiting on 2026-08-08 and a cassette recorded from an outage pins the
+   outage. Each test says so and names the command to record it later.
+3. **Re-recording is not routine.** `--record-mode=once` writes real responses;
+   read the diff before committing. `test_cassette_hygiene.py` catches the PII
+   classes seen so far, not every possible one.
+
 ## 9. WhatsApp (added 2026-08-08)
 
 WhatsApp has **no API a desktop script may send through**. The deep link

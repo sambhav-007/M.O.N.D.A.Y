@@ -1,0 +1,66 @@
+interactions:
+- request:
+    body: null
+    headers:
+      Accept:
+      - application/json, text/plain, */*
+      Connection:
+      - close
+      Host:
+      - ip-api.com
+      user-agent:
+      - REDACTED
+    method: GET
+    uri: http://ip-api.com/json/
+  response:
+    body:
+      string: '{"status": "success", "country": "India", "countryCode": "IN", "region":
+        "DL", "regionName": "Delhi", "city": "New Delhi", "zip": "110001", "lat":
+        28.6139, "lon": 77.209, "timezone": "Asia/Kolkata", "isp": "Example ISP",
+        "org": "Example Org", "as": "AS0000 Example", "query": "203.0.113.1"}'
+    headers:
+      Access-Control-Allow-Origin:
+      - '*'
+      Content-Length:
+      - '308'
+      Content-Type:
+      - application/json; charset=utf-8
+      Date:
+      - Sat, 08 Aug 2026 08:04:30 GMT
+      X-Rl:
+      - '43'
+      X-Ttl:
+      - '59'
+    status:
+      code: 200
+      message: OK
+- request:
+    body: null
+    headers:
+      Accept:
+      - application/json, text/plain, */*
+      Connection:
+      - close
+      Host:
+      - api.open-meteo.com
+      user-agent:
+      - REDACTED
+    method: GET
+    uri: https://api.open-meteo.com/v1/forecast?current_weather=true&latitude=28.6139&longitude=77.209
+  response:
+    body:
+      string: "{\"latitude\":28.6139,\"longitude\":77.209,\"generationtime_ms\":0.13327598571777344,\"utc_offset_seconds\":0,\"timezone\":\"GMT\",\"timezone_abbreviation\":\"GMT\",\"elevation\":0.0,\"current_weather_units\":{\"time\":\"iso8601\",\"interval\":\"seconds\",\"temperature\":\"\xB0C\",\"windspeed\":\"km/h\",\"winddirection\":\"\xB0\",\"is_day\":\"\",\"weathercode\":\"wmo
+        code\"},\"current_weather\":{\"time\":\"2026-08-08T08:00\",\"interval\":900,\"temperature\":28.3,\"windspeed\":11.8,\"winddirection\":144,\"is_day\":1,\"weathercode\":96}}"
+    headers:
+      Connection:
+      - close
+      Content-Type:
+      - application/json; charset=utf-8
+      Date:
+      - Sat, 08 Aug 2026 08:04:31 GMT
+      Transfer-Encoding:
+      - chunked
+    status:
+      code: 200
+      message: OK
+version: 1

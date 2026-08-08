@@ -1,0 +1,70 @@
+interactions:
+- request:
+    body: null
+    headers:
+      Accept:
+      - application/json, text/plain, */*
+      Connection:
+      - close
+      Host:
+      - api.coingecko.com
+      user-agent:
+      - REDACTED
+    method: GET
+    uri: https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd%2Cinr
+  response:
+    body:
+      string: '{"bitcoin":{"usd":64925,"inr":6176820}}'
+    headers:
+      CF-RAY:
+      - a27d02f3f907e575-IXC
+      Cache-Control:
+      - max-age=30, public, must-revalidate, s-maxage=60
+      Connection:
+      - close
+      Content-Type:
+      - application/json; charset=utf-8
+      Date:
+      - Sat, 08 Aug 2026 08:04:39 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      access-control-allow-headers:
+      - Origin, X-Requested-With, Content-Type, Accept, Authorization
+      access-control-allow-methods:
+      - POST, PUT, DELETE, GET, OPTIONS
+      access-control-allow-origin:
+      - '*'
+      access-control-expose-headers:
+      - link, per-page, total
+      access-control-request-method:
+      - '*'
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - HIT
+      etag:
+      - W/"74980b706af6bd23c6a95d86aa53a0dc"
+      referrer-policy:
+      - strict-origin-when-cross-origin
+      vary:
+      - Accept-Encoding, Origin
+      x-content-type-options:
+      - nosniff
+      x-data-source:
+      - '2.0'
+      x-frame-options:
+      - SAMEORIGIN
+      x-permitted-cross-domain-policies:
+      - none
+      x-request-id:
+      - 7f24b5e1-1f0d-4ef0-a4dd-3b58049d7fa5
+      x-runtime:
+      - '0.016737'
+      x-xss-protection:
+      - '0'
+    status:
+      code: 200
+      message: OK
+version: 1

@@ -41,9 +41,26 @@ from ml.xai_explainer import explain_command_intent
 
 class TestRuthlessAdversarialSuite:
 
+    @pytest.fixture(scope="class")
+    def _shared_planner(self):
+        """One planner for the class.
+
+        This fixture was function-scoped, so all ~106 tests below built their own
+        MasterPlanner — each one loading the ML pipelines from scratch and
+        starting its own AutonomyDaemon thread. That was the majority of the
+        suite's runtime and left a hundred daemon threads running. Construction
+        is what is being shared; per-test state is reset below, which is the same
+        arrangement test_tier2_gate.py uses.
+        """
+        return MasterPlanner()
+
     @pytest.fixture(autouse=True)
-    def setup_planner(self):
-        self.planner = MasterPlanner()
+    def setup_planner(self, _shared_planner):
+        self.planner = _shared_planner
+        # No test may inherit another's half-finished conversation.
+        _shared_planner.pending_clarification = None
+        yield
+        _shared_planner.pending_clarification = None
 
     # ── Category 1: Security Risk Gating & Adversarial Inputs (15 Tests) ─────────
 
@@ -360,8 +377,15 @@ class TestRuthlessAdversarialSuite:
         res = browser.fetch_webpage_content("https://invalid_domain_name_123456789.org")
         assert res.get("success") is False
 
+    @pytest.mark.network
     def test_agent_browser_research_topic(self):
-        """Verifies browser research synthesis."""
+        """Verifies browser research synthesis.
+
+        NO CASSETTE YET — DuckDuckGo was returning nothing for this machine on
+        2026-08-08 (the rate-limiting the README documents), and a cassette
+        recorded from a challenge page would assert that the rate limit still
+        applies. Record with `-m network --record-mode=once` once DDG cooperates.
+        """
         browser = self.planner.browser_agent
         res = browser.research_topic("Python")
         assert res.get("success") is True
@@ -433,24 +457,40 @@ class TestRuthlessAdversarialSuite:
         voice.set_voice_enabled(True)
         assert voice.enable_voice is True
 
+    @pytest.mark.vcr
     def test_agent_public_api_fetch_weather(self):
         """Verifies Open-Meteo weather API call."""
         api_agent = PublicApiAgent()
         res = api_agent.get_weather("London")
         assert res.get("success") is True
 
+    @pytest.mark.vcr
     def test_agent_public_api_fetch_crypto(self):
         """Verifies CoinGecko crypto API call."""
         api_agent = PublicApiAgent()
         res = api_agent.get_crypto_prices("bitcoin")
         assert res.get("success") is True
 
+    @pytest.mark.network
     def test_agent_public_api_fetch_iss_location(self):
-        """Verifies ISS location API call."""
+        """Verifies ISS location API call.
+
+        NO CASSETTE YET. `api.open-notify.org` was unreachable on 2026-08-08 when
+        the rest of these were recorded, and a cassette recorded from a timeout
+        pins the timeout rather than the parsing. Record it the next time the
+        host answers:
+
+            py -3.12 -m pytest tests/test_100_ruthless.py -k iss_location \\
+                -m network --record-mode=once
+
+        then swap this marker for `@pytest.mark.vcr`. Until then it is opt-in, so
+        an unreachable third party cannot redden the default suite.
+        """
         api_agent = PublicApiAgent()
         res = api_agent.get_iss_location()
         assert res.get("success") is True
 
+    @pytest.mark.vcr
     def test_agent_public_api_wikipedia_summary(self):
         """Verifies Wikipedia summary API call."""
         api_agent = PublicApiAgent()
@@ -606,6 +646,7 @@ class TestRuthlessAdversarialSuite:
         res = voice.train_voice("ui/mondayvoice.mp3")
         assert res.get("success") is True
 
+    @pytest.mark.vcr
     def test_public_api_geolocation_query(self):
         """Verifies PublicApiAgent IP geolocation fetch."""
         api_agent = PublicApiAgent()
@@ -642,8 +683,13 @@ class TestRuthlessAdversarialSuite:
         res = coder.generate_and_execute_script("list files in current directory")
         assert res.get("success") is True
 
+    @pytest.mark.network
     def test_browser_agent_deep_research(self):
-        """Verifies browser agent deep research topic aggregation."""
+        """Verifies browser agent deep research topic aggregation.
+
+        NO CASSETTE YET — same DuckDuckGo rate limit as
+        `test_agent_browser_research_topic`.
+        """
         browser = self.planner.browser_agent
         res = browser.research_topic("Machine Learning")
         assert res.get("success") is True
@@ -673,6 +719,7 @@ class TestRuthlessAdversarialSuite:
         res = cloner.synthesize_speech("")
         assert res.get("success") is False
 
+    @pytest.mark.vcr
     def test_public_api_fetch_weather_empty_city(self):
         """Verifies weather API handles empty city string."""
         api_agent = PublicApiAgent()
@@ -697,8 +744,22 @@ class TestRuthlessAdversarialSuite:
         tools = registry.list_tools()
         assert isinstance(tools, (list, dict))
 
+    @pytest.mark.network
     def test_planner_process_command_search(self):
-        """Verifies search command processing in MasterPlanner."""
+        """Verifies search command processing in MasterPlanner.
+
+        Marked `network` even though nothing here calls out directly. "search
+        current AI news" classifies as `desktop_automation` at 0.33 confidence,
+        which routes to CoderAgent, which writes a `web_scraper` script and runs
+        it in a **subprocess** — and a subprocess is outside the reach of
+        `--block-network`, which only patches sockets in this interpreter. The
+        script then blocks on a live fetch until CoderAgent's 20s timeout, twice
+        (`max_retries=2`), so this single test cost 40s of the suite's runtime
+        and was the last live-network dependency in the default selection.
+
+        The routing itself is the real defect and is not fixed here — see
+        UPGRADE_PLAN.md §1.2. The marker stops it distorting the suite meanwhile.
+        """
         res = self.planner.process_command("search current AI news")
         assert res.get("execution_result") is not None
 

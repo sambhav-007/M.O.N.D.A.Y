@@ -173,6 +173,36 @@ Type these in plain English. Every example below works as written.
    Spoken replies use gTTS, which needs the network."""
 
 
+# ── Multi-turn state handling ────────────────────────────────────────────────
+# The clarification steps that authorise something irreversible. A clarification
+# on this list may only be resolved by an explicit answer; anything that clears
+# it has to say so out loud.
+_APPROVAL_STEPS = frozenset({"confirm_action", "confirm_send"})
+
+# Words that mark a reply as a new topic rather than an answer to the question
+# still on the table. Deliberately broad: a false positive here abandons a
+# clarification (recoverable, and now announced), while a false negative feeds a
+# genuine new command into a resolver that will misread it.
+_NEW_TOPIC_MARKERS = (
+    "screen", "where", "weather", "who", "what", "search", "open",
+    "capabilities", "tell me", "how", "show", "bitcoin", "crypto",
+)
+
+
+def _prepend_notice(result: Dict[str, Any], notice: str) -> Dict[str, Any]:
+    """Puts `notice` in front of a result's message without disturbing the rest.
+
+    Used to surface a cancelled approval gate on the reply to whatever the user
+    typed instead of answering it.
+    """
+    if not notice or not isinstance(result, dict):
+        return result
+    result["cancelled_pending_approval"] = True
+    existing = result.get("message")
+    result["message"] = f"{notice}\n\n{existing}" if existing else notice
+    return result
+
+
 def parse_confirmation(answer: str) -> str:
     """
     Classifies a reply to a Tier-2 confirmation prompt.
@@ -185,6 +215,13 @@ def parse_confirmation(answer: str) -> str:
         return "yes"
     if a in _NEGATIVE:
         return "no"
+    # A comma after the answer is punctuation, not meaning: "no, cancel that" is
+    # as clear a decline as "no cancel that", but the prefix test below is
+    # whitespace-delimited and "no," failed it. Such a reply then fell through to
+    # "unclear" and, if it also contained a new-topic word, the gate was released
+    # as an abandonment instead of recorded as a decision. Commas only — the
+    # apostrophe in "don't" is load-bearing.
+    a = a.replace(",", " ")
     # Allow natural prefixes ("yes please", "cancel that") but never a bare
     # substring match, so "don't send it" cannot read as affirmative.
     if a.startswith(("yes ", "yeah ", "confirm", "approve", "go ahead", "do it", "proceed")):
@@ -442,18 +479,38 @@ class MasterPlanner:
         context_memories = self.memory_agent.get_contextual_memories(cmd)
 
         # Step 0.1: Check for Multi-Turn Pending Clarification State
+        abandon_notice = ""
         if self.pending_clarification is not None:
             cmd_lower = cmd.lower().strip()
+            pending = self.pending_clarification
+            is_gate = pending.get("step") in _APPROVAL_STEPS
+
+            # A clear yes/no is an answer to the question that was asked, even
+            # when it also contains a word from the new-topic list below. "yes,
+            # show me" used to read as a brand-new command, which dropped an
+            # armed Tier-2 gate on the floor.
+            if is_gate and parse_confirmation(cmd) != "unclear":
+                return self._resolve_clarification(cmd)
+
             # If input is a new independent command rather than an email/number selection or short reply, auto-clear clarification state
-            if any(k in cmd_lower for k in ["screen", "where", "weather", "who", "what", "search", "open", "capabilities", "tell me", "how", "show", "bitcoin", "crypto"]):
+            if any(k in cmd_lower for k in _NEW_TOPIC_MARKERS):
                 self.pending_clarification = None
-            elif self.pending_clarification is not None:
+                # Dropping a low-stakes clarification (which email did you mean?)
+                # quietly is fine — the user moved on. Dropping an approval gate
+                # quietly is not: they were asked whether to send something and
+                # the answer silently became "no" with nothing said. It fails
+                # closed, which is the right direction, but it must be audible or
+                # a later "yes" answers a question that no longer exists.
+                if is_gate:
+                    abandon_notice = self._announce_cancelled_gate(pending)
+            else:
                 return self._resolve_clarification(cmd)
 
         # Step 0.5: Dynamic Multi-Step Task DAG Engine Check
         if self.task_dag_engine.is_multi_step_goal(cmd):
             dag_result = self.task_dag_engine.execute_dag(cmd, user_approved=user_approved)
             self.memory_agent.auto_store_conversation_turn(cmd, str(dag_result.get("message", "")))
+            dag_result = _prepend_notice(dag_result, abandon_notice)
             return {
                 "user_command": cmd,
                 "intent_classification": {"predicted_intent": "multi_step_dag", "confidence": 1.0, "llm_fallback": False, "clo": "CLO04"},
@@ -465,10 +522,15 @@ class MasterPlanner:
         intent, confidence, fallback = predict_intent(self.classifier, cmd)
 
         # Step 2: Component 2.5 RL Bandit Routing Decision if confidence is low
+        # `routed_arm` is the arm that must be credited in step 4. When the
+        # classifier is confident the bandit is not consulted at all, and the
+        # outcome is evidence about direct dispatch; when it is not, the arm the
+        # bandit actually pulled is the one the outcome describes.
+        routed_arm = ROUTING_ACTIONS.index("direct_dispatch")
         routing_strategy = "direct_dispatch"
         if fallback:
-            action_idx = self.rl_bandit.select_action()
-            routing_strategy = ROUTING_ACTIONS[action_idx]
+            routed_arm = self.rl_bandit.select_action()
+            routing_strategy = ROUTING_ACTIONS[routed_arm]
 
         # Step 3: Match intent to target agent tool execution
         tool_result = self._dispatch_to_agent(cmd, intent, user_approved)
@@ -483,11 +545,16 @@ class MasterPlanner:
                     "message": f"🤖 M.O.N.D.A.Y. Cognitive Response:\n{llm_response}"
                 }
 
-        # Reward feedback to RL bandit if successful
-        if tool_result.get("success", False):
-            self.rl_bandit.update(ROUTING_ACTIONS.index("direct_dispatch"), 1.0)
-        else:
-            self.rl_bandit.update(ROUTING_ACTIONS.index("direct_dispatch"), -1.0)
+        # Step 4: Reward feedback to the arm that was actually pulled.
+        # This used to hardcode `ROUTING_ACTIONS.index("direct_dispatch")` on both
+        # branches, so every reward landed on one arm no matter which was
+        # selected. The other three arms were never updated, their Q-values never
+        # left zero, and `get_policy()`'s argmax was therefore decided by array
+        # initialisation rather than by anything the bandit had observed —
+        # component 2.5 could not learn. Credit `routed_arm` or it learns nothing.
+        self.rl_bandit.update(routed_arm, 1.0 if tool_result.get("success", False) else -1.0)
+
+        tool_result = _prepend_notice(tool_result, abandon_notice)
 
         # Auto-store conversation turn to SQLite memory.db
         if isinstance(tool_result, dict) and tool_result.get("message"):
@@ -515,6 +582,28 @@ class MasterPlanner:
             threading.Thread(target=self.voice_agent.speak, args=(msg_text,), daemon=True).start()
 
         return output
+
+    def _announce_cancelled_gate(self, pending: Dict[str, Any]) -> str:
+        """Records and describes an approval gate abandoned for a new command.
+
+        Nothing was executed — the gate fails closed. The user still has to be
+        told, because from their side they asked for something irreversible, were
+        asked to confirm, and would otherwise never hear that it did not happen.
+        """
+        action = (
+            pending.get("action_name")
+            or ("send_email" if pending.get("step") == "confirm_send" else "pending action")
+        )
+        target = pending.get("target") or pending.get("recipient") or ""
+        described = f"{action} → {target}" if target else str(action)
+
+        log_action(str(action), str(target) or "unknown", 2, "cancelled_new_command",
+                   "planner", {"reason": "user issued a new command instead of answering"})
+
+        return (
+            f"↩️ Cancelled the pending approval ({described}) — you asked for "
+            f"something else instead. Nothing was sent or run."
+        )
 
     def _resolve_clarification(self, user_response: str) -> Dict[str, Any]:
         """Resumes paused task using the user's clarification answer."""

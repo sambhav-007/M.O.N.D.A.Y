@@ -63,3 +63,6 @@ pygame>=2.5.0         # Voice audio playback engine
 
 # ── Testing ──────────────────────────────────────────────────────────────────
 pytest>=8.0.0         # Test runner for tests/ (pytest.ini lives at the root)
+pytest-recording>=0.13 # Replays tests/cassettes/ so the suite runs offline; also
+                       # provides the --block-network that keeps it that way
+PyYAML>=6.0           # Reads cassettes back in tests/test_cassette_hygiene.py
