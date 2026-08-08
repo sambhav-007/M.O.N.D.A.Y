@@ -76,12 +76,22 @@ class TestFullSystemArchitecture:
         assert "simulated" not in str(res_approved.get("message", "")).lower()
 
     def test_audio_summarizer_no_sample_notes(self):
-        """Verifies audio summarizer returns real notice when no transcripts exist, not dummy notes."""
+        """Meeting capture is not implemented, and says so.
+
+        This test previously asserted the message "No speech transcripts were
+        captured during this recording period" — which was itself the fix for an
+        earlier fabrication that returned dummy notes. But it still described an
+        empty *meeting* rather than an absent *feature*: nothing in this repo
+        captures audio, `recorded_transcripts` is only ever assigned `[]`, and no
+        caller appends to it. A user could leave this running through a meeting,
+        take no notes, and find afterwards there had never been anything to
+        summarise. The refusal has to come before the recording, not after.
+        """
         audio_agent = AudioSummarizerAgent()
         res = audio_agent.stop_meeting_recording_and_summarize()
-        assert res.get("success") is True
-        assert res.get("meeting_minutes") == []
-        assert "No speech transcripts were captured" in res.get("message", "")
+        assert res.get("success") is False
+        assert res.get("error") == "NOT_IMPLEMENTED"
+        assert "No speech transcripts were captured" not in res.get("message", "")
 
     def test_coder_agent_real_error_handling(self):
         """Unsupported domains report honestly and compile no plugin file."""

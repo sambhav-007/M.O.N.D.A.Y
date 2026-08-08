@@ -18,6 +18,7 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 
 from core.config import MEMORIES_DB_PATH
+from core.contracts import AgentResult, RecordStored, SystemQuery
 from core.security import log_action
 
 
@@ -59,7 +60,9 @@ class MemoryAgent:
         topic_clean = topic.strip()
 
         if not key_clean:
-            return {"success": False, "error": "Memory key cannot be empty."}
+            return AgentResult.failed(
+                "Memory key cannot be empty.", error="EMPTY_KEY"
+            ).as_dict()
 
         with sqlite3.connect(MEMORIES_DB_PATH) as conn:
             cursor = conn.cursor()
@@ -80,14 +83,16 @@ class MemoryAgent:
             conn.commit()
 
         log_action("store_memory", key_clean, 1, "success", self.name, {"id": mem_id, "topic": topic_clean})
-        return {
-            "success": True,
-            "id": mem_id,
-            "key": key_clean,
-            "value": val_clean,
-            "topic": topic_clean,
-            "message": f"✓ Memory saved: '{key_clean}' = '{val_clean}' (Topic: {topic_clean}).",
-        }
+        return AgentResult.ok(
+            f"✓ Memory saved: '{key_clean}' = '{val_clean}' (Topic: {topic_clean}).",
+            evidence=RecordStored(store="memories.db", key=key_clean),
+            data={
+                "id": mem_id,
+                "key": key_clean,
+                "value": val_clean,
+                "topic": topic_clean,
+            },
+        ).as_dict()
 
     def store(self, key: str, value: str, topic: str = "general") -> Dict[str, Any]:
         """Alias for remember()."""
@@ -104,18 +109,27 @@ class MemoryAgent:
             rows = cursor.fetchall()
 
         if not rows:
-            return {"success": True, "query": query_clean, "matches": [], "message": f"Found 0 matching memories for '{query_clean}'."}
+            return AgentResult.ok(
+                f"Found 0 matching memories for '{query_clean}'.",
+                evidence=SystemQuery(source="memories.db", detail="0 rows stored"),
+                data={"query": query_clean, "matches": []},
+            ).as_dict()
 
         # Check for exact key match first
         exact_matches = [r for r in rows if r[1].lower() == query_clean.lower()]
         if exact_matches:
-            matched_items = [{"id": r[0], "key": r[1], "value": r[2], "topic": r[3], "similarity": 1.0} for r in exact_matches]
-            return {
-                "success": True,
-                "query": query_clean,
-                "matches": matched_items,
-                "message": f"✓ Recalled exact memory: '{matched_items[0]['key']}' = '{matched_items[0]['value']}'.",
-            }
+            matched_items = [
+                {"id": r[0], "key": r[1], "value": r[2], "topic": r[3],
+                 "similarity": 1.0, "match_method": "exact_key"}
+                for r in exact_matches
+            ]
+            return AgentResult.ok(
+                f"✓ Recalled exact memory: '{matched_items[0]['key']}' = '{matched_items[0]['value']}'.",
+                evidence=SystemQuery(
+                    source="memories.db", detail=f"exact key match on '{query_clean}'"
+                ),
+                data={"query": query_clean, "matches": matched_items},
+            ).as_dict()
 
         # TF-IDF Vector Similarity Search across memories
         corpus = [f"{r[1]} {r[2]} {r[3]}" for r in rows]
@@ -133,21 +147,34 @@ class MemoryAgent:
                 score = float(sims[idx])
                 if score > 0.05 or query_clean.lower() in corpus[idx].lower():
                     r = rows[idx]
-                    results.append({"id": r[0], "key": r[1], "value": r[2], "topic": r[3], "similarity": round(score, 4)})
+                    results.append({
+                        "id": r[0], "key": r[1], "value": r[2], "topic": r[3],
+                        "similarity": round(score, 4), "match_method": "tfidf",
+                    })
+            method = "tfidf"
         except Exception:
+            # `similarity: 0.5` here was not a similarity — the vectoriser had
+            # failed, nothing was scored, and 0.5 was a constant attached to every
+            # substring hit. Callers that rank or threshold on this field were
+            # ranking on a placeholder. The number is kept so those callers keep
+            # working, but `match_method` now says where it came from.
             results = [
-                {"id": r[0], "key": r[1], "value": r[2], "topic": r[3], "similarity": 0.5}
+                {"id": r[0], "key": r[1], "value": r[2], "topic": r[3],
+                 "similarity": 0.5, "match_method": "substring_fallback"}
                 for r in rows if query_clean.lower() in f"{r[1]} {r[2]}".lower()
             ][:limit]
+            method = "substring_fallback"
 
         msg = f"✓ Recalled {len(results)} memories matching '{query_clean}'." if results else f"Found 0 matching memories for '{query_clean}'."
         log_action("recall_memory", query_clean, 1, "success", self.name, {"match_count": len(results)})
-        return {
-            "success": True,
-            "query": query_clean,
-            "matches": results,
-            "message": msg,
-        }
+        return AgentResult.ok(
+            msg,
+            evidence=SystemQuery(
+                source="memories.db",
+                detail=f"{len(rows)} rows searched by {method}, {len(results)} matched",
+            ),
+            data={"query": query_clean, "matches": results},
+        ).as_dict()
 
     def auto_extract_and_remember(self, user_prompt: str) -> List[Dict[str, Any]]:
         """
@@ -214,11 +241,21 @@ class MemoryAgent:
     def auto_store_conversation_turn(self, user_prompt: str, assistant_response: str, agent_name: str = "MasterPlanner") -> Dict[str, Any]:
         """Logs conversation turn to SQLite memory for multi-turn history retention."""
         if not user_prompt or not assistant_response:
-            return {"success": False, "error": "Empty prompt or response."}
+            return AgentResult.failed(
+                "Empty prompt or response.", error="EMPTY_TURN"
+            ).as_dict()
         turn_key = f"turn_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
         turn_val = f"Agent: {agent_name} | User: {user_prompt[:200]} | Assistant: {assistant_response[:200]}"
         res = self.remember(turn_key, turn_val, topic="conversation_history")
-        return {"success": True, "turn_key": turn_key, "result": res}
+        # Reported success unconditionally, even when the write it delegates to
+        # had failed. It now carries the store's own verdict.
+        if not res.get("success"):
+            return res
+        return AgentResult.ok(
+            f"✓ Conversation turn logged as '{turn_key}'.",
+            evidence=RecordStored(store="memories.db", key=turn_key),
+            data={"turn_key": turn_key, "result": res},
+        ).as_dict()
 
     def get_contextual_memories(self, user_prompt: str, limit: int = 3) -> List[Dict[str, Any]]:
         """Pre-fetches memories relevant to the current user prompt."""
@@ -240,4 +277,8 @@ class MemoryAgent:
         if not sug:
             sug = [{"prompt": "💡 Memory Recall: Ask M.O.N.D.A.Y. to remember your notes or preferences!"}]
 
-        return {"success": True, "suggestions": sug}
+        return AgentResult.ok(
+            f"✓ {len(sug)} proactive suggestion(s) from stored memories.",
+            evidence=SystemQuery(source="memories.db", detail=f"{len(rows)} recent rows"),
+            data={"suggestions": sug},
+        ).as_dict()

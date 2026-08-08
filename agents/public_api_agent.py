@@ -20,6 +20,7 @@ from typing import Any, Dict, List, Optional
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 
+from core.contracts import AgentResult, HttpResponse, SystemQuery
 from core.security import log_action
 
 CACHE_FILE = Path("data") / "public_apis.json"
@@ -138,14 +139,19 @@ class PublicApiAgent:
         for idx, m in enumerate(matches, 1):
             msg += f"  {idx}. {m['name']} ({m['url']}) — {m['description']}\n"
 
-        return {
-            "success": True,
-            "query": intent,
-            "match_count": len(matches),
-            "best_api": matches[0] if matches else None,
-            "apis": matches,
-            "message": msg.strip(),
-        }
+        return AgentResult.ok(
+            msg.strip(),
+            evidence=SystemQuery(
+                source="public_apis.json index",
+                detail=f"{len(self.api_database)} APIs searched, {len(matches)} matched",
+            ),
+            data={
+                "query": intent,
+                "match_count": len(matches),
+                "best_api": matches[0] if matches else None,
+                "apis": matches,
+            },
+        ).as_dict()
 
     def _fetch_worker(self, url: str, headers: Dict[str, str], method: str) -> Dict[str, Any]:
         """Isolated worker executing HTTP GET/POST with a timeout & payload boundary."""
@@ -161,34 +167,29 @@ class PublicApiAgent:
                         data = json.loads(raw_bytes.decode("utf-8"))
                         formatted = json.dumps(data, indent=2)[:600]
                         log_action("execute_dynamic_api", url, 1, "success", self.name)
-                        return {
-                            "success": True,
-                            "url": url,
-                            "data": data,
-                            "message": f"🌐 Live Public API Response ({url}):\n{formatted}",
-                        }
+                        return AgentResult.ok(
+                            f"🌐 Live Public API Response ({url}):\n{formatted}",
+                            evidence=HttpResponse(status=status, url=url),
+                            data={"url": url, "data": data},
+                        ).as_dict()
                     except Exception:
                         pass
 
-                return {
-                    "success": False,
-                    "error": "invalid_format",
-                    "http_status": status,
-                    "message": (
-                        f"⚠️ Public API at {url} returned HTTP {status} with "
-                        f"non-JSON content ({content_type or 'unknown type'})."
-                    ),
-                }
+                return AgentResult.failed(
+                    f"⚠️ Public API at {url} returned HTTP {status} with "
+                    f"non-JSON content ({content_type or 'unknown type'}).",
+                    error="INVALID_FORMAT",
+                    data={"http_status": status},
+                ).as_dict()
         except Exception as ex:
             # Distinguish a rejection from a timeout — they need different fixes.
             status = getattr(ex, "code", None)
             detail = f"HTTP {status}" if status else type(ex).__name__
-            return {
-                "success": False,
-                "error": str(ex),
-                "http_status": status,
-                "message": f"⚠️ Public API call to {url} failed ({detail}): {ex}",
-            }
+            return AgentResult.failed(
+                f"⚠️ Public API call to {url} failed ({detail}): {ex}",
+                error="HTTP_REQUEST_FAILED",
+                data={"http_status": status, "detail": str(ex)},
+            ).as_dict()
 
     def execute_dynamic_api(self, url: str, method: str = "GET", params: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         """
@@ -207,17 +208,17 @@ class PublicApiAgent:
                 future = executor.submit(self._fetch_worker, req_url, self.headers, method)
                 return future.result(timeout=WATCHDOG_TIMEOUT_S)
         except TimeoutError:
-            return {
-                "success": False,
-                "timeout": True,
-                "message": "⚠️ Public API call timed out or returned invalid format.",
-            }
+            return AgentResult.failed(
+                "⚠️ Public API call timed out.",
+                error="API_TIMEOUT",
+                data={"timeout": True},
+            ).as_dict()
         except Exception as ex:
-            return {
-                "success": False,
-                "error": str(ex),
-                "message": "⚠️ Public API call timed out or returned invalid format.",
-            }
+            return AgentResult.failed(
+                f"⚠️ Public API call failed: {ex}",
+                error="API_CALL_FAILED",
+                data={"detail": str(ex)},
+            ).as_dict()
 
     def get_geolocation(self) -> Dict[str, Any]:
         """Detects user's current city, country, lat, lon via IP-API."""
@@ -227,11 +228,20 @@ class PublicApiAgent:
             city, country, lat, lon = d.get("city", "Unknown"), d.get("country", "Unknown"), d.get("lat", 0.0), d.get("lon", 0.0)
             res["message"] = f"🌍 Live Geolocation Detected:\n  • Location: {city}, {country}\n  • Coordinates: Lat {lat}, Lon {lon}\n  • Public IP: {d.get('query')} ({d.get('isp')})"
             return res
-        return {
-            "success": True,
-            "data": {"city": "Local Area", "country": "Local", "lat": 28.61, "lon": 77.23, "query": "127.0.0.1"},
-            "message": "🌍 Local Geolocation Fallback Active (Rate-Limit Protection).",
-        }
+
+        # This used to return `success: True` with `{"city": "Local Area",
+        # "country": "Local", "lat": 28.61, "lon": 77.23, "query": "127.0.0.1"}`
+        # under the heading "Local Geolocation Fallback Active (Rate-Limit
+        # Protection)". Nothing about it was a fallback: the coordinates are
+        # central Delhi, hardcoded, and returned regardless of where the machine
+        # actually is. `get_weather` reads `lat`/`lon` straight out of this, so a
+        # failed lookup silently became a confident forecast for a city the user
+        # was not in.
+        return AgentResult.failed(
+            "I couldn't work out where this machine is — the geolocation service "
+            "didn't answer.",
+            error="GEOLOCATION_UNAVAILABLE",
+        ).as_dict()
 
     def fetch_weather(self, location_query: str = "") -> Dict[str, Any]:
         """Alias for get_weather."""
@@ -291,17 +301,17 @@ class PublicApiAgent:
                 lat = pos.get("latitude", "0")
                 lon = pos.get("longitude", "0")
                 log_action("get_iss_location", "iss-now.json", 1, "success", self.name)
-                return {
-                    "success": True,
-                    "latitude": lat,
-                    "longitude": lon,
-                    "message": (
+                return AgentResult.ok(
+                    (
                         f"🛸 Live International Space Station (ISS) Location:\n"
                         f"  • Latitude: {lat}°\n"
-                        f"  • Longitude: {lon}°\n"
-                        f"  • Status: In Active Orbit around Earth."
+                        f"  • Longitude: {lon}°"
                     ),
-                }
+                    evidence=HttpResponse(
+                        status=resp.status, url="api.open-notify.org/iss-now.json"
+                    ),
+                    data={"latitude": lat, "longitude": lon},
+                ).as_dict()
         except Exception:
             pass
         return self.execute_dynamic_api("http://api.open-notify.org/iss-now.json")

@@ -464,10 +464,15 @@ class TestRuthlessAdversarialSuite:
         assert "not sure how to do that yet" in res.get("message", "")
 
     def test_agent_audio_stop_meeting_recording(self):
-        """Verifies audio summarizer meeting stop."""
+        """Verifies stopping a meeting recording refuses honestly.
+
+        There is no audio capture anywhere in this repo, so there is never a
+        recording to stop. This used to assert `success is True`.
+        """
         audio = AudioSummarizerAgent()
         res = audio.stop_meeting_recording_and_summarize()
-        assert res.get("success") is True
+        assert res.get("success") is False
+        assert res.get("error") == "NOT_IMPLEMENTED"
 
     def test_agent_audio_summarize_notes(self):
         """Verifies audio summarizer file notes processing."""

@@ -73,13 +73,33 @@ migrated handler is a drop-in for the one it replaces.
 a keypress was sent, not a message delivered. Do not add an evidence variant that
 asserts more than the code can observe.
 
-**Migrated so far:** `core/tool_registry.py` (all of it), plus
-`ComputerAgent.set_system_volume` / `get_system_volume` and
-`CommunicationAgent.read_latest_email`. **Nine agents still return raw dicts** —
-browser, document, memory, habit, vision, voice, coder, audio_summarizer,
-public_api. The contract cannot protect a file that does not use it.
+**Migration complete.** All 11 agent modules and `core/tool_registry.py` route
+through the contract. `test_all_agent_modules_import_the_contract` fails the
+moment a twelfth agent appears without it.
 
-**Five fabrications removed**, three from `tool_registry.py`:
+**One limit to remember:** the contract governs *this process*. A generated
+script running under `subprocess` can print `[SUCCESS]`, exit 0, and be believed
+— that is exactly what `web_scraper` did. Check generated templates by hand.
+
+**Thirteen fabrications removed:**
+
+| Where | Was | Now |
+|-------|-----|-----|
+| `AudioSummarizerAgent.start/stop_meeting_recording` | "🎙️ Capturing meeting audio streams…" while capturing nothing. No audio capture exists anywhere; `recorded_transcripts` is only ever assigned `[]` | `NOT_IMPLEMENTED` up front |
+| `coder_agent` web_scraper template | Printed `[SUCCESS]` and exited 0 when the fetch raised, so the parent believed it | `[FAILED]` to stderr, `sys.exit(1)` |
+| `coder_agent` volume template | Same, on non-Windows | Same fix |
+| `HabitAgent.detect_habits_and_suggest` | On *any* exception returned a hardcoded habit — "git commit after running tests", 0.85 confidence, 3.2 lift — phrased as "🤖 Habit Detected: I noticed you frequently…". Component 2.4's failure dressed as its output | `HABIT_MINING_FAILED` |
+| `PublicApiAgent.get_geolocation` | Fallback returned central Delhi coordinates and `127.0.0.1` as "Local Geolocation Fallback Active". `get_weather` reads lat/lon from it, so a failed lookup became a confident forecast for a city the user was not in | `GEOLOCATION_UNAVAILABLE` |
+| `VisionAgent.capture_active_screen` | On grab failure, built a blank dark rectangle and reported "✓ Screen captured (1920x1080)", then fed it to the analyser | `SCREEN_CAPTURE_FAILED` |
+| `VisionAgent.analyze_screen_context` | Without Gemini, headed its answer "✓ Screen Vision Analysis" and ended "Visual Inspection: Onscreen content identified", having identified none — it reports mean pixel brightness | Says plainly it can't read the screen without a key |
+| `VoiceAgent.speak` | `audio_synthesized: True, trained_voice_used: True` returned before the thread ran; both synthesis paths swallow exceptions | `TaskQueued` — speech was queued |
+| `MondayVoiceModel.train_from_reference` | "Extracts acoustic features" but hardcodes `pitch_hz: 185.0`, `spectral_centroid: 1450.0`, `harmonic_ratio: 0.94`. Only the file *size* is read | Fields marked `measured: False`, described as playback defaults |
+| `MondayVoiceModel.synthesize_speech` | `success: True` even when gTTS raised **and** pyttsx3 was absent, so no audio existed | `TTS_UNAVAILABLE` |
+| `BrowserAgent.open_app_or_website` | Discarded `webbrowser.open`'s return value and reported "✓ Opened Web URL" regardless | `BROWSER_LAUNCH_FAILED` when it returns False |
+| `MemoryAgent.auto_store_conversation_turn` | Reported success even when the write it delegates to had failed | Carries the store's verdict |
+| `MemoryAgent.recall` | Fallback attached a constant `similarity: 0.5` to every substring hit; callers ranked on a placeholder | `match_method` names the source |
+
+**Three from `tool_registry.py`, as planned:**
 
 | Was | Now |
 |-----|-----|

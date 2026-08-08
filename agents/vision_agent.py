@@ -18,6 +18,7 @@ import urllib.request
 from pathlib import Path
 from typing import Any, Dict, Optional
 
+from core.contracts import AgentResult, FileRead, FileWritten, HttpResponse
 from core.security import log_action
 
 try:
@@ -92,13 +93,23 @@ class VisionAgent:
     def capture_active_screen(self) -> Dict[str, Any]:
         """Captures screenshot of active screen and saves to scratch directory."""
         if not PIL_AVAILABLE:
-            return {"success": False, "error": "Pillow library not installed for image capture."}
+            return AgentResult.not_configured(
+                "Screen capture", needs="the Pillow package"
+            ).as_dict()
 
         try:
             try:
                 screenshot = ImageGrab.grab()
-            except Exception:
-                screenshot = Image.new("RGB", (1920, 1080), color=(15, 15, 25))
+            except Exception as grab_err:
+                # This used to fall back to `Image.new("RGB", (1920, 1080),
+                # color=(15, 15, 25))` — a blank dark rectangle — and then report
+                # "✓ Screen captured (1920x1080)" and hand its base64 to the
+                # vision analyser. Every downstream answer about "what's on my
+                # screen" would then describe an image that was never on it.
+                return AgentResult.failed(
+                    f"I couldn't capture the screen: {grab_err}",
+                    error="SCREEN_CAPTURE_FAILED",
+                ).as_dict()
 
             out_dir = Path("data") / "scratch"
             out_dir.mkdir(parents=True, exist_ok=True)
@@ -110,16 +121,22 @@ class VisionAgent:
                 base64_data = base64.b64encode(f.read()).decode("utf-8")
 
             log_action("capture_screen", str(out_path), 1, "success", self.name)
-            return {
-                "success": True,
-                "path": str(out_path),
-                "width": screenshot.width,
-                "height": screenshot.height,
-                "base64": base64_data,
-                "message": f"✓ Screen captured ({screenshot.width}x{screenshot.height}).",
-            }
+            return AgentResult.ok(
+                f"✓ Screen captured ({screenshot.width}x{screenshot.height}).",
+                evidence=FileWritten(
+                    path=str(out_path), bytes_written=out_path.stat().st_size
+                ),
+                data={
+                    "path": str(out_path),
+                    "width": screenshot.width,
+                    "height": screenshot.height,
+                    "base64": base64_data,
+                },
+            ).as_dict()
         except Exception as e:
-            return {"success": False, "error": str(e)}
+            return AgentResult.failed(
+                f"Screen capture failed: {e}", error="SCREEN_CAPTURE_FAILED"
+            ).as_dict()
 
     def _query_multimodal_api(self, prompt: str, base64_img: str) -> Optional[str]:
         """
@@ -179,36 +196,57 @@ class VisionAgent:
         if api_response:
             msg = f"✓ Screen Vision Analysis (Gemini Multimodal) for '{user_query}':\n  • Active Foreground Window: \"{win_title}\"\n  • Analysis: {api_response.strip()}"
             log_action("analyze_screen_context", user_query, 1, "success", self.name, {"image": screen_path, "mode": "gemini_multimodal_vision"})
-            return {
-                "success": True,
-                "query": user_query,
-                "image_path": screen_path,
-                "multimodal_llm": True,
-                "message": msg,
-            }
+            return AgentResult.ok(
+                msg,
+                evidence=HttpResponse(
+                    status=200,
+                    url="generativelanguage.googleapis.com/gemini-1.5-flash",
+                ),
+                data={
+                    "query": user_query,
+                    "image_path": screen_path,
+                    "multimodal_llm": True,
+                },
+            ).as_dict()
 
-        # Step 2: Active Window Screen Inspection Fallback
+        # Step 2: no vision model — report what can actually be observed.
+        #
+        # This branch used to be headed "✓ Screen Vision Analysis" and end with
+        # "Visual Inspection: Onscreen content identified under active title",
+        # having identified no content whatsoever. It reads the window title from
+        # the OS and computes mean pixel brightness; nothing looks at what is on
+        # the screen. Asked "what's the error on my screen", it answered with a
+        # luminance figure dressed as an analysis. Without a Gemini key there is
+        # no vision here, and saying so is more useful than a confident
+        # non-answer.
         try:
             img = Image.open(screen_path)
             stat = ImageStat.Stat(img)
             brightness = sum(stat.mean) / len(stat.mean)
             aspect_ratio = round(width / height, 2)
-
-            vision_desc = (
-                f"✓ Screen Vision Analysis for '{user_query}':\n"
-                f"  • Active Foreground Window Title: \"{win_title}\"\n"
-                f"  • Display Canvas Dimensions: {width}x{height} (Aspect {aspect_ratio})\n"
-                f"  • Screen Luminance: {brightness:.1f}/255 | Base64 Payload: {len(base64_img)} bytes\n"
-                f"  • Visual Inspection: Onscreen content identified under active title '{win_title}'."
+            detail = (
+                f"  • Active window title: \"{win_title}\"\n"
+                f"  • Dimensions: {width}x{height} (aspect {aspect_ratio})\n"
+                f"  • Mean brightness: {brightness:.1f}/255"
             )
         except Exception:
-            vision_desc = f"✓ Screen Vision Analysis for '{user_query}': Active Window Title: \"{win_title}\" ({width}x{height})."
+            detail = f"  • Active window title: \"{win_title}\" ({width}x{height})"
 
-        log_action("analyze_screen_context", user_query, 1, "success", self.name, {"image": screen_path, "mode": "active_window_vision"})
-        return {
-            "success": True,
-            "query": user_query,
-            "image_path": screen_path,
-            "active_window": win_title,
-            "message": vision_desc,
-        }
+        vision_desc = (
+            f"I captured the screen but can't read what's on it — that needs a "
+            f"Gemini API key (GEMINI_API_KEY in .env). Here's what I can tell you "
+            f"about it:\n{detail}\n"
+            f"  • Saved to: {screen_path}"
+        )
+
+        log_action("analyze_screen_context", user_query, 1, "partial", self.name, {"image": screen_path, "mode": "active_window_only"})
+        return AgentResult.ok(
+            vision_desc,
+            evidence=FileRead(path=str(screen_path), bytes_read=len(base64_img)),
+            data={
+                "query": user_query,
+                "image_path": screen_path,
+                "active_window": win_title,
+                "vision_model_used": False,
+            },
+        ).as_dict()

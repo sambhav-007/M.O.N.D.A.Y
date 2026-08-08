@@ -148,6 +148,91 @@ def test_convert_csv_to_json_witnesses_the_file_it_wrote(registry, tmp_path):
     assert result["evidence"]["bytes_written"] == out.stat().st_size
 
 
+# ── Every agent, not just the registry ───────────────────────────────────────
+# A migration is only as good as the check that it happened. Each call below is
+# read-only or fails closed: nothing sends, deletes, spends, or writes outside a
+# temp directory, and the network is blocked for the whole suite.
+def test_all_agent_modules_import_the_contract():
+    """
+    A file that never imports `AgentResult` cannot be honouring it. This is a
+    crude check and deliberately so — it fails loudly the moment a tenth agent
+    is added without going through the contract.
+    """
+    import importlib
+    import pkgutil
+
+    import agents
+
+    unmigrated = []
+    for mod in pkgutil.iter_modules(agents.__path__):
+        module = importlib.import_module(f"agents.{mod.name}")
+        source = open(module.__file__, encoding="utf-8").read()
+        if "AgentResult" not in source:
+            unmigrated.append(mod.name)
+
+    assert not unmigrated, (
+        f"these agents still return raw dicts: {unmigrated}. Route them through "
+        f"core.contracts.AgentResult — an unmigrated file is exactly where the "
+        f"next fabricated success will live."
+    )
+
+
+def test_agent_calls_that_should_refuse_all_do(planner_agents):
+    """
+    The refusal paths, exercised for real. Each of these used to report success.
+    """
+    checks = [
+        ("audio.start_meeting_recording", planner_agents["audio"].start_meeting_recording(), "NOT_IMPLEMENTED"),
+        ("audio.stop_meeting_recording", planner_agents["audio"].stop_meeting_recording_and_summarize(), "NOT_IMPLEMENTED"),
+        ("comms.read_latest_email", planner_agents["comms"].read_latest_email(), None),
+        ("coder.unsupported_domain", planner_agents["coder"].generate_and_execute_script("negotiate world peace"), "NOT_IMPLEMENTED"),
+    ]
+    for label, result, expected_error in checks:
+        _assert_contract(result, label)
+        assert result["success"] is False, f"{label} should refuse"
+        if expected_error:
+            assert result["error"] == expected_error, f"{label}: {result['error']}"
+
+
+def test_agent_read_paths_carry_evidence(planner_agents, tmp_path):
+    """The success paths, exercised for real — each must witness what it read."""
+    doc = tmp_path / "notes.txt"
+    doc.write_text(
+        "The quarterly review is on Friday at ten. "
+        "Attendance is expected from the whole team.\n"
+        "Budget questions should go to finance beforehand.\n",
+        encoding="utf-8",
+    )
+
+    results = {
+        "document.summarize": planner_agents["document"].summarize_document(str(doc)),
+        "memory.recall": planner_agents["memory"].recall("nothing_matches_this_xyz"),
+        "habit.detect": planner_agents["habit"].detect_habits_and_suggest(),
+        "audio.summarize": planner_agents["audio"].summarize_audio_file(str(doc)),
+    }
+    for label, result in results.items():
+        _assert_contract(result, label)
+
+
+@pytest.fixture(scope="module")
+def planner_agents():
+    from agents.audio_summarizer_agent import AudioSummarizerAgent
+    from agents.coder_agent import CoderAgent
+    from agents.comms_agent import CommunicationAgent
+    from agents.document_agent import DocumentAgent
+    from agents.habit_agent import HabitAgent
+    from agents.memory_agent import MemoryAgent
+
+    return {
+        "audio": AudioSummarizerAgent(),
+        "coder": CoderAgent(),
+        "comms": CommunicationAgent(),
+        "document": DocumentAgent(),
+        "habit": HabitAgent(),
+        "memory": MemoryAgent(),
+    }
+
+
 # ── The specific fabrications this phase removed ─────────────────────────────
 def test_smart_light_no_longer_invents_a_device(registry):
     """

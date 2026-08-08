@@ -14,6 +14,7 @@ import threading
 from pathlib import Path
 from typing import Any, Dict, Optional
 
+from core.contracts import AgentResult, FileWritten, TaskQueued
 from core.security import log_action
 from ml.voice_cloner import MondayVoiceModel
 
@@ -88,14 +89,15 @@ class VoiceAgent:
         Runs generation & audio playback asynchronously in a background thread so UI does not freeze.
         """
         if not text or not text.strip():
-            return {"success": False, "error": "Speech text cannot be empty."}
+            return AgentResult.failed(
+                "Speech text cannot be empty.", error="EMPTY_TEXT"
+            ).as_dict()
 
         if not self.enable_voice:
-            return {
-                "success": True,
-                "voice_disabled": True,
-                "message": "Voice output is currently disabled (ENABLE_VOICE=False)."
-            }
+            return AgentResult.failed(
+                "Voice output is currently disabled (ENABLE_VOICE=False).",
+                error="VOICE_DISABLED",
+            ).as_dict()
 
         def _generate_and_play():
             output_path = self.root_dir / "data" / "staging" / "temp_speech.wav"
@@ -125,18 +127,23 @@ class VoiceAgent:
             except Exception:
                 pass
 
-        # Run synthesis in background thread so M.O.N.D.A.Y. UI does NOT freeze while talking
+        # Run synthesis in background thread so M.O.N.D.A.Y. UI does NOT freeze
+        # while talking. Because this returns before the thread finishes — and
+        # both synthesis paths above swallow their exceptions — the only thing
+        # this function can honestly witness is that the work was queued.
+        #
+        # It used to return `audio_synthesized: True, trained_voice_used: True`
+        # on the next line. Both were claims about a thread that had not run yet,
+        # and the second was false regardless: neither gTTS nor pyttsx3 uses the
+        # reference sample, and cloning it was abandoned (handoff.md §5).
         threading.Thread(target=_generate_and_play, daemon=True).start()
-        log_action("voice_speak", text[:60], 1, "success", self.name)
+        log_action("voice_speak", text[:60], 1, "queued", self.name)
 
-        return {
-            "success": True,
-            "text": text,
-            "audio_synthesized": True,
-            "trained_voice_used": True,
-            "speaker_wav": str(self.sample_path),
-            "message": f"[Voice] M.O.N.D.A.Y. Speaking: \"{text}\"",
-        }
+        return AgentResult.ok(
+            f'[Voice] M.O.N.D.A.Y. Speaking: "{text}"',
+            evidence=TaskQueued(worker="voice synthesis thread", detail=f"{len(text)} chars"),
+            data={"text": text, "speech_queued": True},
+        ).as_dict()
 
     def listen(self, timeout_seconds: int = 5) -> Dict[str, Any]:
         """
@@ -168,19 +175,19 @@ class VoiceAgent:
             with sr.AudioFile(str(wav_path.resolve())) as source:
                 audio = recognizer.record(source)
                 transcript = recognizer.recognize_google(audio)
-                return {
-                    "success": True,
-                    "listening": False,
-                    "transcript": transcript,
-                    "message": f"[Mic] Recognized speech: \"{transcript}\"",
-                }
+                return AgentResult.ok(
+                    f'[Mic] Recognized speech: "{transcript}"',
+                    evidence=FileWritten(
+                        path=str(wav_path), bytes_written=wav_path.stat().st_size
+                    ),
+                    data={"transcript": transcript, "listening": False},
+                ).as_dict()
         except Exception as err:
-            return {
-                "success": False,
-                "listening": False,
-                "error": str(err),
-                "message": f"[Mic] Listening timed out or speech not clear: {err}",
-            }
+            return AgentResult.failed(
+                f"[Mic] Listening timed out or speech not clear: {err}",
+                error="SPEECH_RECOGNITION_FAILED",
+                data={"listening": False},
+            ).as_dict()
 
     def start_wake_word_listener(self, callback_fn: Optional[Any] = None) -> Dict[str, Any]:
         """
@@ -204,8 +211,8 @@ class VoiceAgent:
         t = threading.Thread(target=continuous_listener_worker, daemon=True)
         t.start()
         log_action("start_wake_word_listener", "hey_monday", 1, "success", self.name)
-        return {
-            "success": True,
-            "wake_word": "Hey Monday / Monday",
-            "message": "✓ Hands-free continuous 'Monday' Wake-Word listener activated in background."
-        }
+        return AgentResult.ok(
+            "✓ Hands-free continuous 'Monday' Wake-Word listener activated in background.",
+            evidence=TaskQueued(worker="wake-word listener thread", detail="polls the mic every 6s"),
+            data={"wake_word": "Hey Monday / Monday"},
+        ).as_dict()

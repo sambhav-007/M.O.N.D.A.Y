@@ -17,6 +17,7 @@ import pypdf
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 
+from core.contracts import AgentResult, FileRead, SystemQuery
 from core.security import log_action
 
 
@@ -74,12 +75,12 @@ class DocumentAgent:
         if path.exists():
             ok, text, err = self.read_document_text(path)
             if not ok:
-                return {"success": False, "error": err}
+                return AgentResult.failed(err, error="DOCUMENT_READ_FAILED").as_dict()
         else:
             text = filepath_or_text
 
         if not text.strip():
-            return {"success": False, "error": "Document text is empty."}
+            return AgentResult.failed("Document text is empty.", error="EMPTY_DOCUMENT").as_dict()
 
         # Sentence tokenisation
         sentences = [s.strip() for s in re.split(r'(?<=[.!?])\s+', text) if len(s.strip()) > 15]
@@ -109,14 +110,20 @@ class DocumentAgent:
             "word_count": word_count, "summary_sentences": max_sentences
         })
 
-        return {
-            "success": True,
-            "document": doc_name,
-            "original_word_count": word_count,
-            "sentences_analysed": len(sentences),
-            "summary": summary,
-            "message": f"✓ Summarised {doc_name} ({word_count} words → {max_sentences} key points).",
-        }
+        return AgentResult.ok(
+            f"✓ Summarised {doc_name} ({word_count} words → {max_sentences} key points).",
+            evidence=(
+                FileRead(path=str(path), bytes_read=len(text))
+                if path.exists()
+                else SystemQuery(source="inline text", detail=f"{word_count} words")
+            ),
+            data={
+                "document": doc_name,
+                "original_word_count": word_count,
+                "sentences_analysed": len(sentences),
+                "summary": summary,
+            },
+        ).as_dict()
 
     def rag_search(self, query: str, document_paths: List[str | Path]) -> Dict[str, Any]:
         """
@@ -143,7 +150,7 @@ class DocumentAgent:
                 chunk_sources.append((path.name, i // chunk_size + 1))
 
         if not all_chunks:
-            return {"success": False, "error": "No valid documents found for search."}
+            return AgentResult.failed("No valid documents found for search.", error="NO_DOCUMENTS").as_dict()
 
         # Vectorize query + chunks
         vectorizer = TfidfVectorizer(stop_words="english")
@@ -169,14 +176,19 @@ class DocumentAgent:
 
         log_action("rag_search", query, 1, "success", self.name, {"matches": len(results)})
 
-        return {
-            "success": True,
-            "query": query,
-            "total_documents_indexed": len(document_paths),
-            "chunks_searched": len(all_chunks),
-            "results": results,
-            "message": f"✓ Found {len(results)} relevant passages across {len(document_paths)} documents.",
-        }
+        return AgentResult.ok(
+            f"✓ Found {len(results)} relevant passages across {len(document_paths)} documents.",
+            evidence=SystemQuery(
+                source="TF-IDF index",
+                detail=f"{len(all_chunks)} chunks from {len(document_paths)} documents",
+            ),
+            data={
+                "query": query,
+                "total_documents_indexed": len(document_paths),
+                "chunks_searched": len(all_chunks),
+                "results": results,
+            },
+        ).as_dict()
 
     def compare_documents(self, filepath1: str | Path, filepath2: str | Path) -> Dict[str, Any]:
         """Generates a unified text/code diff comparison report between two files."""
@@ -184,7 +196,7 @@ class DocumentAgent:
         ok1, text1, err1 = self.read_document_text(filepath1)
         ok2, text2, err2 = self.read_document_text(filepath2)
         if not ok1 or not ok2:
-            return {"success": False, "error": f"Failed to read input files: {err1 or err2}"}
+            return AgentResult.failed(f"Failed to read input files: {err1 or err2}", error="DOCUMENT_READ_FAILED").as_dict()
 
         lines1 = text1.splitlines(keepends=True)
         lines2 = text2.splitlines(keepends=True)
@@ -192,22 +204,26 @@ class DocumentAgent:
         diff_text = "".join(diff[:100]) or "No differences found (Files are identical)."
 
         log_action("compare_documents", f"{filepath1} vs {filepath2}", 1, "success", self.name)
-        return {
-            "success": True,
-            "file1": str(filepath1),
-            "file2": str(filepath2),
-            "diff": diff_text,
-            "diff_lines_count": len(diff),
-            "diff_report": diff_text,
-            "message": f"✓ Generated document diff report between '{Path(filepath1).name}' and '{Path(filepath2).name}' ({len(diff)} diff lines).",
-        }
+        return AgentResult.ok(
+            f"✓ Generated document diff report between '{Path(filepath1).name}' and '{Path(filepath2).name}' ({len(diff)} diff lines).",
+            evidence=FileRead(
+                path=f"{filepath1} + {filepath2}", bytes_read=len(text1) + len(text2)
+            ),
+            data={
+                "file1": str(filepath1),
+                "file2": str(filepath2),
+                "diff": diff_text,
+                "diff_lines_count": len(diff),
+                "diff_report": diff_text,
+            },
+        ).as_dict()
 
     def query_dataset(self, filepath: str | Path, query_filter: str = "", query_expr: str = "") -> Dict[str, Any]:
         """Queries local CSV/JSON datasets using pandas filtering and analytics."""
         import pandas as pd
         path = Path(filepath).resolve()
         if not path.exists():
-            return {"success": False, "error": f"Dataset file '{filepath}' not found."}
+            return AgentResult.failed(f"Dataset file '{filepath}' not found.", error="FILE_NOT_FOUND").as_dict()
 
         effective_query = query_expr or query_filter
         try:
@@ -216,7 +232,7 @@ class DocumentAgent:
             elif path.suffix.lower() == ".json":
                 df = pd.read_json(path)
             else:
-                return {"success": False, "error": "Unsupported dataset format. Use CSV or JSON."}
+                return AgentResult.failed("Unsupported dataset format. Use CSV or JSON.", error="UNSUPPORTED_FORMAT").as_dict()
 
             if effective_query:
                 filtered_df = df.query(effective_query) if hasattr(df, "query") else df
@@ -226,18 +242,20 @@ class DocumentAgent:
             summary_str = f"Rows: {len(filtered_df)} | Columns: {list(filtered_df.columns)[:5]}"
             sample_records = filtered_df.head(5).to_dict(orient="records")
 
-            return {
-                "success": True,
-                "dataset": path.name,
-                "total_rows": len(df),
-                "filtered_rows": len(filtered_df),
-                "row_count": len(filtered_df),
-                "summary": summary_str,
-                "records_sample": sample_records,
-                "message": f"✓ Queried dataset '{path.name}': {len(filtered_df)} matching records.",
-            }
+            return AgentResult.ok(
+                f"✓ Queried dataset '{path.name}': {len(filtered_df)} matching records.",
+                evidence=FileRead(path=str(path), bytes_read=path.stat().st_size),
+                data={
+                    "dataset": path.name,
+                    "total_rows": len(df),
+                    "filtered_rows": len(filtered_df),
+                    "row_count": len(filtered_df),
+                    "summary": summary_str,
+                    "records_sample": sample_records,
+                },
+            ).as_dict()
         except Exception as e:
-            return {"success": False, "error": f"Dataset query failed: {e}"}
+            return AgentResult.failed(f"Dataset query failed: {e}", error="DATASET_QUERY_FAILED").as_dict()
 
     def ask_document_question(
         self,
@@ -265,12 +283,12 @@ class DocumentAgent:
             target_path = document_paths[0]
 
         if not target_path:
-            return {"success": False, "error": "No valid document path provided for QA."}
+            return AgentResult.failed("No valid document path provided for QA.", error="NO_DOCUMENT_PATH").as_dict()
 
         path_obj = Path(target_path)
         ok, full_text, err = self.read_document_text(path_obj)
         if not ok:
-            return {"success": False, "error": f"Could not read document '{target_path}': {err}"}
+            return AgentResult.failed(f"Could not read document '{target_path}': {err}", error="DOCUMENT_READ_FAILED").as_dict()
 
         doc_list = document_paths if document_paths else [path_obj]
         rag_res = self.rag_search(target_question, document_paths=doc_list)
@@ -293,11 +311,13 @@ class DocumentAgent:
             answer = f"Found relevant information in '{path_obj.name}':\n{passage_str[:400]}"
 
         log_action("ask_document_question", target_question, 1, "success", self.name)
-        return {
-            "success": True,
-            "document": path_obj.name,
-            "question": target_question,
-            "answer": str(answer),
-            "passages_consulted": len(passages),
-            "message": f"✓ Document Q&A Answer:\n{answer}",
-        }
+        return AgentResult.ok(
+            f"✓ Document Q&A Answer:\n{answer}",
+            evidence=FileRead(path=str(path_obj), bytes_read=len(full_text)),
+            data={
+                "document": path_obj.name,
+                "question": target_question,
+                "answer": str(answer),
+                "passages_consulted": len(passages),
+            },
+        ).as_dict()

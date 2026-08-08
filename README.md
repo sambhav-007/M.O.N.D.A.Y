@@ -353,8 +353,8 @@ Written down deliberately, so nothing in this README claims more than the code d
 | Tier-2 approval gate | Enforced for `send_email`, `send_whatsapp`, `terminate_process` |
 | WhatsApp | Opens a chat with the message pre-typed; auto-send is Tier-2 gated (see below) |
 | Audit log | Lossless within one process; records the full Tier-2 lifecycle |
-| Test suite | 328 passing, offline and deterministic (`py -3.12 -m pytest`) in ~73s |
-| Result contract | `core/contracts.py` — a handler may only claim success if it carries evidence of what it did |
+| Test suite | 331 passing, offline and deterministic (`py -3.12 -m pytest`) in ~92s |
+| Result contract | `core/contracts.py` — a handler may only claim success if it carries evidence of what it did. All 11 agents route through it |
 
 ### WhatsApp — what it can and cannot do
 
@@ -397,6 +397,14 @@ lookup carries emails only, so a bare name has no other route to a number.
 
 ### Declared in policy but not implemented
 
+- **Meeting audio capture** — there is no implementation. Nothing in the repo
+  records audio, so `AudioSummarizerAgent` now refuses up front instead of
+  reporting an empty meeting. It can still summarise a transcript you supply.
+- **Screen vision without a Gemini key** — the fallback reports the active window
+  title and mean pixel brightness. It does not read the screen, and no longer
+  says it does.
+- **Voice cloning** — neither gTTS nor pyttsx3 uses `mondayvoice.mp3`; the stored
+  "voice profile" holds playback settings, not measured acoustics.
 - **IoT / Smart Home ("Pillar 5")** — there is no implementation. The previous
   `toggle_smart_light` performed no I/O and returned success anyway; it now
   reports `NOT_IMPLEMENTED`. Real support needs a hub to talk to (Home Assistant,

@@ -156,6 +156,28 @@ class KeypressSent(_EvidenceBase):
         return f"sent {self.key}" + (f" to {self.target_hint}" if self.target_hint else "")
 
 
+class TaskQueued(_EvidenceBase):
+    """Work was handed to a background worker that really was started.
+
+    The narrowest variant here, and the one most easily misused. It witnesses
+    *dispatch* and nothing else: a thread exists. It says nothing about whether
+    the work succeeded, and a message paired with it must not claim it did.
+    `VoiceAgent.speak` is the motivating case — it returns before synthesis
+    finishes by design, so "queued for synthesis" is the strongest true statement
+    available, where the old code said `audio_synthesized: True`.
+
+    If you can wait for the outcome, wait for it and use the evidence that
+    describes what actually happened instead.
+    """
+
+    kind: Literal["task_queued"] = "task_queued"
+    worker: str
+    detail: str = ""
+
+    def describe(self) -> str:
+        return f"queued on {self.worker}" + (f" ({self.detail})" if self.detail else "")
+
+
 class RecordStored(_EvidenceBase):
     """A row was committed to the local database."""
 
@@ -176,6 +198,7 @@ Evidence = Annotated[
         SystemQuery,
         SmtpAccepted,
         KeypressSent,
+        TaskQueued,
         RecordStored,
     ],
     Field(discriminator="kind"),

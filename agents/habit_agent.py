@@ -11,6 +11,7 @@ import json
 from typing import Any, Dict, List
 
 from core.config import ACTION_LOG_PATH
+from core.contracts import AgentResult, SystemQuery
 from core.security import log_action
 
 
@@ -66,26 +67,25 @@ class HabitAgent:
 
             log_action("detect_habits", "system", 1, "success", self.name, {"suggestions_count": len(suggestions)})
 
-            return {
-                "success": True,
-                "habits_found": len(suggestions),
-                "suggestions": suggestions,
-                "message": f"✓ Mined workflow history — discovered {len(suggestions)} automation opportunities.",
-            }
+            return AgentResult.ok(
+                f"✓ Mined workflow history — discovered {len(suggestions)} automation opportunities.",
+                evidence=SystemQuery(
+                    source="ml.association_rules.run_apriori",
+                    detail=f"{len(sessions)} sessions → {len(rules)} rules",
+                ),
+                data={"habits_found": len(suggestions), "suggestions": suggestions},
+            ).as_dict()
 
         except Exception as e:
-            # Fallback simple suggestion
-            return {
-                "success": True,
-                "habits_found": 1,
-                "suggestions": [
-                    {
-                        "trigger": "run tests",
-                        "automated_action": "git commit",
-                        "confidence": 0.85,
-                        "lift": 3.2,
-                        "prompt": "🤖 Habit Detected: I noticed you frequently git commit after running tests. Automate this workflow?",
-                    }
-                ],
-                "message": f"✓ Habit detector active (fallback): {e}",
-            }
+            # This branch used to return `success: True` with one hardcoded
+            # "habit": git commit after running tests, at 0.85 confidence and
+            # 3.2 lift, phrased as "🤖 Habit Detected: I noticed you frequently…".
+            # Nothing had been noticed. Component 2.4 had just failed to run, and
+            # its failure was dressed up as its output — a fabricated mining
+            # result complete with fabricated statistics, which is worse than a
+            # fabricated success because it invites the user to act on it.
+            log_action("detect_habits", "system", 1, "failure", self.name, {"error": str(e)})
+            return AgentResult.failed(
+                f"I couldn't mine your workflow history: {e}",
+                error="HABIT_MINING_FAILED",
+            ).as_dict()

@@ -17,6 +17,7 @@ import subprocess
 from pathlib import Path
 from typing import Any, Dict, Optional, Tuple
 
+from core.contracts import AgentResult, ProcessExit
 from core.security import log_action
 
 SCRATCH_DIR = Path("data") / "scratch"
@@ -84,7 +85,10 @@ def set_volume(target_percentage: int = 50) -> None:
         subprocess.run(["powershell", "-Command", ps_cmd], capture_output=True)
         print(f"[SUCCESS] Generalized System Volume set to {{target_percentage}}%.")
     else:
-        print(f"[SUCCESS] Generalized System Volume set request processed ({{target_percentage}}%).")
+        # The keypress mechanism above is Windows-only; there is nothing to do
+        # here. It used to print "[SUCCESS] … set request processed" and exit 0.
+        print("[FAILED] Volume control is only implemented on Windows.", file=sys.stderr)
+        sys.exit(1)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Generalized System Volume Plugin")
@@ -132,8 +136,13 @@ def scrape_news_headlines(url: str = "{url}", limit: int = {limit}) -> list:
                 print(f"  {{idx}}. {{clean_title}}")
             return titles
     except Exception as e:
-        print(f"[SUCCESS] Generalized web scraper executed for {{url}}.")
-        return []
+        # This printed "[SUCCESS] Generalized web scraper executed" and exited 0,
+        # so CoderAgent read a zero return code plus a SUCCESS line and reported
+        # the scrape as done — a fabricated success laundered through a
+        # subprocess, where the result contract in the parent process could not
+        # see it. Exit non-zero so the failure is the failure.
+        print(f"[FAILED] Could not scrape {{url}}: {{e}}", file=sys.stderr)
+        sys.exit(1)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Generalized Web Scraper Plugin")
@@ -199,16 +208,16 @@ if __name__ == "__main__":
         SUPPORTED_DOMAINS = {"system_volume", "desktop_folder", "web_scraper"}
         if domain not in SUPPORTED_DOMAINS:
             log_action("execute_dynamic_script", user_prompt, 1, "unsupported", self.name)
-            return {
-                "success": False,
-                "domain": domain,
-                "message": (
+            return AgentResult.failed(
+                (
                     f"I'm not sure how to do that yet: \"{user_prompt}\". "
                     "I can currently open apps, search the web, work with documents, "
                     "save/recall memories, adjust system volume, and create desktop "
                     "folders. Try rephrasing or a more specific command."
                 ),
-            }
+                error="NOT_IMPLEMENTED",
+                data={"domain": domain},
+            ).as_dict()
 
         while attempt < max_retries:
             attempt += 1
@@ -244,15 +253,21 @@ if __name__ == "__main__":
                         except Exception: pass
 
                     plugin_msg = f"\n  ✓ Permanently compiled generalized plugin: 'data/plugins/{plugin_file.name}' ({func_name})"
-                    return {
-                        "success": True,
-                        "script_generated": script_code,
-                        "plugin_file": str(plugin_file),
-                        "domain": domain,
-                        "function": func_name,
-                        "output": stdout_clean,
-                        "message": f"{stdout_clean}{plugin_msg}",
-                    }
+                    return AgentResult.ok(
+                        f"{stdout_clean}{plugin_msg}",
+                        evidence=ProcessExit(
+                            command=f"{Path(sys.executable).name} {temp_script.name}",
+                            returncode=proc.returncode,
+                            stdout_excerpt=stdout_clean[:120],
+                        ),
+                        data={
+                            "script_generated": script_code,
+                            "plugin_file": str(plugin_file),
+                            "domain": domain,
+                            "function": func_name,
+                            "output": stdout_clean,
+                        },
+                    ).as_dict()
                 else:
                     error_context = proc.stderr.strip()
                     if attempt < max_retries:
@@ -279,11 +294,11 @@ if __name__ == "__main__":
                     except Exception: pass
 
         log_action("execute_dynamic_script", user_prompt, 1, "failed", self.name, {"error": error_context})
-        return {
-            "success": False,
-            "error": error_context or "SCRIPT_EXECUTION_FAILED",
-            "message": f"❌ Script execution failed for '{domain}': {error_context}",
-        }
+        return AgentResult.failed(
+            f"❌ Script execution failed for '{domain}': {error_context}",
+            error="SCRIPT_EXECUTION_FAILED",
+            data={"detail": error_context},
+        ).as_dict()
 
     def execute_filesystem_task(self, prompt: str) -> Dict[str, Any]:
         """

@@ -104,30 +104,47 @@ class MondayVoiceModel:
         file_size = ref_path.stat().st_size
         duration_sec = max(1.0, round(file_size / 35000.0, 2))
 
-        # Acoustic feature extraction from mondayvoice.mp3
+        # These are TTS playback defaults, not measurements. The docstring above
+        # used to promise "acoustic feature extraction (duration, energy
+        # spectrum, rate, pitch estimation)" and the fields were named to match —
+        # `pitch_hz: 185.0`, `spectral_centroid: 1450.0`, `harmonic_ratio: 0.94`,
+        # `voice_gender: "female_ai_entity"` — but no audio was ever decoded or
+        # analysed. The only thing read from the file is its size in bytes, and
+        # `estimated_duration_sec` is that divided by 35000. Nothing downstream
+        # uses the invented numbers except `rate` and `volume`, which are
+        # pyttsx3 settings.
+        #
+        # Real extraction needs a decoder, and decoding the mp3 needs FFmpeg,
+        # which Smart App Control blocks on this machine — the same wall that
+        # ended the XTTS work (see handoff.md §5). So the honest move is to stop
+        # calling these measurements.
         self.voice_profile = {
             "trained": True,
             "reference_file": str(ref_path.resolve()),
             "file_size_bytes": file_size,
             "estimated_duration_sec": duration_sec,
-            "pitch_hz": 185.0,
-            "rate_wpm": 165,
-            "volume": 1.0,
-            "spectral_centroid": 1450.0,
-            "voice_gender": "female_ai_entity",
-            "harmonic_ratio": 0.94,
+            "measured": False,  # nothing here came from analysing the audio
+            "rate_wpm": 165,    # pyttsx3 playback default
+            "volume": 1.0,      # pyttsx3 playback default
             "model_version": "monday-signature-v3.0",
         }
 
-        # Save trained profile model weights to models/monday_voice_profile.joblib
         try:
             joblib.dump(self.voice_profile, self.model_path)
-        except Exception:
-            pass
+        except Exception as e:
+            return {
+                "success": False,
+                "error": "VOICE_PROFILE_SAVE_FAILED",
+                "message": f"Could not save the voice profile: {e}",
+            }
 
         return {
             "success": True,
-            "message": f"✓ M.O.N.D.A.Y. Voice Model trained from reference '{ref_path.name}'.",
+            "message": (
+                f"✓ Voice playback profile set from '{ref_path.name}' "
+                f"({file_size:,} bytes). Note: this stores playback settings — it "
+                f"does not analyse or clone the recording."
+            ),
             "profile": self.voice_profile,
         }
 
@@ -203,19 +220,30 @@ class MondayVoiceModel:
                 except Exception:
                     spoke_natively = False
 
+        # This used to return `success: True` and `trained_voice_used: True`
+        # unconditionally — including when gTTS raised and pyttsx3 was missing or
+        # also raised, leaving `spoke_natively` False and no audio anywhere. Two
+        # separate claims were false: that speech happened, and that it used the
+        # reference voice. Neither gTTS nor pyttsx3 has ever seen
+        # mondayvoice.mp3; cloning it was evaluated and abandoned (handoff.md §5).
+        if not spoke_natively:
+            return {
+                "success": False,
+                "error": "TTS_UNAVAILABLE",
+                "message": (
+                    "I couldn't speak that — gTTS needs the network and pyttsx3 "
+                    "is not installed."
+                ),
+            }
+
         return {
             "success": True,
             "text": text,
-            "trained_voice_used": True,
-            "reference_file": str(self.ref_audio_path),
             "engine": neural_engine_used,
-            "voice_parameters": {
-                "rate": rate,
-                "volume": volume,
-                "pitch_hz": self.voice_profile.get("pitch_hz", 180.0),
-            },
+            "reference_voice_cloned": False,  # no engine here clones the sample
+            "voice_parameters": {"rate": rate, "volume": volume},
             "spoke_natively": spoke_natively,
-            "message": f"M.O.N.D.A.Y. Trained Voice: \"{text}\"",
+            "message": f"M.O.N.D.A.Y.: \"{text}\"",
         }
 
 

@@ -241,19 +241,27 @@ trusting any later phase.
 **Done when:** `pytest -m "not network"` is green **with the Wi-Fi off**, in
 under 20 seconds, on three consecutive runs.
 
-### Phase 2 — The result contract 🟡 **STARTED 2026-08-08**
+### Phase 2 — The result contract ✅ **DONE 2026-08-08**
 
-Done: `core/contracts.py` exists and is enforced; `core/tool_registry.py` is
-fully migrated; **five** fabrications removed (the three named in §1.4, plus two
-found during the work — see below); `tests/test_result_contract.py` covers both
-the mechanism and the migrated handlers. Suite: **328 passing**.
+`core/contracts.py` exists and is enforced. **All 11 agent modules** plus
+`core/tool_registry.py` route through it, checked by a test that fails the moment
+a twelfth appears without it. **Thirteen fabrications removed** — the three named
+in §1.4 and ten more found while migrating. Suite: **331 passing**, offline, ~92s.
 
-Not done: nine agents still return raw dicts (`browser`, `document`, `memory`,
-`habit`, `vision`, `voice`, `coder`, `audio_summarizer`, `public_api`). The
-contract cannot catch a fabrication in a file that does not use it yet, so step 2
-below is still the bulk of this phase.
+The full list is in `handoff.md`. The two worst were not in `§1.4` at all:
 
-Two fabrications found beyond §1.4, both in the same class:
+- **`AudioSummarizerAgent`** claimed to be "capturing meeting audio streams"
+  while capturing nothing. There is no audio capture anywhere in the repo —
+  `recorded_transcripts` is only ever assigned `[]` and no caller appends to it.
+  A user could leave it running through a meeting, take no notes, and find
+  afterwards there had never been anything to summarise.
+- **A generated `web_scraper` script** printed `[SUCCESS]` and exited 0 when the
+  fetch raised. The parent read a zero exit code and reported the scrape as done
+  — a fabricated success laundered through a **subprocess**, where the contract
+  in the parent process could not see it. Worth remembering as a general limit:
+  the contract governs this process only.
+
+Two more found beyond §1.4, in the same class as the originals:
 
 - **`ComputerAgent.get_system_volume`** returned a hardcoded `volume: 50` as
   though it were a reading — and that fallback was the *only* path that ever

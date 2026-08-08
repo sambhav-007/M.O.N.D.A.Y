@@ -16,6 +16,7 @@ from urllib.parse import parse_qs, quote_plus, unquote, urlparse
 import httpx
 from bs4 import BeautifulSoup
 
+from core.contracts import AgentResult, HttpResponse, ProcessExit, SystemQuery
 from core.security import log_action
 
 HEADERS = {
@@ -67,28 +68,27 @@ class BrowserAgent:
             if results:
                 log_action("web_search", query, 1, "success", self.name,
                            {"results_count": len(results)})
-                return {
-                    "success": True,
-                    "query": query,
-                    "result_count": len(results),
-                    "results": results,
-                    "message": f"✓ Found {len(results)} web search results for '{query}'.",
-                }
+                return AgentResult.ok(
+                    f"✓ Found {len(results)} web search results for '{query}'.",
+                    evidence=HttpResponse(status=resp.status_code, url=str(resp.url)),
+                    data={
+                        "query": query,
+                        "result_count": len(results),
+                        "results": results,
+                    },
+                ).as_dict()
 
             last_error = "WEB_SEARCH_NO_RESULTS"
 
         log_action("web_search", query, 1, "failed", self.name, {"error": last_error})
-        return {
-            "success": False,
-            "query": query,
-            "result_count": 0,
-            "results": [],
-            "error": last_error or "WEB_SEARCH_NO_RESULTS",
-            "message": (
+        return AgentResult.failed(
+            (
                 f"❌ Web search for '{query}' returned no results "
                 f"({last_error}). DuckDuckGo may be rate-limiting this machine."
             ),
-        }
+            error=last_error or "WEB_SEARCH_NO_RESULTS",
+            data={"query": query, "result_count": 0, "results": []},
+        ).as_dict()
 
     @staticmethod
     def _parse_ddg_html(html: str, num_results: int) -> List[Dict[str, str]]:
@@ -161,7 +161,7 @@ class BrowserAgent:
             with httpx.Client(headers=HEADERS, timeout=10.0, follow_redirects=True) as client:
                 resp = client.get(url)
                 if resp.status_code != 200:
-                    return {"success": False, "error": f"HTTP status {resp.status_code}"}
+                    return AgentResult.failed(f"HTTP status {resp.status_code}", error=f"HTTP_{resp.status_code}").as_dict()
 
                 soup = BeautifulSoup(resp.text, "html.parser")
 
@@ -177,16 +177,18 @@ class BrowserAgent:
 
                 log_action("read_webpage", url, 1, "success", self.name, {"char_count": len(text)})
 
-                return {
-                    "success": True,
-                    "url": url,
-                    "title": title,
-                    "content": text[:max_chars],
-                    "total_chars": len(text),
-                    "message": f"✓ Fetched page '{title}' ({len(text)} chars).",
-                }
+                return AgentResult.ok(
+                    f"✓ Fetched page '{title}' ({len(text)} chars).",
+                    evidence=HttpResponse(status=resp.status_code, url=str(resp.url)),
+                    data={
+                        "url": url,
+                        "title": title,
+                        "content": text[:max_chars],
+                        "total_chars": len(text),
+                    },
+                ).as_dict()
         except Exception as e:
-            return {"success": False, "error": f"Failed to fetch {url}: {e}"}
+            return AgentResult.failed(f"Failed to fetch {url}: {e}", error="PAGE_FETCH_FAILED").as_dict()
 
     def extract_webpage_markdown(self, url: str) -> Dict[str, Any]:
         """Fetches target web page and converts HTML structure into clean Markdown."""
@@ -203,13 +205,13 @@ class BrowserAgent:
         markdown += "\n\n".join(paragraphs[:30])
 
         log_action("extract_webpage_markdown", url, 1, "success", self.name)
-        return {
-            "success": True,
-            "url": url,
-            "title": title,
-            "markdown_content": markdown,
-            "message": f"✓ Extracted Markdown representation for '{title}'.",
-        }
+        return AgentResult.ok(
+            f"✓ Extracted Markdown representation for '{title}'.",
+            # The fetch it is built on carries the real proof; reuse it rather
+            # than inventing a second, weaker witness for the same round trip.
+            evidence=HttpResponse(status=200, url=url),
+            data={"url": url, "title": title, "markdown_content": markdown},
+        ).as_dict()
 
     def research_topic(self, topic: str) -> Dict[str, Any]:
         """
@@ -220,7 +222,7 @@ class BrowserAgent:
         results = search_res.get("results", [])
 
         if not results:
-            return {"success": False, "error": f"No web information found for '{topic}'."}
+            return AgentResult.failed(f"No web information found for '{topic}'.", error="NO_RESEARCH_RESULTS").as_dict()
 
         summary_points = []
         for idx, r in enumerate(results, 1):
@@ -230,13 +232,17 @@ class BrowserAgent:
 
         log_action("research_topic", topic, 1, "success", self.name, {"sources": len(results)})
 
-        return {
-            "success": True,
-            "topic": topic,
-            "sources_consulted": len(results),
-            "report": report,
-            "message": f"✓ Synthesised research report on '{topic}' from {len(results)} sources.",
-        }
+        return AgentResult.ok(
+            f"✓ Synthesised research report on '{topic}' from {len(results)} sources.",
+            evidence=SystemQuery(
+                source="web search results", detail=f"{len(results)} sources"
+            ),
+            data={
+                "topic": topic,
+                "sources_consulted": len(results),
+                "report": report,
+            },
+        ).as_dict()
 
     def deep_research_and_scrape(self, query: str, num_results: int = 3) -> Dict[str, Any]:
         """
@@ -247,7 +253,7 @@ class BrowserAgent:
         results = search_res.get("results", [])
 
         if not results:
-            return {"success": False, "error": f"No search results found for '{query}'."}
+            return AgentResult.failed(f"No search results found for '{query}'.", error="NO_SEARCH_RESULTS").as_dict()
 
         scraped_sources = []
         for r in results[:num_results]:
@@ -275,13 +281,17 @@ class BrowserAgent:
 
         log_action("deep_research_and_scrape", query, 1, "success", self.name, {"sources_scraped": sources_count})
 
-        return {
-            "success": True,
-            "query": query,
-            "sources_scraped": sources_count,
-            "report": synthesis,
-            "message": f"✓ Deep research completed for '{query}'. Scraped {sources_count} top web pages.",
-        }
+        return AgentResult.ok(
+            f"✓ Deep research completed for '{query}'. Scraped {sources_count} top web pages.",
+            evidence=SystemQuery(
+                source="scraped web pages", detail=f"{sources_count} pages"
+            ),
+            data={
+                "query": query,
+                "sources_scraped": sources_count,
+                "report": synthesis,
+            },
+        ).as_dict()
 
     def open_app_or_website(self, target_name: str) -> Dict[str, Any]:
         """
@@ -294,14 +304,28 @@ class BrowserAgent:
         # Direct explicit web URLs pass through directly
         if target.startswith("http://") or target.startswith("https://") or (("." in target) and (not target.endswith(".exe"))):
             url = target if target.startswith("http") else f"https://{target}"
-            webbrowser.open(url)
+            # `webbrowser.open` returns whether a browser was successfully
+            # launched. That return value was discarded and success reported
+            # regardless — on a machine with no browser registered, "✓ Opened Web
+            # URL" was printed for a window that never appeared.
+            launched = webbrowser.open(url)
+            if not launched:
+                log_action("open_website", url, 1, "failure", self.name)
+                return AgentResult.failed(
+                    f"I couldn't open a browser for {url} — no browser is "
+                    f"registered to handle it.",
+                    error="BROWSER_LAUNCH_FAILED",
+                    data={"target": target_name, "url": url},
+                ).as_dict()
+
             log_action("open_website", url, 1, "success", self.name)
-            return {
-                "success": True,
-                "target": target_name,
-                "url": url,
-                "message": f"✓ Opened Web URL ({url}).",
-            }
+            return AgentResult.ok(
+                f"✓ Opened Web URL ({url}).",
+                evidence=ProcessExit(
+                    command=f"webbrowser.open({url})", returncode=0
+                ),
+                data={"target": target_name, "url": url},
+            ).as_dict()
 
         # Check Local App First via ComputerAgent
         from agents.computer_agent import ComputerAgent
