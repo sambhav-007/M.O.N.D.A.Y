@@ -241,7 +241,34 @@ trusting any later phase.
 **Done when:** `pytest -m "not network"` is green **with the Wi-Fi off**, in
 under 20 seconds, on three consecutive runs.
 
-### Phase 2 — The result contract (≈1 day)
+### Phase 2 — The result contract 🟡 **STARTED 2026-08-08**
+
+Done: `core/contracts.py` exists and is enforced; `core/tool_registry.py` is
+fully migrated; **five** fabrications removed (the three named in §1.4, plus two
+found during the work — see below); `tests/test_result_contract.py` covers both
+the mechanism and the migrated handlers. Suite: **328 passing**.
+
+Not done: nine agents still return raw dicts (`browser`, `document`, `memory`,
+`habit`, `vision`, `voice`, `coder`, `audio_summarizer`, `public_api`). The
+contract cannot catch a fabrication in a file that does not use it yet, so step 2
+below is still the bulk of this phase.
+
+Two fabrications found beyond §1.4, both in the same class:
+
+- **`ComputerAgent.get_system_volume`** returned a hardcoded `volume: 50` as
+  though it were a reading — and that fallback was the *only* path that ever
+  ran, because `Win32_AudioDevice` exposes no `Volume` property. Every caller
+  since has been told the volume is 50%.
+- **`CommunicationAgent.read_latest_email`** returned "✓ Inbox check complete:
+  0 unread messages" whenever credentials were missing, the optional
+  `googleapiclient` was absent, or the API raised — every case in which the
+  inbox is *unknown*, reported as *empty*.
+
+One deviation from the design below: the field is `success`, not `ok`, so
+`as_dict()` stays a drop-in for the dicts the API, UI and 300-odd tests already
+read. The contract is the validator, not the vocabulary.
+
+
 
 1. `core/contracts.py` — `AgentResult`, `Evidence` union.
 2. Migrate agents one file at a time; `AgentResult.model_dump()` keeps the API

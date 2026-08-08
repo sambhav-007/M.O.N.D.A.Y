@@ -353,7 +353,8 @@ Written down deliberately, so nothing in this README claims more than the code d
 | Tier-2 approval gate | Enforced for `send_email`, `send_whatsapp`, `terminate_process` |
 | WhatsApp | Opens a chat with the message pre-typed; auto-send is Tier-2 gated (see below) |
 | Audit log | Lossless within one process; records the full Tier-2 lifecycle |
-| Test suite | 308 passing, offline and deterministic (`py -3.12 -m pytest`) in ~70s |
+| Test suite | 328 passing, offline and deterministic (`py -3.12 -m pytest`) in ~73s |
+| Result contract | `core/contracts.py` — a handler may only claim success if it carries evidence of what it did |
 
 ### WhatsApp — what it can and cannot do
 
@@ -395,6 +396,14 @@ lookup carries emails only, so a bare name has no other route to a number.
   gTTS / browser `speechSynthesis` instead.
 
 ### Declared in policy but not implemented
+
+- **IoT / Smart Home ("Pillar 5")** — there is no implementation. The previous
+  `toggle_smart_light` performed no I/O and returned success anyway; it now
+  reports `NOT_IMPLEMENTED`. Real support needs a hub to talk to (Home Assistant,
+  MQTT, or a vendor cloud) and a device to talk about.
+- **Reading the system volume** — Windows does not expose it to PowerShell
+  without a helper (pycaw, nircmd, AudioDeviceCmdlets), none of which is
+  installed. Setting the volume works.
 
 `core/security.py` classifies `delete_file`, `overwrite_file`, `execute_shell`,
 `submit_form`, `modify_system_settings` and `kill_process` as Tier 2. **None of

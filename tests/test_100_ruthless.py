@@ -145,11 +145,14 @@ class TestRuthlessAdversarialSuite:
         res = self.planner.process_command("📁🧹 Desktop clean up 🚀")
         assert "execution_result" in res
 
-    def test_adversarial_negative_volume_setting(self):
+    def test_adversarial_negative_volume_setting(self, fake_powershell):
         """Verifies ComputerAgent handles negative volume input safely."""
         comp = self.planner.computer_agent
         res = comp.set_system_volume(-50)
         assert "success" in res
+        # Clamped to 0 before it reached the shell, not passed through negative.
+        assert "1..0 " in fake_powershell.last_command or "1..0}" in fake_powershell.last_command \
+            or "1..0 |" in fake_powershell.last_command
 
     # ── Category 2: Task DAG Engine & Core Systems (15 Tests) ────────────────────
 
@@ -335,10 +338,22 @@ class TestRuthlessAdversarialSuite:
     # ── Category 4: Worker Agents Exhaustive Verification (20 Tests) ──────────────
 
     def test_agent_computer_get_system_volume(self):
-        """Verifies volume query method."""
+        """Verifies the volume query reports honestly.
+
+        This used to assert `success is True`, which only held because the
+        fallback returned a hardcoded `volume: 50` as though it were a reading —
+        and the fallback was the only path that ever ran, since
+        `Win32_AudioDevice` exposes no `Volume` property. Either outcome is fine
+        now; what must not happen is a success carrying an invented number.
+        """
         comp = self.planner.computer_agent
         res = comp.get_system_volume()
-        assert res.get("success") is True
+        if res.get("success"):
+            assert res.get("evidence"), "a volume reading must say where it came from"
+            assert isinstance(res.get("volume"), int)
+        else:
+            assert res.get("error") == "VOLUME_READ_UNSUPPORTED"
+            assert "volume" not in res, "a failed read must not report a number"
 
     def test_agent_computer_battery_status(self):
         """Verifies battery status query."""
@@ -391,10 +406,20 @@ class TestRuthlessAdversarialSuite:
         assert res.get("success") is True
 
     def test_agent_comms_read_latest_email(self):
-        """Verifies reading latest email status."""
+        """Verifies the inbox reader does not invent an answer.
+
+        This used to assert `success is True`, which held only because the
+        no-credentials branch returned "✓ Inbox check complete: 0 unread
+        messages." — a statement about the user's mailbox made without opening
+        it. Without Gmail configured the honest answer is NOT_CONFIGURED.
+        """
         comms = self.planner.comms_agent
         res = comms.read_latest_email()
-        assert res.get("success") is True
+        if res.get("success"):
+            assert res.get("evidence"), "a real inbox read must be witnessed"
+        else:
+            assert res.get("error") in {"NOT_CONFIGURED", "GMAIL_READ_FAILED"}
+            assert "0 unread" not in res.get("message", "")
 
     def test_agent_comms_list_contacts(self):
         """Verifies contact list resolution."""
@@ -732,11 +757,13 @@ class TestRuthlessAdversarialSuite:
         res = mem.remember("", "value")
         assert res.get("success") is False
 
-    def test_computer_agent_set_volume_valid(self):
+    def test_computer_agent_set_volume_valid(self, fake_powershell):
         """Verifies valid volume setting."""
         comp = self.planner.computer_agent
         res = comp.set_system_volume(50)
         assert res.get("success") is True
+        assert res["evidence"]["kind"] == "process_exit"
+        assert res["evidence"]["returncode"] == 0
 
     def test_tool_registry_list_tools_format(self):
         """Verifies ToolRegistry output schema."""

@@ -60,6 +60,45 @@ See `UPGRADE_PLAN.md` for the full five-phase plan this belongs to.
    read the diff before committing. `test_cassette_hygiene.py` catches the PII
    classes seen so far, not every possible one.
 
+### 2026-08-08 (later still) — UPGRADE_PLAN Phase 2, partial
+
+**`core/contracts.py`** — `AgentResult` may only claim success if it carries
+`Evidence`: a `ProcessExit`, `HttpResponse`, `FileRead`/`FileWritten`,
+`SystemQuery`, `SmtpAccepted`, `KeypressSent` or `RecordStored`. There is no
+variant meaning "trust me". A failure must carry an `error` code. `as_dict()`
+emits the `{success, message, error, …data}` shape everything already reads, so a
+migrated handler is a drop-in for the one it replaces.
+
+`KeypressSent` exists so WhatsApp keeps reporting at exactly its real strength —
+a keypress was sent, not a message delivered. Do not add an evidence variant that
+asserts more than the code can observe.
+
+**Migrated so far:** `core/tool_registry.py` (all of it), plus
+`ComputerAgent.set_system_volume` / `get_system_volume` and
+`CommunicationAgent.read_latest_email`. **Nine agents still return raw dicts** —
+browser, document, memory, habit, vision, voice, coder, audio_summarizer,
+public_api. The contract cannot protect a file that does not use it.
+
+**Five fabrications removed**, three from `tool_registry.py`:
+
+| Was | Now |
+|-----|-----|
+| `read_latest_email` checked whether `data/google_token.json` *existed* and returned a hardcoded subject/sender ("Project Monday Status Update" from "team@monday.ai") as though fetched | Delegates to the real reader |
+| `change_volume`'s f-string never interpolated `level`, so 20% and 90% did the same thing, both reported as done | Delegates to `set_system_volume` |
+| `toggle_smart_light` returned success with no protocol, no address, no device — the entirety of "Pillar 5: IoT" | `NOT_IMPLEMENTED`, still registered so the planner's route gives a useful answer |
+| `ComputerAgent.get_system_volume` returned a hardcoded `50` as a reading; the CIM query never works, so this was the only path | `VOLUME_READ_UNSUPPORTED` |
+| `CommunicationAgent.read_latest_email` said "0 unread messages" whenever the inbox was *unknown* | `NOT_CONFIGURED` |
+
+`set_system_volume` also used `subprocess.Popen` and reported success on the next
+line, before PowerShell had done anything. It now waits and reports the exit
+status. That made the side effect *dependable*, which is why the two tests that
+drive it use the new `fake_powershell` fixture — running the suite used to leave
+the machine muted.
+
+Two stale assertions updated: `test_agent_computer_get_system_volume` and
+`test_agent_comms_read_latest_email` both asserted `success is True`, which held
+only because of the fabrication each one was sitting on.
+
 ## 9. WhatsApp (added 2026-08-08)
 
 WhatsApp has **no API a desktop script may send through**. The deep link

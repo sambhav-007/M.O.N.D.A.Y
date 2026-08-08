@@ -42,6 +42,7 @@ from __future__ import annotations
 
 import json
 import re
+import subprocess
 
 import pytest
 
@@ -135,6 +136,37 @@ def _scrub_response(response):
 
     body["string"] = text.encode("utf-8") if isinstance(raw, bytes) else text
     return response
+
+
+@pytest.fixture
+def fake_powershell(monkeypatch):
+    """Intercepts `ComputerAgent`'s PowerShell calls instead of running them.
+
+    `set_system_volume` drives the real speakers: 50 volume-down keypresses to
+    reach zero, then back up to the requested level. Running the suite therefore
+    left the machine muted or at whatever the last test asked for. That was
+    always true, but it used to be fired with `subprocess.Popen` and never waited
+    for, so it was unreliable as well as unwanted; making the call synchronous so
+    it could be witnessed also made the side effect dependable.
+
+    A test should not reach outside the process to prove a function assembled the
+    right command. This records the command and reports a clean exit.
+    """
+
+    class _Recorder:
+        last_command: str = ""
+
+    recorder = _Recorder()
+    real_run = subprocess.run
+
+    def _fake_run(args, *a, **kw):
+        if isinstance(args, (list, tuple)) and args and "powershell" in str(args[0]).lower():
+            recorder.last_command = " ".join(str(x) for x in args)
+            return subprocess.CompletedProcess(args, 0, stdout="", stderr="")
+        return real_run(args, *a, **kw)
+
+    monkeypatch.setattr(subprocess, "run", _fake_run)
+    return recorder
 
 
 @pytest.fixture(scope="module")

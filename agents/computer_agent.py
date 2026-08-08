@@ -23,6 +23,7 @@ import psutil
 from PIL import ImageGrab
 
 from core.config import STAGING_DIR
+from core.contracts import AgentResult, ProcessExit, SystemQuery
 from core.security import evaluate_action_permission, log_action
 
 # Category mapping for file extension organization
@@ -306,20 +307,64 @@ class ComputerAgent:
             return {"success": False, "error": str(e)}
 
     def set_system_volume(self, percentage: int) -> Dict[str, Any]:
-        """Sets Windows master audio volume percentage (0-100%)."""
+        """Sets Windows master audio volume percentage (0-100%).
+
+        Works by sending volume-down 50 times to reach zero, then volume-up
+        `pct/2` times — each keypress is a 2% step. That is a real mechanism, but
+        it used to be launched with `subprocess.Popen` and reported success on
+        the next line, before PowerShell had done anything at all: a failure to
+        launch, a policy block or a non-zero exit were all reported as
+        "✓ System volume set". It now waits for the exit status and reports what
+        that status was.
+        """
+        if sys.platform != "win32":
+            return AgentResult.unsupported(
+                "set the system volume on this platform",
+                detail="The keypress mechanism is Windows-only.",
+            ).as_dict()
+
         pct = max(0, min(100, int(percentage)))
+        ps_cmd = (
+            f"$wsh = New-Object -ComObject WScript.Shell; "
+            f"1..50 | % {{ $wsh.SendKeys([char]174) }}; "
+            f"1..{int(pct / 2)} | % {{ $wsh.SendKeys([char]175) }}"
+        )
         try:
-            # Try PyCAW or PowerShell audio endpoint volume control
-            ps_cmd = (
-                f"$wsh = New-Object -ComObject WScript.Shell; "
-                f"1..50 | % {{ $wsh.SendKeys([char]174) }}; "
-                f"1..{int(pct / 2)} | % {{ $wsh.SendKeys([char]175) }}"
+            proc = subprocess.run(
+                ["powershell", "-Command", ps_cmd],
+                capture_output=True, text=True, timeout=30,
             )
-            subprocess.Popen(["powershell", "-Command", ps_cmd], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-            log_action("set_volume", f"{pct}%", 1, "success", self.name)
-            return {"success": True, "volume": pct, "message": f"✓ System volume set to {pct}%."}
+        except subprocess.TimeoutExpired:
+            log_action("set_volume", f"{pct}%", 1, "timeout", self.name)
+            return AgentResult.failed(
+                "The volume command did not finish in time; the volume may be "
+                "partly changed.",
+                error="VOLUME_TIMEOUT",
+            ).as_dict()
         except Exception as e:
-            return {"success": False, "error": str(e)}
+            log_action("set_volume", f"{pct}%", 1, "failure", self.name)
+            return AgentResult.failed(
+                f"Could not run the volume command: {e}", error="VOLUME_EXEC_FAILED"
+            ).as_dict()
+
+        if proc.returncode != 0:
+            log_action("set_volume", f"{pct}%", 1, "failure", self.name)
+            return AgentResult.failed(
+                f"The volume command failed (exit {proc.returncode}).",
+                error="VOLUME_COMMAND_FAILED",
+                data={"stderr": (proc.stderr or "").strip()[:200]},
+            ).as_dict()
+
+        log_action("set_volume", f"{pct}%", 1, "success", self.name)
+        return AgentResult.ok(
+            f"✓ System volume set to {pct}%.",
+            evidence=ProcessExit(
+                command="powershell -Command <volume keypresses>",
+                returncode=proc.returncode,
+                stdout_excerpt=(proc.stdout or "").strip()[:120],
+            ),
+            data={"volume": pct},
+        ).as_dict()
 
     def create_file_artifact(self, filename: str, content: str) -> Dict[str, Any]:
         """Creates and saves a text file artifact into staging directory."""
@@ -338,17 +383,46 @@ class ComputerAgent:
             return {"success": False, "error": f"Failed to save file artifact: {e}"}
 
     def get_system_volume(self) -> Dict[str, Any]:
-        """Returns current system master volume percentage via OS query."""
+        """Returns current system master volume percentage via OS query.
+
+        The fallback used to be `{"success": True, "volume": 50, "message":
+        "✓ System volume query completed."}` — a hardcoded 50 presented as a
+        reading. It was also the *only* path that ever ran: `Win32_AudioDevice`
+        exposes no `Volume` property, so the CIM query never returns a number and
+        every caller since has been told the volume is 50%.
+
+        Windows has no supported way to read the master volume from PowerShell
+        without a helper (pycaw, nircmd, an AudioDeviceCmdlets module), none of
+        which is installed here. So the honest answer is that it cannot be read.
+        """
         if sys.platform == "win32":
             try:
-                ps_cmd = "[Math]::Round((Get-CimInstance -ClassName Win32_AudioDevice | Select-Object -First 1).Volume * 100)"
-                res = subprocess.run(["powershell", "-Command", ps_cmd], capture_output=True, text=True, timeout=3)
+                ps_cmd = (
+                    "[Math]::Round((Get-CimInstance -ClassName Win32_AudioDevice "
+                    "| Select-Object -First 1).Volume * 100)"
+                )
+                res = subprocess.run(
+                    ["powershell", "-Command", ps_cmd],
+                    capture_output=True, text=True, timeout=5,
+                )
                 if res.stdout.strip().isdigit():
                     vol = int(res.stdout.strip())
-                    return {"success": True, "volume": vol, "message": f"✓ System volume is currently at {vol}%."}
+                    return AgentResult.ok(
+                        f"✓ System volume is currently at {vol}%.",
+                        evidence=SystemQuery(
+                            source="Win32_AudioDevice", detail=f"{vol}%"
+                        ),
+                        data={"volume": vol},
+                    ).as_dict()
             except Exception:
                 pass
-        return {"success": True, "volume": 50, "message": "✓ System volume query completed."}
+
+        return AgentResult.failed(
+            "I can't read the current volume on this machine — Windows doesn't "
+            "expose it to PowerShell without a helper like pycaw or nircmd, and "
+            "neither is installed. I can still set it.",
+            error="VOLUME_READ_UNSUPPORTED",
+        ).as_dict()
 
     def get_battery_status(self) -> Dict[str, Any]:
         """Returns real-time laptop battery percentage and power plug state."""

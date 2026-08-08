@@ -19,6 +19,13 @@ import sys
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional
 
+from core.contracts import (
+    AgentResult,
+    FileRead,
+    FileWritten,
+    HttpResponse,
+    SystemQuery,
+)
 from core.security import log_action
 
 
@@ -101,7 +108,11 @@ class ToolRegistry:
         def list_processes(limit: int = 15) -> Dict[str, Any]:
             import psutil
             procs = [p.info for p in psutil.process_iter(['pid', 'name', 'memory_percent'])][:limit]
-            return {"success": True, "processes": procs, "message": f"✓ Listed {len(procs)} active processes."}
+            return AgentResult.ok(
+                f"✓ Listed {len(procs)} active processes.",
+                evidence=SystemQuery(source="psutil.process_iter", detail=f"{len(procs)} rows"),
+                data={"processes": procs},
+            ).as_dict()
 
         self.register_tool(
             "list_processes",
@@ -115,10 +126,17 @@ class ToolRegistry:
             import difflib
             p1, p2 = Path(file1), Path(file2)
             if not p1.exists() or not p2.exists():
-                return {"success": False, "error": "One or both files do not exist."}
-            l1, l2 = p1.read_text(encoding="utf-8", errors="ignore").splitlines(), p2.read_text(encoding="utf-8", errors="ignore").splitlines()
-            diff = list(difflib.unified_diff(l1, l2))
-            return {"success": True, "diff_lines": len(diff), "diff": "\n".join(diff[:50]), "message": f"✓ Document diff generated ({len(diff)} diff lines)."}
+                return AgentResult.failed(
+                    "One or both files do not exist.", error="FILE_NOT_FOUND"
+                ).as_dict()
+            t1 = p1.read_text(encoding="utf-8", errors="ignore")
+            t2 = p2.read_text(encoding="utf-8", errors="ignore")
+            diff = list(difflib.unified_diff(t1.splitlines(), t2.splitlines()))
+            return AgentResult.ok(
+                f"✓ Document diff generated ({len(diff)} diff lines).",
+                evidence=FileRead(path=str(p1), bytes_read=len(t1) + len(t2)),
+                data={"diff_lines": len(diff), "diff": "\n".join(diff[:50])},
+            ).as_dict()
 
         self.register_tool(
             "compare_files",
@@ -132,10 +150,20 @@ class ToolRegistry:
             import pandas as pd
             p = Path(filepath)
             if not p.exists():
-                return {"success": False, "error": f"File '{filepath}' not found."}
+                return AgentResult.failed(
+                    f"File '{filepath}' not found.", error="FILE_NOT_FOUND"
+                ).as_dict()
             df = pd.read_csv(p) if p.suffix.lower() == ".csv" else pd.read_json(p)
             res = df.query(query_filter) if query_filter and hasattr(df, "query") else df
-            return {"success": True, "total_rows": len(df), "matching_rows": len(res), "records": res.head(5).to_dict(orient="records"), "message": f"✓ Queried {p.name}: {len(res)} rows match."}
+            return AgentResult.ok(
+                f"✓ Queried {p.name}: {len(res)} rows match.",
+                evidence=FileRead(path=str(p), bytes_read=p.stat().st_size),
+                data={
+                    "total_rows": len(df),
+                    "matching_rows": len(res),
+                    "records": res.head(5).to_dict(orient="records"),
+                },
+            ).as_dict()
 
         self.register_tool(
             "query_csv_json",
@@ -152,7 +180,11 @@ class ToolRegistry:
             with urllib.request.urlopen(req, timeout=10) as resp:
                 soup = BeautifulSoup(resp.read().decode("utf-8"), "html.parser")
                 md = f"# {soup.title.string if soup.title else url}\n\n" + soup.get_text(separator="\n\n", strip=True)[:2000]
-                return {"success": True, "url": url, "markdown": md, "message": f"✓ Extracted Markdown representation from {url}."}
+                return AgentResult.ok(
+                    f"✓ Extracted Markdown representation from {url}.",
+                    evidence=HttpResponse(status=resp.status, url=url),
+                    data={"url": url, "markdown": md},
+                ).as_dict()
 
         self.register_tool(
             "extract_web_markdown",
@@ -164,11 +196,19 @@ class ToolRegistry:
 
         # ── Category 1: System / File Control ──────────────────────────────────
         def change_volume(level: int = 50) -> Dict[str, Any]:
-            if sys.platform == "win32":
-                ps_cmd = f"(New-Object -ComObject WScript.Shell).SendKeys([char]174)*50"
-                subprocess.run(["powershell", "-Command", ps_cmd], capture_output=True)
-                return {"success": True, "level": level, "message": f"✓ System volume adjusted to {level}%."}
-            return {"success": True, "level": level, "message": f"✓ Volume set request processed ({level}%)."}
+            """Delegates to the one real implementation.
+
+            This used to be its own: an f-string reading
+            `SendKeys([char]174)*50` that never interpolated `level` at all, then
+            `"✓ System volume adjusted to {level}%."` — so asking for 20% and
+            asking for 90% did the identical thing and both were reported as
+            done. `ComputerAgent.set_system_volume` actually steps to the
+            requested level and waits for the exit status, so there is no reason
+            for a second, worse copy to exist.
+            """
+            from agents.computer_agent import ComputerAgent
+
+            return ComputerAgent().set_system_volume(int(level))
 
         self.register_tool(
             "change_volume",
@@ -180,20 +220,17 @@ class ToolRegistry:
 
         # ── Category 2: Communication / Scheduling ──────────────────────────────
         def read_latest_email() -> Dict[str, Any]:
-            # Inspect local token data or return recent message status
-            token_path = Path("data/google_token.json")
-            if token_path.exists():
-                return {
-                    "success": True,
-                    "count": 1,
-                    "latest": {"subject": "Project Monday Status Update", "sender": "team@monday.ai"},
-                    "message": "✓ Fetched latest inbox email via Gmail OAuth.",
-                }
-            return {
-                "success": True,
-                "count": 0,
-                "message": "✓ Gmail credentials online. Inbox ready.",
-            }
+            """Delegates to the real Gmail reader.
+
+            This used to check whether `data/google_token.json` *existed* and, if
+            so, return a hardcoded email — subject "Project Monday Status
+            Update", sender "team@monday.ai" — as though it had been fetched. It
+            opened no inbox. The presence of a file on disk was being reported as
+            the contents of the user's mailbox.
+            """
+            from agents.comms_agent import CommunicationAgent
+
+            return CommunicationAgent().read_latest_email()
 
         self.register_tool(
             "read_latest_email",
@@ -211,13 +248,15 @@ class ToolRegistry:
             with urllib.request.urlopen(req, timeout=10) as resp:
                 soup = BeautifulSoup(resp.read().decode("utf-8"), "html.parser")
                 text = soup.get_text(separator=" ", strip=True)[:1000]
-                return {
-                    "success": True,
-                    "url": url,
-                    "title": soup.title.string if soup.title else url,
-                    "content_sample": text,
-                    "message": f"✓ Scraped text content from {url}.",
-                }
+                return AgentResult.ok(
+                    f"✓ Scraped text content from {url}.",
+                    evidence=HttpResponse(status=resp.status, url=url),
+                    data={
+                        "url": url,
+                        "title": soup.title.string if soup.title else url,
+                        "content_sample": text,
+                    },
+                ).as_dict()
 
         self.register_tool(
             "scrape_website_text",
@@ -231,7 +270,9 @@ class ToolRegistry:
         def convert_csv_to_json(csv_path: str, output_json_path: Optional[str] = None) -> Dict[str, Any]:
             cpath = Path(csv_path)
             if not cpath.exists():
-                return {"success": False, "error": f"CSV file '{csv_path}' not found."}
+                return AgentResult.failed(
+                    f"CSV file '{csv_path}' not found.", error="FILE_NOT_FOUND"
+                ).as_dict()
 
             out_path = Path(output_json_path) if output_json_path else cpath.with_suffix(".json")
             data = []
@@ -243,13 +284,17 @@ class ToolRegistry:
             with open(out_path, "w", encoding="utf-8") as f:
                 json.dump(data, f, indent=2)
 
-            return {
-                "success": True,
-                "csv_path": str(cpath),
-                "output_json_path": str(out_path),
-                "records_converted": len(data),
-                "message": f"✓ Converted {len(data)} CSV rows to JSON at '{out_path.name}'.",
-            }
+            return AgentResult.ok(
+                f"✓ Converted {len(data)} CSV rows to JSON at '{out_path.name}'.",
+                evidence=FileWritten(
+                    path=str(out_path), bytes_written=out_path.stat().st_size
+                ),
+                data={
+                    "csv_path": str(cpath),
+                    "output_json_path": str(out_path),
+                    "records_converted": len(data),
+                },
+            ).as_dict()
 
         self.register_tool(
             "convert_csv_to_json",
@@ -260,19 +305,29 @@ class ToolRegistry:
         )
 
         # ── Category 5: IoT / Smart Home ────────────────────────────────────────
+        # There is no implementation behind this pillar. The previous
+        # `toggle_smart_light` took a device name and a state, performed no I/O of
+        # any kind — no protocol, no address, no device — and returned
+        # `{"success": True, "message": "✓ Smart Home IoT: Turned 'Living Room
+        # Light' ON."}`. It was the entirety of "Pillar 5: IoT & Smart Home
+        # Automation".
+        #
+        # It is kept registered, and honest, rather than deleted: the planner
+        # routes "turn on the light" here, and an unregistered tool would answer
+        # "Tool not found in registry", which tells the user nothing about why.
+        # Real support needs a hub to talk to — Home Assistant's REST API, MQTT,
+        # or a vendor cloud — and a device to talk about.
         def toggle_smart_light(device_name: str = "Living Room Light", state: str = "on") -> Dict[str, Any]:
-            state_clean = state.lower().strip()
-            return {
-                "success": True,
-                "device": device_name,
-                "state": state_clean,
-                "message": f"✓ Smart Home IoT: Turned '{device_name}' {state_clean.upper()}.",
-            }
+            return AgentResult.unsupported(
+                f"switch '{device_name}' {state.lower().strip()}",
+                detail="No smart-home hub is configured, and MONDAY has no IoT "
+                       "integration yet — nothing here can reach a physical device.",
+            ).as_dict()
 
         self.register_tool(
             "toggle_smart_light",
             "iot",
-            "Toggles a smart home light or smart plug device state.",
+            "NOT IMPLEMENTED — reports honestly that no smart-home hub is wired up.",
             toggle_smart_light,
             {"device_name": "str", "state": "str ('on' or 'off')"},
         )

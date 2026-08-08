@@ -17,6 +17,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from core.config import STAGING_DIR
+from core.contracts import AgentResult, HttpResponse
 from core.security import evaluate_action_permission, log_action
 
 
@@ -826,29 +827,55 @@ class CommunicationAgent:
             return {"success": False, "error": str(e)}
 
     def read_latest_email(self) -> Dict[str, Any]:
-        """Reads latest email from inbox or local staging cache."""
+        """Reads the latest email from the Gmail inbox.
+
+        The fallback used to be `{"success": True, "email": "No new emails found
+        in inbox.", "message": "✓ Inbox check complete: 0 unread messages."}`.
+        That is a factual claim about the user's mailbox made without opening it:
+        the branch runs precisely when there are no credentials, no
+        `googleapiclient`, or the API call raised — every case in which the
+        inbox is unknown, not empty. "Not configured" and "empty" are different
+        answers and only one of them was ever true here.
+        """
         creds = _get_google_credentials()
-        if creds:
-            try:
-                from googleapiclient.discovery import build
-                service = build("gmail", "v1", credentials=creds)
-                results = service.users().messages().list(userId="me", maxResults=1).execute()
-                messages = results.get("messages", [])
-                if messages:
-                    msg = service.users().messages().get(userId="me", id=messages[0]["id"]).execute()
-                    snippet = msg.get("snippet", "")
-                    return {
-                        "success": True,
-                        "email": snippet,
-                        "message": f"✓ Latest Email: '{snippet[:100]}...'",
-                    }
-            except Exception:
-                pass
-        return {
-            "success": True,
-            "email": "No new emails found in inbox.",
-            "message": "✓ Inbox check complete: 0 unread messages.",
-        }
+        if not creds:
+            return AgentResult.not_configured(
+                "Reading email",
+                needs="Google OAuth credentials — see GOOGLE_OAUTH_SETUP.md",
+            ).as_dict()
+
+        try:
+            from googleapiclient.discovery import build
+        except ImportError:
+            return AgentResult.not_configured(
+                "Reading email",
+                needs="the `google-api-python-client` package, which is optional "
+                      "and not installed here",
+            ).as_dict()
+
+        try:
+            service = build("gmail", "v1", credentials=creds)
+            results = service.users().messages().list(userId="me", maxResults=1).execute()
+            messages = results.get("messages", [])
+            if not messages:
+                # Now a real reading: the API answered and the inbox was empty.
+                return AgentResult.ok(
+                    "✓ Inbox check complete: no messages found.",
+                    evidence=HttpResponse(status=200, url="gmail/v1/users/me/messages"),
+                    data={"email": "", "count": 0},
+                ).as_dict()
+
+            msg = service.users().messages().get(userId="me", id=messages[0]["id"]).execute()
+            snippet = msg.get("snippet", "")
+            return AgentResult.ok(
+                f"✓ Latest Email: '{snippet[:100]}...'",
+                evidence=HttpResponse(status=200, url="gmail/v1/users/me/messages"),
+                data={"email": snippet, "count": len(messages)},
+            ).as_dict()
+        except Exception as e:
+            return AgentResult.failed(
+                f"Could not read the inbox: {e}", error="GMAIL_READ_FAILED"
+            ).as_dict()
 
     def get_contacts(self) -> List[Dict[str, Any]]:
         """Retrieves stored/local contacts list."""
