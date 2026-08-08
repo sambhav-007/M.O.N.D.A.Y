@@ -1,13 +1,17 @@
 # M.O.N.D.A.Y — Session Handoff
 
-_Last updated: 2026-08-07. Machine: Windows 11 Home, user `sambh`._
+_Last updated: 2026-08-08. Machine: Windows 11 Home, user `sambh`._
 
 > **Read this first.** `README.md` § *Status & Known Limitations* is the
 > authoritative statement of what works and what does not. This file is a running
 > log and parts of it age badly — several items below are struck through because
 > they turned out to be stale or simply wrong.
 
-## 0. Changes 2026-08-07
+## 0. Changes 2026-08-07 → 08
+
+Ten commits, `16157ee` … `81b06f7`. All committed; nothing is left staged.
+
+### 2026-08-07
 
 | Area | Change |
 |------|--------|
@@ -16,21 +20,68 @@ _Last updated: 2026-08-07. Machine: Windows 11 Home, user `sambh`._
 | **2.6 XAI** | Rewritten to compute **exact Shapley values in closed form** — `shap` is uninstallable here (§8). Verified bit-for-bit identical to `shap.LinearExplainer`. Emits 2 CSVs + 3 figures. Fixed a fabricated `explain_command_intent()` that was live on an API endpoint. |
 | **Tier-2 gate** | Now genuinely enforced (PRD §9). See the resolved note in §2c. |
 | Docs | README / PRD / MONDAY_ACADEMIC / PROJECT_PLAN reconciled against the code. |
-| Tests | 169 passing (28 new for the Tier-2 gate). |
 
-## 8. Environment constraints discovered 2026-08-07
+### 2026-08-08
+
+| Area | Change |
+|------|--------|
+| **`/help`** | New capability menu, shared by the app, CLI and API from `core.planner.build_help_text()` — one source of truth. Replaced a menu advertising a `mondayvoice.mp3` voice clone (abandoned) and a "Self-Evolution Plugin System" that does not exist. Trigger is exact: `help me summarize x.pdf` used to print the menu instead of summarising. `history` and `proactive` were CLI-only and now work everywhere. |
+| Email UX | A bare `send mail to a@b.com` collected subject and body instead of offering to send an empty email, and the confirmation now accepts `subject: … body: …` as an edit — previously the draft could not be corrected at all, leaving only "send it empty" or "cancel". |
+| **WhatsApp** | Genuinely implemented — see §9. |
+| Noise | Stopped printing `❌ Raw Google Gmail API Error: No module named 'googleapiclient'` on every draft; the Google client libs are optional and undeclared, so their absence is normal. |
+| Tests | **276 passing**, up from 140. New files: `test_tier2_gate.py` (28), `test_help_command.py` (34), `test_whatsapp.py` (67), `test_email_and_whatsapp_ux.py` (7). |
+
+## 9. WhatsApp (added 2026-08-08)
+
+WhatsApp has **no API a desktop script may send through**. The deep link
+(`whatsapp://send?phone=…&text=…`) opens a chat with the message pre-typed but
+deliberately will not send it. Simulating the Enter keypress is the only route,
+so that is what the approved path does.
+
+- **Any message with text is Tier-2 gated**, then sent for real: it shows the
+  message, asks *"Send it?"*, and on `yes` opens the chat and presses Enter.
+- A command with no text just opens the chat (Tier 1 — nothing to send).
+- Numbers default to **+91** (`DEFAULT_COUNTRY_CODE` in `.env`). Lengths are
+  validated, not merely bounded.
+- Unknown name → asks for the number, saves it as `<name>'s number`, and resumes
+  the message that was originally asked for.
+- Needs optional `pyautogui`; without it the chat still opens pre-filled and it
+  says which part it could not do.
+
+**Two things that must not drift:**
+
+1. It reports that **Enter was pressed**, never that the message was delivered.
+   Nothing here can read WhatsApp back, and the keypress goes to whatever window
+   has focus.
+2. Number lookup is deliberately strict. `normalise_phone` once stripped every
+   non-digit from arbitrary text, and `memory_agent.recall` is a TF-IDF
+   *similarity* search — together they addressed a message to a number lifted
+   from an unrelated saved conversation transcript. A memory row is now accepted
+   only if it is not machine-written (`turn_`/`session_`/`log_`), its key names
+   the person, its key reads like a contact record, and its value yields a real
+   number. Do not loosen any of those four.
+
+## 8. Environment constraints discovered 2026-08-07 → 08
 
 - **`shap` cannot be installed.** It hard-imports `numba`. numba 0.66 (the only
   build supporting `numpy>=2.3.5`, which `mlxtend`/2.4 requires) is blocked by
   Smart App Control; numba 0.61.2 loads but pins `numpy<2.2` and breaks `mlxtend`.
   No version satisfies both. Do not retry — see `reports/2_6_shap_equivalence.md`.
 - **Known-good env:** numpy 2.5.1, pandas 2.3.3, sklearn 1.9.0, scipy 1.18.0,
-  mlxtend 0.25.0, starlette 1.3.1. Check with `py -3.12 -m pip check`.
+  mlxtend 0.25.0, starlette 1.3.1, pyautogui 0.9.54. Check with
+  `py -3.12 -m pip check`.
 - **SAC blocks lift over time.** pandas 3.0.5 was blocked on 2026-08-06 and
-  imported fine on 2026-08-07. Reputation-based blocks are not permanent.
+  imported fine on 2026-08-07. Reputation-based blocks are not permanent, so a
+  block observed once is worth re-testing rather than treating as permanent.
+- **`pyautogui` installs cleanly** — SAC does not block it.
 - **`app.routes` is unreliable for introspection** in FastAPI 0.140.13 — routes
   added via `include_router` do not appear there but *do* serve. Use
-  `app.openapi()['paths']`, or the endpoint will look missing when it is not.
+  `app.openapi()['paths']`. This cost real time: the `/ml/*` endpoints looked
+  missing and were nearly written up as a critical finding before a `TestClient`
+  call returned 200.
+- **Tests must not write to `data/memories.db`.** It is the user's real assistant
+  memory. Contact-saving tests stub `remember`/`recall`; manual testing left
+  fake relatives in it more than once and they had to be deleted by hand.
 
 This captures the state of work so anyone (teammate or future session) can pick up
 without re-deriving the hard-won environment knowledge.
@@ -148,7 +199,8 @@ sending is not configured — it does not fake a delivery.
 >
 > Worth knowing: the Tier-2 actions the original note listed (`delete_file`,
 > `overwrite_file`, …) **do not exist** in the codebase. The genuinely reachable
-> Tier-2 surface was `send_email` and `terminate_process`. See PRD §3.
+> Tier-2 surface is now `send_email`, `send_whatsapp` and `terminate_process`
+> (`core.security.TIER_2_IMPLEMENTED`). See PRD §3.
 
 ---
 
@@ -172,9 +224,16 @@ sending is not configured — it does not fake a delivery.
 > uncommitted. That is no longer true: the merge was committed, and work has
 > continued on top of it. `git log` is the authority, not this file.
 
-Recent history:
+Recent history (newest first):
 
 ```
+81b06f7 feat(whatsapp): ask "Send it?" and actually send, instead of leaving it typed
+2db0860 fix(whatsapp): default +91, validate lengths, and let numbers actually be taught
+738baec fix(whatsapp): send to the number the user typed, not one found in memory
+507de22 feat(whatsapp): prepare messages by default, auto-send behind the Tier-2 gate
+3755255 fix(ux): email drafts you can complete, and no fake WhatsApp sends
+3fc2833 feat: /help capability menu, accurate and shared across surfaces
+a2687cc docs: reconcile every claim against the code
 c17d4ed feat(security): enforce the Tier-2 approval gate (PRD §9)
 fbce7e7 feat(2.6): real XAI layer via exact closed-form Shapley values
 16157ee chore(security): add pre-commit secret guard, ignore runtime logs and calendar
@@ -203,7 +262,9 @@ Cleaned up:
 - `data/action_history.json` and `models/monday_voice_profile.joblib` are now
   gitignored and untracked (files remain on disk).
 
-Still untracked, verify before committing: `voice/`, `ui/_monday_ref_22k.wav`, `handoff.md`.
+Still untracked and undecided: `voice/` (contains `tts_bridge.py`) and
+`ui/_monday_ref_22k.wav`. The `.wav` is a resampled copy of the voice reference
+made for the abandoned XTTS work (§5) and is probably deletable.
 
 Repo: `https://github.com/sambhav-007/M.O.N.D.A.Y` (private).
 
@@ -245,13 +306,16 @@ the current browser TTS) — just route UI speech through `POST /agent/voice/spe
   **verified against a live 200 response on 2026-08-06** once the block lifted; that
   check also exposed that lite wraps every result in a `//duckduckgo.com/l/?uddg=`
   redirect, now unwrapped by `BrowserAgent._unwrap_ddg_redirect`.
-- **Test suite: 169 passed, 0 failed** (2026-08-07). The previously-failing
-  `test_agent_public_api_fetch_iss_location` now passes — that network recovered on
-  its own; nothing was changed to fix it. It will fail again whenever
-  `api.open-notify.org` is unreachable, which is the point of the marker item below.
-- **Several tests depend on live third-party APIs** (DuckDuckGo, open-notify,
-  CoinGecko) and so fail whenever those are down or rate-limiting. Worth marking them
-  `@pytest.mark.network` so a red suite means a real regression.
+- **Test suite: 276 passed, 1 failed** (2026-08-08). The failure is
+  `test_agent_public_api_fetch_iss_location` — `api.open-notify.org` unreachable.
+  Not a code defect: it passed on 2026-08-07 and failed in four of the five runs on
+  2026-08-08 without anything touching that path.
+- **⚠️ Several tests depend on live third-party APIs** (DuckDuckGo, open-notify,
+  CoinGecko), so a red suite does **not** currently mean a regression. This is the
+  top outstanding task: mark them `@pytest.mark.network` so
+  `pytest -m "not network"` is meaningfully green. Runtime also swings on network
+  conditions — 117s to 301s across runs, and one run exceeded a 600s timeout
+  entirely. **This is a live demo risk, not just test hygiene.**
 - ~~**`data/calendar.json` is tracked but is runtime churn**~~ — FIXED 2026-08-07.
   Untracked and gitignored; both call sites in `agents/comms_agent.py` create it on
   demand. A fresh clone reports an empty calendar until an event is scheduled.
@@ -264,6 +328,28 @@ the current browser TTS) — just route UI speech through `POST /agent/voice/spe
   (Google People API / Outlook contacts) is now marked inactive, and the README has
   a **Status & Known Limitations** section that is the authoritative list.
 - Voice "listening" and "speaking" need a real mic + audio device to verify end-to-end.
+- **`/help` content is width-budgeted to 68 columns** so it fits the CLI's panel on
+  an 80-column terminal. Verified in the CLI and as raw text, **not** yet in the
+  WebGL console pane — worth a look next time the app is run.
+- **2.1 leans on stopwords.** The XAI layer exposed that the top attributions for
+  `browser` are `on, my, me, for, to`, because the shared `tfidf = dict(...)`
+  config in `ml/intent_classifier.py:352-357` (`build_pipelines`) sets
+  `ngram_range`, `max_features`, `sublinear_tf` and `strip_accents` but no
+  `stop_words`. Deliberately **not** changed: it would move the published 0.929
+  macro-F1, the confusion matrix and the comparison CSVs. The suggested write-up is
+  a counterfactual — train a `stop_words='english'` variant, report the delta and
+  the cleaner attributions as a 2.6 finding, leave the shipped model alone.
+
+### Suggested order for the remaining work
+
+1. **`@pytest.mark.network`** — cheap, and makes every later result trustworthy.
+2. **Offline demo path + rehearsed script** — the largest demo-day risk. DDG
+   rate-limits this machine and open-notify has failed repeatedly.
+3. **Voice double-speak** — collapse to one path (UI-only is offline and instant
+   but silences `cli.py`; backend-only keeps the CLI talking but needs network).
+4. **CLO01 report chapter + evidence index** — now backed by a gate that really
+   runs, with `tests/test_tier2_gate.py` and the audit log as evidence.
+5. The 2.1 stopword counterfactual, if time allows.
 
 ---
 
@@ -272,9 +358,26 @@ the current browser TTS) — just route UI speech through `POST /agent/voice/spe
 # regenerate synthetic datasets (uses datagen/)
 py -3.12 -m datagen.generate
 
-# run the ML test suite
-py -3.12 tests/test_ml.py -v
+# full test suite (~2-4 min, varies with network)
+py -3.12 -m pytest tests/ -q
+
+# component 2.6 — writes CLO evidence to reports/ and reports/figures/
+py -3.12 -m ml.xai_explainer
 
 # start API only (no GUI)
 py -3.12 -m uvicorn api.main:app --host 127.0.0.1 --port 8000
+
+# authoritative endpoint list (do NOT use app.routes - see section 8)
+py -3.12 -c "from api.main import app; print(sorted(app.openapi()['paths']))"
 ```
+
+### Demo-safe commands to type into the app
+
+`/help` · `health` · `battery` · `what time is it` · `history` · `proactive` ·
+`remember X is Y` → `recall X` · `kill notepad` (shows the Tier-2 gate) ·
+`send mail to a@b.com subject "Hi" body "Hello"` (draft → confirm) ·
+`message 9876543210 saying hi` (Tier-2 → sends)
+
+Everything above works offline. Avoid `search …`, `research …`, `weather …`,
+`bitcoin price` and `iss location` on an unreliable network — those are the ones
+that stall.
