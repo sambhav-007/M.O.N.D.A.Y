@@ -33,3 +33,8 @@ AUTO_EXECUTE_TIER_1 = True
 # Server Settings
 API_HOST = os.getenv("API_HOST", "0.0.0.0")
 API_PORT = int(os.getenv("API_PORT", "8000"))
+
+# Default country code for phone numbers typed without one. WhatsApp always
+# needs a country code, and requiring the user to type +91 every time is friction
+# they will not tolerate. Override with DEFAULT_COUNTRY_CODE in .env.
+DEFAULT_COUNTRY_CODE = os.getenv("DEFAULT_COUNTRY_CODE", "91")

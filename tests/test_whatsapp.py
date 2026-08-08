@@ -94,6 +94,39 @@ def test_normalise_phone_rejects_prose_containing_a_number(prose):
     assert CommunicationAgent.normalise_phone(prose) is None
 
 
+# ── Default country code ─────────────────────────────────────────────────────
+@pytest.mark.parametrize(
+    "raw,expected",
+    [
+        ("9876543210", "919876543210"),      # bare national mobile
+        ("98765 43210", "919876543210"),     # spaced
+        ("09876543210", "919876543210"),     # trunk prefix
+        ("919876543210", "919876543210"),    # already carries the code
+        ("+ 919 876 543 210", "919876543210"),  # space after the +
+    ],
+)
+def test_missing_country_code_defaults_to_91(raw, expected):
+    assert CommunicationAgent.normalise_phone(raw) == expected
+
+
+@pytest.mark.parametrize(
+    "raw",
+    [
+        "79828 0245",       # 9 digits — opened a chat with "+798280245"
+        "+ 9199 662 4322",  # 11 digits, cannot be a real +91 number
+        "12345",
+        "987654321",        # 9 digits
+        "98765432101",      # 11 digits, no trunk zero
+    ],
+)
+def test_malformed_numbers_are_rejected_not_guessed(raw):
+    assert CommunicationAgent.normalise_phone(raw) is None
+
+
+def test_other_country_codes_still_work():
+    assert CommunicationAgent.normalise_phone("+1 555 123 4567") == "15551234567"
+
+
 def test_extract_phone_is_the_deliberate_prose_search():
     assert CommunicationAgent.extract_phone("her number is +91 98765 43210") == "919876543210"
     # Requires an explicit '+', so IDs and order numbers are not recipients.
@@ -185,6 +218,100 @@ def test_end_to_end_uses_the_number_the_user_typed(planner, stub_whatsapp):
     planner.process_command('open whatsapp and send message "Hello" to +917988280245')
     assert stub_whatsapp["opened"] == [("917988280245", "Hello")]
     assert stub_whatsapp["sent"] == []
+
+
+# ── Teaching a number ────────────────────────────────────────────────────────
+@pytest.fixture
+def no_memory_writes(planner, monkeypatch):
+    """
+    Capture saved contacts instead of writing them. memories.db is the user's
+    real assistant memory; a suite must not leave relatives in it.
+    """
+    saved = {}
+    monkeypatch.setattr(
+        planner.memory_agent, "remember",
+        lambda key, value, topic="general": saved.update({key: value}) or {"success": True},
+    )
+    monkeypatch.setattr(
+        planner.memory_agent, "recall",
+        lambda query, limit=8: {"matches": [
+            {"key": k, "value": v} for k, v in saved.items()
+            if query.strip().lower() in k.lower()
+        ]},
+    )
+    return saved
+
+
+@pytest.mark.parametrize(
+    "command,key,value",
+    [
+        ("papa number is +919996624322", "papa's number", "+919996624322"),
+        ("mummy's number is 9876543210", "mummy's number", "+919876543210"),
+        ("remember bhaiya number is 09812345678", "bhaiya's number", "+919812345678"),
+        ("save didi contact number 9812345678", "didi's number", "+919812345678"),
+    ],
+)
+def test_natural_phrasings_save_a_contact_number(planner, no_memory_writes, command, key, value):
+    """
+    Every one of these previously fell through to chitchat and was answered with
+    a greeting, so a number could only be taught via one exact phrasing.
+    """
+    res = _exec(planner.process_command(command))
+    assert res.get("success") is True
+    assert no_memory_writes.get(key) == value
+
+
+def test_number_with_no_owner_asks_whose_it_is(planner, no_memory_writes):
+    """'the number is +91…' must not be filed under "the's number"."""
+    res = _exec(planner.process_command("the number is +919996624322"))
+    assert res.get("success") is False
+    assert res.get("error") == "NO_CONTACT_NAME"
+    # Conversation turns are stored via the same remember() call, so assert on
+    # contact records specifically rather than on the store being untouched.
+    contacts = {k: v for k, v in no_memory_writes.items() if k.endswith("'s number")}
+    assert contacts == {}
+
+
+# ── The follow-up flow ───────────────────────────────────────────────────────
+def test_unknown_contact_asks_then_saves_then_resumes(planner, stub_whatsapp, no_memory_writes):
+    """The screenshot flow: ask for the number, then carry on with the message."""
+    first = _exec(planner.process_command("papa on WhatsApp hello"))
+    assert first.get("awaiting_contact_number") is True
+    assert stub_whatsapp["opened"] == []
+
+    second = _exec(planner.process_command("9996624322"))
+    assert no_memory_writes.get("papa's number") == "+919996624322"
+    # The original message is carried through, not discarded.
+    assert stub_whatsapp["opened"] == [("919996624322", "hello")]
+
+
+def test_mid_sentence_on_whatsapp_is_not_message_text(planner):
+    """'papa on WhatsApp hello' put "on WhatsApp hello" in the body."""
+    target, text = planner._parse_whatsapp_command("papa on WhatsApp hello")
+    assert target == "papa"
+    assert text == "hello"
+
+
+def test_known_contact_routes_bare_message_to_whatsapp(planner, stub_whatsapp, no_memory_writes):
+    """'message papa saying hi' fell through to chitchat once papa was known."""
+    planner.process_command("papa number is 9996624322")
+    planner.pending_clarification = None
+    _exec(planner.process_command("message papa saying good morning"))
+    assert stub_whatsapp["opened"][-1] == ("919996624322", "good morning")
+
+
+def test_unknown_bare_name_does_not_become_a_whatsapp_message(planner, stub_whatsapp, no_memory_writes):
+    """Without a saved number the command must not be hijacked from email."""
+    _exec(planner.process_command("message someone_unknown_xyz saying hi"))
+    assert stub_whatsapp["opened"] == []
+
+
+def test_malformed_number_target_says_so(planner, stub_whatsapp):
+    """'WhatsApp 79828 0245 hello' opened a chat with +798280245."""
+    res = _exec(planner.process_command("WhatsApp 79828 0245 hello"))
+    assert res.get("error") == "BAD_PHONE"
+    assert "9 digits" in res["message"]
+    assert stub_whatsapp["opened"] == []
 
 
 # ── Number resolution ────────────────────────────────────────────────────────

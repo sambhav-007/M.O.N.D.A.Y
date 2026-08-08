@@ -553,36 +553,64 @@ class CommunicationAgent:
     #                           confirm delivery. See the warning in its docstring.
 
     # The WHOLE string must be a phone number — digits with optional +, spaces,
-    # dashes, dots or parentheses. Anchored deliberately.
-    _PHONE_ONLY_RE = re.compile(r"^\+?[\d\s\-().]{7,25}$")
+    # dashes, dots or parentheses. Anchored deliberately. A space after the '+'
+    # is tolerated because people type "+ 9199 662 4322".
+    _PHONE_ONLY_RE = re.compile(r"^\+?\s*[\d][\d\s\-().]{6,24}$")
     _PHONE_CLEAN_RE = re.compile(r"[^\d]")
     # For pulling a number out of prose, which is a different and more dangerous
     # operation — see extract_phone().
-    _PHONE_IN_TEXT_RE = re.compile(r"\+\d[\d\s\-().]{6,20}\d")
+    _PHONE_IN_TEXT_RE = re.compile(r"\+\s*\d[\d\s\-().]{6,20}\d")
 
     @staticmethod
     def normalise_phone(raw: str) -> Optional[str]:
         """
         Reduces a string that *is* a phone number to the digits WhatsApp expects.
 
-        Strict on purpose. This used to strip every non-digit from arbitrary text
-        and treat whatever survived as a number, so the stored sentence
-        "+919876543210 saying hello there" normalised to a valid number — which is
-        how a message was once addressed to a number the user never typed.
-        Anything containing letters is rejected; use extract_phone() when you
-        genuinely mean to search prose.
+        A number typed without a country code gets DEFAULT_COUNTRY_CODE (91 unless
+        overridden), because WhatsApp always needs one and making the user type it
+        every time is friction they will not tolerate.
+
+        Length is validated rather than merely bounded. "79828 0245" is nine
+        digits — not a valid mobile — and used to sail through an 8-to-15 range
+        check and open a chat with "+798280245".
+
+        Strict about letters on purpose: this once stripped every non-digit from
+        arbitrary text and treated the residue as a number, so a stored sentence
+        became a valid recipient. Use extract_phone() to search prose deliberately.
         """
         if not raw:
             return None
         text = str(raw).strip()
         if not CommunicationAgent._PHONE_ONLY_RE.match(text):
             return None
+
+        had_plus = text.lstrip().startswith("+")
         digits = CommunicationAgent._PHONE_CLEAN_RE.sub("", text)
-        # Fewer than 8 digits cannot carry a country code plus a subscriber
-        # number, and WhatsApp requires the country code.
-        if not (8 <= len(digits) <= 15):
+        if not digits:
             return None
-        return digits
+
+        from core.config import DEFAULT_COUNTRY_CODE
+        cc = str(DEFAULT_COUNTRY_CODE).lstrip("+")
+
+        if had_plus:
+            if not (8 <= len(digits) <= 15):
+                return None
+            # A number in the user's own country has a known length, so catch a
+            # malformed one rather than opening a chat with it: "+ 9199 662 4322"
+            # is eleven digits and cannot be a real +91 number.
+            if digits.startswith(cc) and len(digits) != len(cc) + 10:
+                return None
+            return digits
+
+        # No '+'. Accept only shapes that are unambiguous, then add the default
+        # country code. Anything else is a typo we must not silently "fix".
+        if len(digits) == 10:                      # bare national mobile
+            return cc + digits
+        if len(digits) == 11 and digits.startswith("0"):   # trunk-prefixed
+            return cc + digits[1:]
+        if digits.startswith(cc) and 11 <= len(digits) <= 15:
+            return digits                          # already carries the code
+        return None
 
     @staticmethod
     def extract_phone(text: str) -> Optional[str]:

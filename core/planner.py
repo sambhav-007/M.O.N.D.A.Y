@@ -131,11 +131,13 @@ Type these in plain English. Every example below works as written.
    send mail to a@b.com subject "Hi" body "Hello"
         ⚠️ Tier 2 — I draft it, show you, then ask. Reply 'send'
         to deliver or 'cancel' to keep it as a draft.
-   message +919876543210 saying hi   opens WhatsApp with it typed;
-                                     you press Enter to send
-   send whatsapp to bhumi saying hi  ⚠️ Tier 2 — I ask, then press
-                                     Enter for you. Needs a number:
-                                     remember bhumi's number is +91…
+   message 9876543210 saying hi      opens WhatsApp with it typed;
+                                     you press Enter. 10 digits is
+                                     fine — I'll assume +91
+   papa's number is 9876543210       saves a contact, then just say
+                                     "message papa saying hi"
+   send whatsapp to papa saying hi   ⚠️ Tier 2 — I ask, then press
+                                     Enter for you
    schedule meeting tomorrow 3pm     add a calendar event
    notify me the build finished      desktop notification
 
@@ -529,6 +531,9 @@ class MasterPlanner:
 
         if c_step == "confirm_action":
             return self._resolve_tier2_approval(clarification, raw_ans)
+
+        if c_step == "get_contact_number":
+            return self._resolve_contact_number(clarification, raw_ans)
 
         if c_step == "confirm_send":
             verdict = parse_confirmation(raw_ans)
@@ -932,6 +937,169 @@ class MasterPlanner:
         """Approved executor for send_whatsapp. Only reachable post-approval."""
         return self.comms_agent.send_whatsapp_now(phone, text)
 
+    def _resolve_contact_number(
+        self, clarification: Dict[str, Any], reply: str
+    ) -> Dict[str, Any]:
+        """
+        Takes the number the user just supplied, saves it, and resumes the
+        message they originally asked for.
+        """
+        name = clarification.get("name", "that contact")
+        pending_text = clarification.get("pending_text", "")
+        wants_send = bool(clarification.get("wants_send"))
+
+        # Accept a bare number, or a full "papa's number is +91..." restatement.
+        phone = self.comms_agent.normalise_phone(reply)
+        if not phone:
+            restated = self._SAVE_NUMBER_RE.match(reply or "")
+            if restated:
+                phone = self.comms_agent.normalise_phone(restated.group("phone"))
+                # Only let a restatement rename the contact if it names a real
+                # person. "the number is +91..." must stay attached to whoever we
+                # were already asking about, not be saved as "the's number".
+                restated_name = self._clean_contact_name(restated.group("name"))
+                if restated_name:
+                    name = restated_name
+        if not phone:
+            phone = self.comms_agent.extract_phone(reply)
+
+        if not phone:
+            if parse_confirmation(reply) == "no":
+                return self._wrap_contact_result(reply, {
+                    "success": True, "cancelled": True,
+                    "message": f"Alright — nothing sent, and I haven't saved a number for {name}.",
+                })
+            self.pending_clarification = clarification  # re-arm, don't guess
+            return self._wrap_contact_result(reply, {
+                "success": False,
+                "pending_clarification": True,
+                "awaiting_contact_number": True,
+                "message": (
+                    f"That didn't look like a phone number. What's {name}'s number? "
+                    f"(10 digits is fine — I'll assume +91, or say 'cancel')"
+                ),
+            })
+
+        self.memory_agent.remember(f"{name}'s number", f"+{phone}", topic="contacts")
+
+        if not pending_text:
+            return self._wrap_contact_result(reply, {
+                "success": True,
+                "contact": name,
+                "phone": phone,
+                "message": f"✓ Saved {name}'s number as +{phone}.",
+            })
+
+        if wants_send:
+            result = self.require_tier2_approval(
+                action_name="send_whatsapp",
+                target=f"+{phone}",
+                executor="send_whatsapp",
+                executor_kwargs={"phone": phone, "text": pending_text},
+                original_command=clarification.get("original_command", ""),
+                task_type="communication",
+                agent="comms",
+                detail_lines=[
+                    f'Message : "{pending_text}"',
+                    f"Number  : +{phone} (just saved for {name})",
+                    "I'll open the chat and press Enter. Keep that window focused.",
+                ],
+            )
+            result["message"] = f"✓ Saved {name}'s number as +{phone}.\n\n" + result["message"]
+            return self._wrap_contact_result(reply, result)
+
+        opened = self.comms_agent.open_whatsapp_chat(phone, pending_text)
+        opened["message"] = f"✓ Saved {name}'s number as +{phone}.\n" + opened.get("message", "")
+        return self._wrap_contact_result(reply, opened)
+
+    def _wrap_contact_result(self, reply: str, result: Dict[str, Any]) -> Dict[str, Any]:
+        return {
+            "user_command": reply,
+            "clarification_resumed": True,
+            "intent_classification": {
+                "predicted_intent": "communication", "confidence": 1.0,
+                "llm_fallback": False, "clo": "CLO04",
+            },
+            "rl_routing": {"strategy": "contact_number_prompt", "clo": "CLO05"},
+            "execution_result": result,
+        }
+
+    # ── Saving a contact's phone number ──────────────────────────────────────
+    # "papa number is +919996624322", "remember bhumi's number is 9876543210",
+    # "save papa 9876543210". Without this, every one of those fell through to
+    # chitchat and answered with a greeting, so a number could only ever be
+    # taught by hitting the exact `remember X's number is Y` phrasing.
+    _SAVE_NUMBER_RE = re.compile(
+        r'^\s*(?:remember|save|store|set|add)?\s*'
+        r'(?P<name>[A-Za-z][\w .\-]{0,40}?)'
+        r"(?:'s|s')?\s+"
+        r'(?:phone\s+|mobile\s+|cell\s+|whats\s?app\s+|contact\s+)?'
+        r'(?:number|num|no\.?)\s*'
+        r'(?:is|=|:|-)?\s*'
+        r'(?P<phone>\+?\s*[\d][\d\s\-().]{5,24})\s*$',
+        re.IGNORECASE,
+    )
+
+    # Words that are never a person. "the number is +91…" must not be filed
+    # under "the's number".
+    _NON_NAMES = {
+        "the", "my", "a", "an", "this", "that", "his", "her", "their", "its",
+        "your", "our", "there", "here", "it", "whatsapp", "phone", "mobile",
+        "contact", "number",
+    }
+
+    def _clean_contact_name(self, raw: str) -> str:
+        """Returns a usable contact name, or '' if it is filler."""
+        name = (raw or "").strip().strip(",:;\"'")
+        name = re.sub(
+            r'^(?:remember|save|store|set|add|the|my|his|her|their)\s+',
+            "", name, flags=re.IGNORECASE,
+        ).strip()
+        return "" if not name or name.lower() in self._NON_NAMES else name
+
+    def _handle_save_contact_number(self, command: str) -> Optional[Dict[str, Any]]:
+        """Stores '<name>'s number' when the command reads like one. Else None."""
+        match = self._SAVE_NUMBER_RE.match(command or "")
+        if not match:
+            return None
+
+        name = self._clean_contact_name(match.group("name"))
+        phone = self.comms_agent.normalise_phone(match.group("phone"))
+
+        if not phone:
+            return {
+                "success": False,
+                "error": "BAD_PHONE",
+                "message": (
+                    f"'{match.group('phone').strip()}' doesn't look like a valid "
+                    f"number. Indian mobiles are 10 digits (9876543210); for other "
+                    f"countries include the code (+1 555 123 4567)."
+                ),
+            }
+        if not name:
+            # "the number is ..." — a number with nobody to attach it to.
+            return {
+                "success": False,
+                "error": "NO_CONTACT_NAME",
+                "phone": phone,
+                "message": (
+                    f"Whose number is +{phone}? Try: papa's number is +{phone}"
+                ),
+            }
+
+        key = f"{name}'s number"
+        self.memory_agent.remember(key, f"+{phone}", topic="contacts")
+        return {
+            "success": True,
+            "intent": "save_contact_number",
+            "contact": name,
+            "phone": phone,
+            "message": (
+                f"✓ Saved {name}'s number as +{phone}.\n"
+                f"  You can now say: message {name} saying hello"
+            ),
+        }
+
     # ── WhatsApp helpers ─────────────────────────────────────────────────────
     def _resolve_phone_number(self, target: str) -> Dict[str, Any]:
         """
@@ -993,6 +1161,11 @@ class MasterPlanner:
     _WHATSAPP_PHONE_RE = re.compile(
         r'\b(?:message|msg|text|send to)\s+\+?\d[\d\s\-()]{7,}', re.IGNORECASE
     )
+    # A messaging verb followed by a bare name — only routed to WhatsApp when
+    # that name turns out to have a saved number. See the guard at the call site.
+    _WA_NAME_VERB_RE = re.compile(
+        r'^\s*(?:message|msg|text)\s+[A-Za-z]', re.IGNORECASE
+    )
 
     # Leading verbs and filler stripped before the target is read. Done stepwise
     # rather than as one regex: "send whatsapp to bhumi saying hi", "open whatsapp
@@ -1005,7 +1178,12 @@ class MasterPlanner:
         r'(?:to\s+)?',
         re.IGNORECASE,
     )
-    _WA_LEADING_PHONE_RE = re.compile(r'^\+?\d[\d\s\-()]{6,}\d')
+    _WA_LEADING_PHONE_RE = re.compile(r'^\+?\s*\d[\d\s\-()]{6,}\d')
+    # "papa on WhatsApp hello" puts the app name in the middle. Without removing
+    # it the message body came out as "on WhatsApp hello".
+    _WA_MIDDLE_APP_RE = re.compile(
+        r'\s*\b(?:on|in|via|through|over|using)\s+whats\s?app\b\s*', re.IGNORECASE
+    )
     _WA_CONNECTOR_RE = re.compile(
         r'^(?:saying|say|that\s+says|that|with\s+text|:|-)\s+', re.IGNORECASE
     )
@@ -1027,6 +1205,8 @@ class MasterPlanner:
             send message "Hi" to +919876543210       target last
         """
         work = (command or "").strip()
+        # Drop a mid-sentence "on WhatsApp" so it cannot become message text.
+        work = self._WA_MIDDLE_APP_RE.sub(" ", work).strip()
 
         # 1. A trailing "to <target>" is the recipient — take it before anything
         #    else, so it cannot be mistaken for part of the message.
@@ -1093,13 +1273,48 @@ class MasterPlanner:
                 )
             return res
 
+        # A target that is clearly meant to be a number, but is not a valid one,
+        # deserves to be told so — "I don't have a phone number for '79828 0245'"
+        # reads as if it were a contact name we failed to look up.
+        if (
+            re.fullmatch(r'[\d\s\-+().]{4,}', target or "")
+            and not self.comms_agent.normalise_phone(target)
+        ):
+            digits = re.sub(r'\D', '', target)
+            return {
+                "success": False,
+                "error": "BAD_PHONE",
+                "requested_contact": target,
+                "message": (
+                    f"'{target.strip()}' isn't a valid number — I count {len(digits)} "
+                    f"digits. Indian mobiles are 10 digits (9876543210, I'll add +91); "
+                    f"for other countries include the code (+1 555 123 4567)."
+                ),
+            }
+
         resolved = self._resolve_phone_number(target)
         if not resolved.get("phone"):
+            # Park the request so the next message can supply the number and the
+            # original instruction resumes. Previously the user was told to run a
+            # `remember ...` command and then retype the whole thing.
+            self.pending_clarification = {
+                "type": "contact_number_prompt",
+                "step": "get_contact_number",
+                "name": target,
+                "pending_text": text,
+                "wants_send": bool(re.match(r'^\s*(send|shoot|fire)\b', cmd_lower)),
+                "original_command": command,
+            }
             return {
                 "success": False,
                 "error": resolved.get("error", "NO_NUMBER"),
                 "requested_contact": target,
-                "message": resolved.get("message", f"No number for '{target}'."),
+                "pending_clarification": True,
+                "awaiting_contact_number": True,
+                "message": (
+                    f"I don't have a phone number for '{target}'.\n"
+                    f"  What's their number? (10 digits is fine — I'll assume +91)"
+                ),
             }
         phone = resolved["phone"]
 
@@ -1444,12 +1659,30 @@ class MasterPlanner:
             return self.vision_agent.analyze_screen_context(command)
 
         # ── 0. WhatsApp Priority Handler (Fixes "open whatsapp message...") ──────
+        # Saving a contact number has to be checked before the WhatsApp and
+        # chitchat branches: "papa number is +919996624322" mentions no app and
+        # otherwise lands in chitchat, which answered it with a greeting.
+        saved = self._handle_save_contact_number(command)
+        if saved is not None:
+            return saved
+
         # Either the user named WhatsApp, or they asked to message a literal
         # phone number — "message +919876543210 saying hi" has no other sensible
         # destination, and it is what /help tells them to type. A bare name
         # ("message bhumi") stays out of this: it is too easily an email.
         if "whatsapp" in cmd_lower or self._WHATSAPP_PHONE_RE.search(command):
             return self._handle_whatsapp(command, cmd_lower)
+
+        # "message papa saying good morning" — no app named and no literal
+        # number, but if that name has a saved WhatsApp number the intent is not
+        # ambiguous. Without this the command fell through to chitchat and was
+        # answered with a greeting. Guarded tightly: a messaging verb, no email
+        # address, and the name must already resolve to a number (which is a
+        # memory lookup, so it must not run on every command).
+        if self._WA_NAME_VERB_RE.match(command) and "@" not in command:
+            probe_target, _ = self._parse_whatsapp_command(command)
+            if probe_target and self._resolve_phone_number(probe_target).get("phone"):
+                return self._handle_whatsapp(command, cmd_lower)
 
         # ── 00. Email Communication Priority Handler ─────────────────────────────
         # "mail"/"mail to" matter: without them "send mail to a@outlook.com" fell
