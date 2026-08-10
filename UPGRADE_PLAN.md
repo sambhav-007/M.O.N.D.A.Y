@@ -290,7 +290,28 @@ read. The contract is the validator, not the vocabulary.
 **Done when:** every agent returns `AgentResult`; the contract test passes; no
 handler can report success it cannot witness.
 
-### Phase 3 — The router (≈2 days, the main event)
+### Phase 3 — The router 🟡 **STARTED 2026-08-08**
+
+Done: `core/intent_patterns.py`, `core/skills.py`, `core/router.py`, the first
+tranche of 9 skills in `core/skills_builtin.py`, wired into
+`_dispatch_to_agent` ahead of the legacy chain. **Routing accuracy 1.000 (44/44)**
+— `reports/routing_evidence.md`, asserted per-command so a regression names the
+command it broke. Suite: **402 passing, 25s**.
+
+Not done: the legacy chain is still there. Migrated so far are the offline
+utility commands (time, date, battery, volume ×5, health). `kill`, memory,
+document, email and WhatsApp still fall through — deliberately, and the fallback
+count in the evidence report is the progress bar.
+
+**Do not use the padacioso package.** Its `calc_intent` dispatches every match
+through a `ProcessPoolExecutor` — measured at **~200 ms per command** against
+**0.01 ms** for a direct `simplematch` call, and on Windows it needs an
+`if __name__ == "__main__"` guard the planner cannot provide (it is imported by
+uvicorn, pytest and `cli.py`), so it raises outright. `core/intent_patterns.py`
+reimplements the ~40 lines of alternation/optional expansion that were the only
+part worth having, on top of the same underlying matcher.
+
+### Phase 3 — original design (≈2 days, the main event)
 
 1. `core/skills/` — one folder per skill: `intents.yaml`, `handler.py`,
    `manifest.py` (declaring `tier`, `slots`, `offline: bool`).

@@ -353,8 +353,9 @@ Written down deliberately, so nothing in this README claims more than the code d
 | Tier-2 approval gate | Enforced for `send_email`, `send_whatsapp`, `terminate_process` |
 | WhatsApp | Opens a chat with the message pre-typed; auto-send is Tier-2 gated (see below) |
 | Audit log | Lossless within one process; records the full Tier-2 lifecycle |
-| Test suite | 331 passing, offline and deterministic (`py -3.12 -m pytest`) in ~92s |
+| Test suite | 402 passing, offline and deterministic (`py -3.12 -m pytest`) in ~25s |
 | Result contract | `core/contracts.py` — a handler may only claim success if it carries evidence of what it did. All 11 agents route through it |
+| Skill router | `core/router.py` — patterns → classifier → legacy fallback. Routing accuracy 1.000 (44/44), see [`reports/routing_evidence.md`](reports/routing_evidence.md) |
 
 ### WhatsApp — what it can and cannot do
 

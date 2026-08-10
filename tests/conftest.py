@@ -138,6 +138,74 @@ def _scrub_response(response):
     return response
 
 
+@pytest.fixture(scope="session", autouse=True)
+def _isolate_memory_db(tmp_path_factory):
+    """Points the memory store at a throwaway database for the whole session.
+
+    `MasterPlanner.process_command` calls `auto_store_conversation_turn` on every
+    command, so each test that issues one wrote a permanent row into
+    `data/memory.db` — the user's real assistant memory. handoff.md warns about
+    this ("Tests must not write to data/memories.db… manual testing left fake
+    relatives in it more than once"), but the warning only ever covered the
+    contact-saving tests, which stub `remember`/`recall`. Every other test wrote
+    freely.
+
+    Two consequences, and the second is why it showed up:
+
+    1. The user's memory filled with test transcripts — 2,196 rows by
+       2026-08-10, of which 2,196 were machine-written conversation turns.
+    2. `recall` builds a TF-IDF matrix over *every* stored row, and
+       `get_contextual_memories` runs on every command. So the suite got slower
+       each time it ran, permanently: ~70s, then ~92s, then 222s across one
+       afternoon. It was not a regression in any of the code being changed.
+
+    Redirecting the module-level name is what works here — `memory_agent` does
+    `from core.config import MEMORIES_DB_PATH`, so patching `core.config` alone
+    would rebind nothing.
+    """
+    import agents.memory_agent as memory_agent
+
+    scratch = tmp_path_factory.mktemp("memory") / "test_memory.db"
+    patcher = pytest.MonkeyPatch()
+    patcher.setattr(memory_agent, "MEMORIES_DB_PATH", scratch, raising=True)
+    yield scratch
+    patcher.undo()
+
+
+@pytest.fixture(scope="session", autouse=True)
+def _isolate_audit_log(tmp_path_factory):
+    """Points the audit log at a throwaway file for the session.
+
+    `core.security.log_action` reads the entire JSON array, appends one entry and
+    writes the whole thing back, under a lock, on **every action**. That is
+    O(file) per call, so the cost grows with the log — and the log only ever
+    grows.
+
+    Measured on 2026-08-10: `data/action_history.json` had reached **19,837
+    entries / 6.5 MB**, and the suite took **209s**. The same suite against the
+    committed 87 KB log took **38.7s**. Nothing in the code under test had
+    regressed; the audit log had simply grown, and every run made it worse.
+
+    Isolating it here keeps the suite fast and stops tests writing to the user's
+    real audit trail — which is CLO01 evidence, and should contain their actions,
+    not the test suite's.
+
+    **This is a real defect in the app, not only in the tests.** A user's own log
+    grows the same way, and every command they issue slows down with it. The fix
+    is an append-only format (JSON Lines) rather than read-modify-write, which
+    also resolves the multi-process last-writer-wins loss that `core/security.py`
+    already documents. That is a change to a CLO01 evidence artefact, so it wants
+    its own commit rather than being folded into the router work.
+    """
+    import core.security as security
+
+    scratch = tmp_path_factory.mktemp("audit") / "action_history.json"
+    patcher = pytest.MonkeyPatch()
+    patcher.setattr(security, "ACTION_LOG_PATH", scratch, raising=True)
+    yield scratch
+    patcher.undo()
+
+
 @pytest.fixture
 def fake_powershell(monkeypatch):
     """Intercepts `ComputerAgent`'s PowerShell calls instead of running them.

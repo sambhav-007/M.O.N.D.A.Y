@@ -42,6 +42,8 @@ from agents.public_api_agent import PublicApiAgent
 from agents.audio_summarizer_agent import AudioSummarizerAgent
 from core.task_dag_engine import TaskDAGEngine
 
+from core.router import Router
+from core.skills_builtin import build_builtin_registry
 from core.tool_registry import ToolRegistry
 from core.autonomy import AutonomyDaemon
 from core.security import evaluate_action_permission, log_action
@@ -364,6 +366,14 @@ class MasterPlanner:
         self.cognitive_engine = TriModelCognitiveEngine()
         self.task_dag_engine = TaskDAGEngine(self)
         self.tool_registry = ToolRegistry()
+
+        # Phase 3: the skill router. Built after the agents exist, because the
+        # skills bind to them. `last_routing_decision` is exposed so the API and
+        # the tests can see *how* a command was routed, not just what came back —
+        # the old chain gave no way to tell whether the classifier had been
+        # involved at all.
+        self.router = Router(build_builtin_registry(self))
+        self.last_routing_decision = None
         self.autonomy_daemon = AutonomyDaemon()
         self.autonomy_daemon.start()
 
@@ -533,7 +543,7 @@ class MasterPlanner:
             routing_strategy = ROUTING_ACTIONS[routed_arm]
 
         # Step 3: Match intent to target agent tool execution
-        tool_result = self._dispatch_to_agent(cmd, intent, user_approved)
+        tool_result = self._dispatch_to_agent(cmd, intent, user_approved, confidence)
 
         # If standard dispatch requires generative reasoning, query Cognitive Engine
         if fallback or (isinstance(tool_result, dict) and not tool_result.get("success") and not tool_result.get("refusal")):
@@ -1566,7 +1576,13 @@ class MasterPlanner:
             return False
         return cmd_lower.startswith(self._QUESTION_OPENERS) or cmd_lower.endswith("?")
 
-    def _dispatch_to_agent(self, command: str, intent: str, user_approved: bool) -> Dict[str, Any]:
+    def _dispatch_to_agent(
+        self,
+        command: str,
+        intent: str,
+        user_approved: bool,
+        confidence: float = 0.0,
+    ) -> Dict[str, Any]:
         """Routes command to appropriate specialized tool agent."""
         cmd_lower = command.lower().strip()
 
@@ -1586,6 +1602,23 @@ class MasterPlanner:
                 "intent": "help_menu",
                 "message": build_help_text(),
             }
+
+        # ── 0. The skill router (Phase 3) ────────────────────────────────────────
+        # Runs before the substring chain below, which it is progressively
+        # replacing. A command the router can place is handled by a declared
+        # skill with typed slots; everything else falls through unchanged, so
+        # migration is incremental and each step is independently verifiable.
+        #
+        # The firewall and /help stay in front of it deliberately: a refusal and
+        # the capability menu must not depend on a pattern matching.
+        decision = self.router.route(command, intent=intent, confidence=confidence)
+        self.last_routing_decision = decision
+        if decision.routed:
+            result = decision.skill.handler(**decision.slots)
+            if isinstance(result, dict):
+                result.setdefault("routed_by", decision.stage)
+                result.setdefault("skill", decision.skill.name)
+            return result
 
         # ── 00000. Audit log & proactive suggestions ────────────────────────────
         # cli.py handled these itself, so they worked in the terminal but fell

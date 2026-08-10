@@ -61,6 +61,17 @@ python-dotenv>=1.0.0
 joblib>=1.4.0         # Model persistence
 pygame>=2.5.0         # Voice audio playback engine
 
+# ── Command routing (stage 1 of core/router.py) ──────────────────────────────
+# Slot-capture engine behind core/intent_patterns.py. Pure Python, no compiled
+# wheels, so no Smart App Control exposure.
+#
+# Deliberately NOT `padacioso`, whose design this follows: its calc_intent runs
+# every match through a ProcessPoolExecutor — measured at ~200ms per command
+# against 0.01ms for a direct simplematch call — and on Windows that pool needs
+# an `if __name__ == "__main__"` guard the planner cannot provide, since it is
+# imported by uvicorn, pytest and cli.py. It raises outright there.
+simplematch>=1.4
+
 # ── Testing ──────────────────────────────────────────────────────────────────
 pytest>=8.0.0         # Test runner for tests/ (pytest.ini lives at the root)
 pytest-recording>=0.13 # Replays tests/cassettes/ so the suite runs offline; also
