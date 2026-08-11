@@ -119,6 +119,39 @@ Two stale assertions updated: `test_agent_computer_get_system_volume` and
 `test_agent_comms_read_latest_email` both asserted `success is True`, which held
 only because of the fabrication each one was sitting on.
 
+### 2026-08-10 — audit log is append-only
+
+`core.security.log_action` read the entire JSON array, appended one entry and
+wrote it all back, **on every action**. O(file) per call against a file that only
+grows. Measured on the real log (19,837 entries / 6.5 MB):
+
+| | per action |
+|---|---|
+| old: read 85 ms + write 255 ms | **340 ms** |
+| new: append one line | **0.39 ms** |
+
+That is **872× faster**, and the cost no longer depends on how much history
+exists. It was degrading the actual assistant, not just the suite — every
+command a user issued paid to re-serialise their whole history.
+
+- Format: `data/action_history.jsonl`, one record per line, never rewritten.
+- `data/action_history.json` (the old array) is **still read** so nothing is
+  lost, and never written to again. It is skipped entirely once the new log can
+  satisfy the request on its own, since every legacy record is older.
+- **Cross-process loss is fixed.** The old note in `core/security.py` said this
+  "would need a file lock or an append-only format" — this is that format.
+  Writers append whole lines instead of overwriting each other's copy.
+- **Corruption is confined to a line.** One bad byte used to make the whole array
+  unreadable; the reader now skips the line and carries on. The
+  `action_history.corrupt-*.json` salvage path is gone because it cannot happen.
+- `HabitAgent` read the log with `json.load` inside `except: pass`, so it would
+  have silently stopped finding history. It now goes through `get_action_history`
+  — and takes the most recent 200 rather than feeding all 19,837 actions into
+  component 2.4 as one session, which had been swamping the 300 synthetic ones.
+
+Covered by `tests/test_audit_log.py` (11 tests), including that write cost stops
+growing with the log.
+
 ## 9. WhatsApp (added 2026-08-08)
 
 WhatsApp has **no API a desktop script may send through**. The deep link

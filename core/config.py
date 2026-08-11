@@ -16,7 +16,16 @@ MODELS_DIR = BASE_DIR / "models"
 LOGS_DIR = BASE_DIR / "logs"
 STAGING_DIR = DATA_DIR / "staging"
 MEMORIES_DB_PATH = DATA_DIR / "memory.db"
-ACTION_LOG_PATH = DATA_DIR / "action_history.json"
+# The audit log is append-only JSON Lines: one record per line, never rewritten.
+# It was a single JSON array, which `log_action` had to read, extend and write
+# back on *every* action — O(file) per call against a file that only grows. By
+# 2026-08-10 it held 19,837 entries / 6.5 MB, and the cost was showing up as a
+# general slowdown in everything the assistant did.
+ACTION_LOG_PATH = DATA_DIR / "action_history.jsonl"
+
+# The old array-format log. Still read so history predating the change is not
+# lost; never written to again.
+LEGACY_ACTION_LOG_PATH = DATA_DIR / "action_history.json"
 
 # Create directories if they don't exist
 for d in [DATA_DIR, MODELS_DIR, LOGS_DIR, STAGING_DIR]:

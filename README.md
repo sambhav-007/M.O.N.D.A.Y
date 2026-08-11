@@ -352,8 +352,8 @@ Written down deliberately, so nothing in this README claims more than the code d
 | FastAPI engine | 24 endpoints, verified against the live OpenAPI schema |
 | Tier-2 approval gate | Enforced for `send_email`, `send_whatsapp`, `terminate_process` |
 | WhatsApp | Opens a chat with the message pre-typed; auto-send is Tier-2 gated (see below) |
-| Audit log | Lossless within one process; records the full Tier-2 lifecycle |
-| Test suite | 402 passing, offline and deterministic (`py -3.12 -m pytest`) in ~25s |
+| Audit log | Append-only JSON Lines (`data/action_history.jsonl`). Lossless across processes; records the full Tier-2 lifecycle |
+| Test suite | 413 passing, offline and deterministic (`py -3.12 -m pytest`) in ~41s |
 | Result contract | `core/contracts.py` — a handler may only claim success if it carries evidence of what it did. All 11 agents route through it |
 | Skill router | `core/router.py` — patterns → classifier → legacy fallback. Routing accuracy 1.000 (44/44), see [`reports/routing_evidence.md`](reports/routing_evidence.md) |
 

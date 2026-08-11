@@ -12,26 +12,41 @@ PRD §9 Implementation:
 from __future__ import annotations
 
 import json
-import os
 import threading
-import time
+from collections import deque
 from datetime import datetime
 from typing import Any, Dict, List, Optional, Tuple
 
-from core.config import ACTION_LOG_PATH, AUTO_EXECUTE_TIER_1
+from core.config import ACTION_LOG_PATH, AUTO_EXECUTE_TIER_1, LEGACY_ACTION_LOG_PATH
 
-# AutonomyDaemon logs from a background thread while the planner logs from the
-# main thread. Without this lock the read-modify-write below interleaves, one
-# writer clobbers the other, and a reader can observe a half-written file.
+# The audit log is append-only JSON Lines. Each `log_action` opens the file in
+# append mode and writes exactly one line, which is O(1) regardless of how much
+# history exists.
 #
-# Scope: this makes logging lossless within one interpreter (verified: 480
-# entries across 8 threads, none lost), which is how the app runs. Several
-# interpreters writing the same log concurrently — e.g. a test suite alongside a
-# live app — still lose entries to last-writer-wins, though the file stays valid
-# JSON. Cross-process safety would need a file lock or an append-only format.
+# It used to be a single JSON array: read the whole file, append one entry, write
+# the whole file back. That cost grew with the log, and the log only grows — by
+# 2026-08-10 it held 19,837 entries / 6.5 MB and every action in the assistant
+# paid to re-serialise all of it. The test suite made the same shape of problem
+# visible (38s → 209s as the file filled), but the user's own log degrades their
+# session in exactly the same way.
+#
+# Two other properties come out of the change rather than being bolted on:
+#
+# * **Cross-process writes no longer clobber each other.** The old note here said
+#   several interpreters sharing the log "still lose entries to last-writer-wins…
+#   cross-process safety would need a file lock or an append-only format". This
+#   is that append-only format. Writes go through O_APPEND, so concurrent writers
+#   interleave whole lines rather than overwriting one another's copy of the
+#   file. Two processes can still produce lines in an unhelpful *order*, and a
+#   torn line remains theoretically possible for very large records, but no
+#   writer can now discard another's entries.
+# * **Corruption is contained to a line.** Previously a single parse failure
+#   meant the entire array was unreadable, and the recovery path moved the whole
+#   file aside to `action_history.corrupt-*.json`. Now an unparseable line is
+#   skipped by the reader and the rest of the log is unaffected.
+#
+# The lock is kept: it costs nothing and keeps ordering tidy within a process.
 _LOG_LOCK = threading.Lock()
-_LOG_WRITE_RETRIES = 5
-_LOG_WRITE_BACKOFF_S = 0.02
 
 # ── Defined Risk Tiers ─────────────────────────────────────────────────────────
 TIER_1_ACTIONS = {
@@ -167,68 +182,77 @@ def log_action(
         "details": details or {},
     }
 
-    # Append to JSON log file. Serialised and written atomically so a crash or a
-    # concurrent reader never truncates the audit trail.
+    # One line, appended. No read, no rewrite — the cost does not depend on how
+    # much history is already there.
+    #
+    # `ensure_ascii=True` is deliberate: the record must not contain a raw
+    # newline that would split it across two lines and corrupt both.
+    line = json.dumps(entry, ensure_ascii=True) + "\n"
     with _LOG_LOCK:
-        history: List[Dict[str, Any]] = []
-        if ACTION_LOG_PATH.exists():
-            try:
-                with open(ACTION_LOG_PATH, "r", encoding="utf-8") as f:
-                    history = json.load(f)
-                if not isinstance(history, list):
-                    raise ValueError("audit log is not a JSON array")
-            except Exception:
-                # Do NOT silently start over — that discards the whole audit
-                # trail. Preserve the unreadable file for inspection first.
-                salvage = ACTION_LOG_PATH.with_suffix(
-                    f".corrupt-{datetime.now():%Y%m%d-%H%M%S}.json"
-                )
-                try:
-                    os.replace(ACTION_LOG_PATH, salvage)
-                except Exception:
-                    pass
-                history = []
-
-        history.append(entry)
-
-        # The temp name must be unique per process: the lock above is per-process,
-        # so two interpreters sharing one temp path would interleave their writes
-        # into it and then replace that mixture into place.
-        tmp_path = ACTION_LOG_PATH.with_suffix(f".{os.getpid()}.tmp")
         try:
-            with open(tmp_path, "w", encoding="utf-8") as f:
-                json.dump(history, f, indent=2)
-
-            # On Windows os.replace raises PermissionError while another process
-            # holds the destination open, so retry briefly. Auditing must never
-            # take down the action it is recording, hence the swallow at the end.
-            for attempt in range(_LOG_WRITE_RETRIES):
-                try:
-                    os.replace(tmp_path, ACTION_LOG_PATH)
-                    break
-                except PermissionError:
-                    if attempt == _LOG_WRITE_RETRIES - 1:
-                        break
-                    time.sleep(_LOG_WRITE_BACKOFF_S * (attempt + 1))
+            ACTION_LOG_PATH.parent.mkdir(parents=True, exist_ok=True)
+            with open(ACTION_LOG_PATH, "a", encoding="utf-8") as f:
+                f.write(line)
         except Exception:
+            # Auditing must never take down the action it is recording.
             pass
-        finally:
-            if tmp_path.exists():
-                try:
-                    tmp_path.unlink()
-                except Exception:
-                    pass
 
     return entry
 
 
-def get_action_history(limit: int = 50) -> List[Dict[str, Any]]:
-    """Returns the recent action audit logs."""
-    if not ACTION_LOG_PATH.exists():
+def _read_jsonl_tail(path, limit: int) -> List[Dict[str, Any]]:
+    """Returns the last `limit` parseable records from a JSON Lines file.
+
+    A `deque(maxlen=…)` over the file keeps only the lines that can still make
+    the cut, so a large log costs a scan but never a full parse. Unparseable
+    lines are skipped rather than aborting the read — with one record per line,
+    damage cannot spread past the line it is on.
+    """
+    if not path.exists():
         return []
     try:
-        with open(ACTION_LOG_PATH, "r", encoding="utf-8") as f:
-            history = json.load(f)
-        return history[-limit:]
+        with open(path, "r", encoding="utf-8") as f:
+            tail = deque(f, maxlen=max(1, limit))
     except Exception:
         return []
+
+    records: List[Dict[str, Any]] = []
+    for raw in tail:
+        raw = raw.strip()
+        if not raw:
+            continue
+        try:
+            record = json.loads(raw)
+        except Exception:
+            continue
+        if isinstance(record, dict):
+            records.append(record)
+    return records
+
+
+def _read_legacy_array(path) -> List[Dict[str, Any]]:
+    """Reads the pre-2026-08-10 array-format log, if it is still around."""
+    if not path.exists():
+        return []
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            history = json.load(f)
+        return history if isinstance(history, list) else []
+    except Exception:
+        return []
+
+
+def get_action_history(limit: int = 50) -> List[Dict[str, Any]]:
+    """Returns the most recent audit records, newest last.
+
+    Reads the append-only log first. The legacy array file is only opened when
+    the new log cannot fill the request on its own — every legacy record predates
+    every new one, so once there are `limit` new entries the old file is
+    irrelevant and a 6.5 MB parse is skipped entirely.
+    """
+    recent = _read_jsonl_tail(ACTION_LOG_PATH, limit)
+    if len(recent) >= limit:
+        return recent[-limit:]
+
+    legacy = _read_legacy_array(LEGACY_ACTION_LOG_PATH)
+    return (legacy + recent)[-limit:]

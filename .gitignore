@@ -13,6 +13,7 @@ data/staging/
 # Machine-generated runtime artifacts. These are rewritten on every run and
 # caused repeated merge conflicts; the voice profile also embeds an absolute
 # path to the machine that trained it. Both regenerate automatically.
+data/action_history.jsonl
 data/action_history.json
 data/action_history.*.tmp
 data/action_history.corrupt-*.json

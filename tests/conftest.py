@@ -199,10 +199,13 @@ def _isolate_audit_log(tmp_path_factory):
     """
     import core.security as security
 
-    scratch = tmp_path_factory.mktemp("audit") / "action_history.json"
+    scratch_dir = tmp_path_factory.mktemp("audit")
     patcher = pytest.MonkeyPatch()
-    patcher.setattr(security, "ACTION_LOG_PATH", scratch, raising=True)
-    yield scratch
+    patcher.setattr(security, "ACTION_LOG_PATH", scratch_dir / "action_history.jsonl")
+    # The legacy reader too, or `get_action_history` would fall back to the real
+    # 6.5 MB array whenever a test logged fewer records than it asked for.
+    patcher.setattr(security, "LEGACY_ACTION_LOG_PATH", scratch_dir / "action_history.json")
+    yield scratch_dir
     patcher.undo()
 
 

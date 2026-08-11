@@ -10,9 +10,8 @@ from __future__ import annotations
 import json
 from typing import Any, Dict, List
 
-from core.config import ACTION_LOG_PATH
 from core.contracts import AgentResult, SystemQuery
-from core.security import log_action
+from core.security import get_action_history, log_action
 
 
 class HabitAgent:
@@ -34,16 +33,28 @@ class HabitAgent:
             # Generate synthetic session data augmented with recent user action log
             sessions = generate_session_log(n_sessions=300)
 
-            # Extract recent action history if available
-            if ACTION_LOG_PATH.exists():
-                try:
-                    with open(ACTION_LOG_PATH, "r", encoding="utf-8") as f:
-                        history = json.load(f)
-                    recent_actions = [h.get("action", "") for h in history if h.get("action")]
-                    if len(recent_actions) >= 3:
-                        sessions.append(recent_actions)
-                except Exception:
-                    pass
+            # Extract recent action history if available.
+            #
+            # This used to `json.load` the audit log directly, which stopped
+            # working the moment the log became append-only JSON Lines — and
+            # silently, since the read is wrapped in `except: pass`. Going
+            # through `get_action_history` means there is one reader, and it is
+            # the one that understands both formats.
+            #
+            # The bound is new too: it previously fed *every* recorded action
+            # into the miner as a single session, so the transaction grew without
+            # limit and, at 19,837 entries, dominated the 300 synthetic sessions
+            # it was supposed to augment.
+            try:
+                recent_actions = [
+                    h.get("action", "")
+                    for h in get_action_history(limit=200)
+                    if h.get("action")
+                ]
+                if len(recent_actions) >= 3:
+                    sessions.append(recent_actions)
+            except Exception:
+                pass
 
             df = encode_transactions(sessions)
             rules, _ = run_apriori(df, min_support=0.10, min_confidence=0.55)
