@@ -4,21 +4,21 @@ End-to-end routing accuracy: *which handler does a command actually reach?*
 This supersedes component 2.1's offline macro-F1 as the measure of routing,
 because until this phase the classifier's output was computed and discarded.
 
-- **Skills registered**: 9
-- **Patterns compiled**: 255
+- **Skills registered**: 15
+- **Patterns compiled**: 312
 
 | Set | n | Accuracy |
 |-----|---|----------|
-| Commands that must reach a skill | 32 | 1.000 |
-| Commands that must NOT be captured | 12 | 1.000 |
-| **Overall** | **44** | **1.000** |
+| Commands that must reach a skill | 45 | 1.000 |
+| Commands that must NOT be captured | 10 | 1.000 |
+| **Overall** | **55** | **1.000** |
 
 ## Stages used
 
 | Stage | n |
 |-------|---|
-| pattern | 32 |
-| fallback | 12 |
+| pattern | 45 |
+| fallback | 10 |
 
 ## Why the negatives are the interesting half
 

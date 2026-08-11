@@ -13,6 +13,7 @@ pattern later.
 
 from __future__ import annotations
 
+import re
 from datetime import datetime
 from typing import Any, Dict
 
@@ -186,6 +187,168 @@ def build_builtin_registry(planner: Any) -> SkillRegistry:
             "how is my (pc|computer|system|machine) doing",
         ],
         handler=health,
+        tier=1,
+        offline=True,
+    ))
+
+    # ── Screenshot ───────────────────────────────────────────────────────────
+    def screenshot(**_: Any) -> Dict[str, Any]:
+        return planner.computer_agent.take_screenshot()
+
+    registry.register(Skill(
+        name="take_screenshot",
+        description="Capture the screen",
+        patterns=[
+            "screenshot",
+            "[(take|grab|capture)] [a] screenshot",
+            "capture [the] screen",
+        ],
+        handler=screenshot,
+        tier=1,
+        offline=True,
+    ))
+
+    # ── Terminate a process — the first Tier-2 skill ─────────────────────────
+    # Killing a process loses unsaved work, so it stops and asks in its own turn
+    # (PRD §9). "close" alone is deliberately not a trigger: it is far too easy
+    # to say by accident. The pattern also declines a bare "kill" with no target,
+    # where the old regex produced an empty process name and a separate error.
+    def terminate_process(process: str = "", **_: Any) -> Dict[str, Any]:
+        name = re.sub(
+            r"\s+(process|app|application|task)$", "", process.strip(), flags=re.IGNORECASE
+        ).strip()
+        if not name:
+            return AgentResult.failed(
+                "Which process should I terminate?", error="NO_PROCESS"
+            ).as_dict()
+        return planner.require_tier2_approval(
+            action_name="terminate_process",
+            target=name,
+            executor="terminate_process",
+            executor_kwargs={"process": name},
+            original_command=f"kill {name}",
+            task_type="desktop_automation",
+            agent="computer",
+            detail_lines=["Unsaved work in this process will be lost."],
+        )
+
+    registry.register(Skill(
+        name="terminate_process",
+        description="Force-close a running process (Tier 2 — asks first)",
+        patterns=[
+            "(kill|terminate|force close|end) {process}",
+        ],
+        handler=terminate_process,
+        tier=2,
+        offline=True,
+    ))
+
+    # ── Memory ───────────────────────────────────────────────────────────────
+    # The old branch fired on `"remember" in cmd_lower or "recall" in cmd_lower
+    # or "what did i" in cmd_lower`, then re-split the command with a second
+    # regex to find the key and value. Patterns capture both in one step, and
+    # "what did i" no longer swallows every sentence starting that way.
+    def remember(key: str = "", value: str = "", fact: str = "", **_: Any) -> Dict[str, Any]:
+        if key and value:
+            return planner.memory_agent.remember(key.strip(), value.strip(), topic="user_notes")
+        # "remember to call mum" — no key/value split, so store it whole rather
+        # than inventing a key from the first word.
+        text = fact.strip()
+        if not text:
+            return AgentResult.failed(
+                "What should I remember?", error="NOTHING_TO_REMEMBER"
+            ).as_dict()
+        return planner.memory_agent.remember(text, text, topic="user_notes")
+
+    # Contact numbers are a *more specific* reading of "remember X is Y", and they
+    # must reach `_handle_save_contact_number`, not the generic memory store. Its
+    # four validation guards exist because `normalise_phone` once stripped digits
+    # out of arbitrary text and `recall` is a similarity search — together they
+    # addressed a WhatsApp message to a number lifted from an unrelated saved
+    # transcript (handoff.md §9.2). None of that is reimplemented here.
+    #
+    # Specificity ranking is what makes this work: "remember {name} number is
+    # {phone}" carries more literal text than "remember {key} is {value}", so it
+    # wins regardless of registration order.
+    def save_contact_number(_command: str = "", **_: Any) -> Dict[str, Any]:
+        saved = planner._handle_save_contact_number(_command)
+        if saved is not None:
+            return saved
+        # The command looked like a contact but did not survive validation as
+        # one — store it as an ordinary note rather than dropping it.
+        return planner.memory_agent.remember(_command, _command, topic="user_notes")
+
+    registry.register(Skill(
+        name="save_contact_number",
+        description="Save someone's phone number",
+        patterns=[
+            "remember [that] {name} number is {phone}",
+            "[remember [that]] {name}'s number is {phone}",
+            "{name} number is {phone}",
+            "save {name} number as {phone}",
+        ],
+        handler=save_contact_number,
+        tier=1,
+        offline=True,
+    ))
+
+    registry.register(Skill(
+        name="remember_fact",
+        description="Save something to memory",
+        patterns=[
+            # Every one of these keeps a mandatory verb. Making the verb optional
+            # expands to a bare `{key} is {value}`, which matches any sentence
+            # containing " is " — `IntentContainer.add_intent` now refuses it.
+            "remember [that] {key} is {value}",
+            "remember [that] {key} = {value}",
+            "(save|store|note) [that] {key} is {value}",
+            "remember [that] {fact}",
+        ],
+        handler=remember,
+        intents=["memory_query"],
+        tier=1,
+        offline=True,
+    ))
+
+    def recall(query: str = "", **_: Any) -> Dict[str, Any]:
+        return planner.memory_agent.recall(query.strip() or "")
+
+    registry.register(Skill(
+        name="recall_memory",
+        description="Look something up in memory",
+        patterns=[
+            "recall {query}",
+            "what did i say about {query}",
+            "what do you (know|remember) about {query}",
+            "(look up|lookup) {query} in [my] memory",
+        ],
+        handler=recall,
+        tier=1,
+        offline=True,
+    ))
+
+    # ── Documents ────────────────────────────────────────────────────────────
+    # `"summarize" in cmd_lower or "pdf" in cmd_lower` then a regex for the path,
+    # falling back to **README.md** when it found nothing — so "summarize this"
+    # confidently summarised the project's own readme.
+    def summarize(path: str = "", **_: Any) -> Dict[str, Any]:
+        target = path.strip().strip("\"'")
+        if not target:
+            return AgentResult.failed(
+                "Which file should I summarise?", error="NO_DOCUMENT"
+            ).as_dict()
+        return planner.document_agent.summarize_document(target)
+
+    registry.register(Skill(
+        name="summarize_document",
+        description="Summarise a document",
+        patterns=[
+            "(summarize|summarise) {path}",
+            "(summarize|summarise) [the] (file|document|pdf) {path}",
+            "give me a summary of {path}",
+        ],
+        handler=summarize,
+        intents=["document_intel"],
         tier=1,
         offline=True,
     ))

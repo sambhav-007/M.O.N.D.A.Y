@@ -9,7 +9,12 @@ from __future__ import annotations
 
 import pytest
 
-from core.intent_patterns import IntentContainer, expand_pattern, specificity
+from core.intent_patterns import (
+    IntentContainer,
+    expand_pattern,
+    is_anchored,
+    specificity,
+)
 
 
 # ── Pattern expansion ────────────────────────────────────────────────────────
@@ -41,6 +46,56 @@ def test_slots_are_never_treated_as_syntax():
 
 def test_specificity_counts_literal_text_only():
     assert specificity("send mail to {r}") > specificity("{a} {b}")
+
+
+# ── The wildcard guard ───────────────────────────────────────────────────────
+@pytest.mark.parametrize(
+    "pattern",
+    [
+        "{key} is {value}",                     # matches any sentence with " is "
+        "{a} {b}",                              # matches almost everything
+        "[(save|store|note)] [that] {key} is {value}",  # expands to the first one
+        "[remember] {fact}",                    # expands to a bare "{fact}"
+    ],
+)
+def test_patterns_with_no_literal_text_are_refused(pattern):
+    """
+    A pattern needs at least one mandatory word, or it quietly captures other
+    skills' commands.
+
+    This is not hypothetical. `[(save|store|note)] [that] {key} is {value}` was
+    registered for the memory skill, and because *every* segment is optional its
+    expansion included the bare `{key} is {value}` — so "what is the capital of
+    france" and "determination is important" were both filed as memories. It
+    fails at registration now, because an over-broad pattern does not announce
+    itself in behaviour: it just silently takes work from other skills, which is
+    exactly what the substring chain did.
+    """
+    container = IntentContainer()
+    with pytest.raises(ValueError, match="not anchored"):
+        container.add_intent("too_greedy", [pattern])
+
+
+@pytest.mark.parametrize(
+    "pattern",
+    [
+        "end {process}",            # prefix-anchored, even though "end" is short
+        "kill {process}",
+        "{name} number is {phone}", # slot-first, but "number is" is specific
+        "remember {key} is {value}",
+    ],
+)
+def test_anchored_patterns_are_accepted(pattern):
+    """Legitimately short prefixes must not be caught by the guard."""
+    assert is_anchored(pattern)
+    IntentContainer().add_intent("fine", [pattern])
+
+
+def test_a_single_mandatory_word_is_enough():
+    container = IntentContainer()
+    container.add_intent("ok", ["(save|store) {key} is {value}"])
+    assert container.calc_intent("save the wifi password is hunter2") is not None
+    assert container.calc_intent("what is the capital of france") is None
 
 
 # ── Matching ─────────────────────────────────────────────────────────────────

@@ -102,6 +102,41 @@ def specificity(pattern: str) -> int:
     return len(_SLOT.sub("", pattern).replace(" ", ""))
 
 
+#: When a pattern does not begin with a literal word, this much literal text is
+#: required elsewhere in it. Two letters of connective ("is", "to", "at") is not
+#: an anchor; "number is" is.
+MIN_FLOATING_LITERALS = 4
+
+
+def is_anchored(pattern: str) -> bool:
+    """Whether a pattern is specific enough to be safe to register.
+
+    An unanchored pattern does not announce itself — it silently captures other
+    skills' commands, which is precisely the failure mode of the substring chain
+    this module replaces. `{key} is {value}` matches *any* sentence containing
+    " is ", and `{a} {b}` matches nearly everything.
+
+    This is not hypothetical. `[(save|store|note)] [that] {key} is {value}` was
+    registered for the memory skill; every segment is optional, so its expansion
+    included the bare `{key} is {value}`, and "what is the capital of france" was
+    filed as a memory.
+
+    Two ways to be anchored, either sufficing:
+
+    * **Prefix-anchored** — begins with literal text. `end {process}` qualifies
+      even though "end" is short, because it can only match commands that start
+      with that word.
+    * **Enough literal text** — `{name} number is {phone}` opens with a slot but
+      carries "number is", which is specific enough to be meant.
+    """
+    stripped = pattern.strip()
+    if not stripped:
+        return False
+    if not stripped.startswith("{"):
+        return True
+    return specificity(stripped) >= MIN_FLOATING_LITERALS
+
+
 @dataclass(frozen=True)
 class Match:
     """A pattern that matched, and what it captured."""
@@ -124,6 +159,16 @@ class IntentContainer:
         compiled = self._intents.setdefault(name, [])
         for raw in patterns:
             for concrete in expand_pattern(raw.lower()):
+                if not is_anchored(concrete):
+                    raise ValueError(
+                        f"{name}: pattern {raw!r} expands to {concrete!r}, which is "
+                        f"not anchored — it would match almost any input. Either "
+                        f"start it with a literal word, or give it at least "
+                        f"{MIN_FLOATING_LITERALS} characters of literal text. "
+                        f"`(save|store) {{key}} is {{value}}` is fine; "
+                        f"`[(save|store)] {{key}} is {{value}}` is not, because "
+                        f"dropping every optional leaves a bare `{{key}} is {{value}}`."
+                    )
                 # `case_sensitive=False` rather than lowercasing the input:
                 # matching must ignore case, but *captures* must not. Lowercasing
                 # the command first would have sent an email with the subject

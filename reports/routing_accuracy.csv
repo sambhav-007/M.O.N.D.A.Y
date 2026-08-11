@@ -32,14 +32,25 @@ system health,system_health,system_health,pattern,True,
 computer stats,system_health,system_health,pattern,True,
 how is my pc doing,system_health,system_health,pattern,True,
 how much do you charge for consulting,(fallback),(fallback),fallback,True,
-what did i say about the method,(fallback),(fallback),fallback,True,
+what did i say about the method,recall_memory,recall_memory,pattern,True,{'query': 'the method'}
 tell me something about whether it rains,(fallback),(fallback),fallback,True,
-summarize the quarterly report,(fallback),(fallback),fallback,True,
 what is the capital of france,(fallback),(fallback),fallback,True,
 send mail to a@b.com,(fallback),(fallback),fallback,True,
-remember the wifi password is on the fridge,(fallback),(fallback),fallback,True,
 open notepad,(fallback),(fallback),fallback,True,
 determination is important,(fallback),(fallback),fallback,True,
 i need to book a flight,(fallback),(fallback),fallback,True,
-kill notepad,(fallback),(fallback),fallback,True,
 search for python tutorials,(fallback),(fallback),fallback,True,
+this sentence is a statement,(fallback),(fallback),fallback,True,
+the meeting is on friday,(fallback),(fallback),fallback,True,
+screenshot,take_screenshot,take_screenshot,pattern,True,
+take a screenshot,take_screenshot,take_screenshot,pattern,True,
+kill notepad,terminate_process,terminate_process,pattern,True,{'process': 'notepad'}
+terminate chrome,terminate_process,terminate_process,pattern,True,{'process': 'chrome'}
+remember my exam is on friday,remember_fact,remember_fact,pattern,True,"{'key': 'my exam', 'value': 'on friday'}"
+remember that the wifi password is on the fridge,remember_fact,remember_fact,pattern,True,"{'key': 'the wifi password', 'value': 'on the fridge'}"
+recall my exam,recall_memory,recall_memory,pattern,True,{'query': 'my exam'}
+what did i say about the exam,recall_memory,recall_memory,pattern,True,{'query': 'the exam'}
+summarize README.md,summarize_document,summarize_document,pattern,True,{'path': 'README.md'}
+summarise the file notes.txt,summarize_document,summarize_document,pattern,True,{'path': 'notes.txt'}
+remember papa number is 9876543210,save_contact_number,save_contact_number,pattern,True,"{'name': 'papa', 'phone': '9876543210'}"
+mummy's number is 9876543210,save_contact_number,save_contact_number,pattern,True,"{'name': 'mummy', 'phone': '9876543210'}"

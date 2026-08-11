@@ -76,17 +76,38 @@ ROUTING_SET: List[Tuple[str, str]] = [
     # ── Negatives: must fall through, not be captured ────────────────────────
     # Each of these was mis-served by the substring chain.
     ("how much do you charge for consulting", "(fallback)"),      # "charge" → battery
-    ("what did i say about the method", "(fallback)"),            # "eth" → ethereum
+    # Reclassified in tranche 2, and the reason matters. This was a negative
+    # because the *crypto* branch grabbed it — `"eth" in cmd_lower` matches
+    # m-eth-od. It is genuinely a memory recall, so now that recall_memory
+    # exists, reaching it is the correct answer rather than a capture. The
+    # "eth" negative is still covered by the "whether it rains" case below,
+    # which no skill should claim.
+    ("what did i say about the method", "recall_memory"),
     ("tell me something about whether it rains", "(fallback)"),   # "eth" again
-    ("summarize the quarterly report", "(fallback)"),
     ("what is the capital of france", "(fallback)"),
     ("send mail to a@b.com", "(fallback)"),
-    ("remember the wifi password is on the fridge", "(fallback)"),
     ("open notepad", "(fallback)"),
     ("determination is important", "(fallback)"),                 # "terminate"
     ("i need to book a flight", "(fallback)"),
-    ("kill notepad", "(fallback)"),                               # not yet migrated
     ("search for python tutorials", "(fallback)"),
+    ("this sentence is a statement", "(fallback)"),               # bare "{key} is {value}"
+    ("the meeting is on friday", "(fallback)"),
+
+    # ── Tranche 2 ────────────────────────────────────────────────────────────
+    ("screenshot", "take_screenshot"),
+    ("take a screenshot", "take_screenshot"),
+    ("kill notepad", "terminate_process"),
+    ("terminate chrome", "terminate_process"),
+    ("remember my exam is on friday", "remember_fact"),
+    ("remember that the wifi password is on the fridge", "remember_fact"),
+    ("recall my exam", "recall_memory"),
+    ("what did i say about the exam", "recall_memory"),
+    ("summarize README.md", "summarize_document"),
+    ("summarise the file notes.txt", "summarize_document"),
+    # Contact numbers are a more specific reading of "remember X is Y" and must
+    # reach the validated contact path, not the generic memory store.
+    ("remember papa number is 9876543210", "save_contact_number"),
+    ("mummy's number is 9876543210", "save_contact_number"),
 ]
 
 

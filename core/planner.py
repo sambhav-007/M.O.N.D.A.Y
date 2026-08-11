@@ -1614,7 +1614,12 @@ class MasterPlanner:
         decision = self.router.route(command, intent=intent, confidence=confidence)
         self.last_routing_decision = decision
         if decision.routed:
-            result = decision.skill.handler(**decision.slots)
+            # `_command` carries the original text alongside the captured slots.
+            # A few handlers need it to delegate to logic that parses the whole
+            # command itself — contact saving, whose four validation guards must
+            # not be reimplemented (handoff.md §9.2). Underscored so it can never
+            # collide with a slot name.
+            result = decision.skill.handler(_command=command, **decision.slots)
             if isinstance(result, dict):
                 result.setdefault("routed_by", decision.stage)
                 result.setdefault("skill", decision.skill.name)
