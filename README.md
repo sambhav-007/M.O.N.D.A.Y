@@ -355,7 +355,7 @@ Written down deliberately, so nothing in this README claims more than the code d
 | Audit log | Append-only JSON Lines (`data/action_history.jsonl`). Lossless across processes; records the full Tier-2 lifecycle |
 | Test suite | 433 passing, offline and deterministic (`py -3.12 -m pytest`) in ~37s |
 | Result contract | `core/contracts.py` — a handler may only claim success if it carries evidence of what it did. All 11 agents route through it |
-| Skill router | `core/router.py` — patterns → classifier → legacy fallback. Routing accuracy 1.000 (55/55), 16 skills, see [`reports/routing_evidence.md`](reports/routing_evidence.md) |
+| Skill router | `core/router.py` — patterns → classifier → legacy fallback. Routing accuracy 1.000 (55/55), 15 skills, see [`reports/routing_evidence.md`](reports/routing_evidence.md) |
 
 ### WhatsApp — what it can and cannot do
 
