@@ -1,0 +1,2937 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#0a0a0a">
+<link rel="manifest" href="/manifest.json">
+<link rel="icon" href="/favicon.png">
+<link rel="apple-touch-icon" href="/favicon.png">
+<title>CODEC</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #121215; --surface: #1a1a1d; --surface-2: #212125; --surface-3: #2a2a2e;
+  --border: #303035; --border-hover: #424248;
+  --text: #ececec; --text-muted: #9a9aa0; --text-dim: #6a6a70;
+  --accent: #E8711A; --accent-hover: #f07d2a; --accent-dim: rgba(232,113,26,0.10);
+  --accent-glow: rgba(232,113,26,0.06);
+  --danger: #ef4444; --success: #22c55e; --info: #3b82f6;
+  --font: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  --mono: 'JetBrains Mono', 'SF Mono', monospace;
+  --radius-sm: 6px; --radius: 10px; --radius-lg: 14px;
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  /* Backward-compat aliases */
+  --bg2: #111111; --bg3: #1a1a1a; --bg4: #222222;
+  --fg: #e8e8e8; --fg2: #7a7a7a; --fg3: #4a4a4a;
+  --ac: #E8711A; --bd: #232323;
+}
+[data-theme="light"] {
+  --bg: #f7f5f2; --surface: #ffffff; --surface-2: #f0ece6; --surface-3: #e8e4de;
+  --border: #d5d0ca; --border-hover: #bbb;
+  --text: #1a1a1a; --text-muted: #555; --text-dim: #777;
+  --accent-dim: rgba(232,113,26,0.08); --accent-glow: rgba(232,113,26,0.04);
+  --bg2: #fff; --bg3: #f0ece6; --bg4: #e8e4de;
+  --fg: #1a1a1a; --fg2: #555; --fg3: #777; --bd: #d5d0ca;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html { background: var(--bg); }
+html, body { font-family: var(--font); background: var(--bg); color: var(--text); height: 100%; overflow: hidden; -webkit-tap-highlight-color: transparent; }
+.app { display: flex; flex-direction: column; height: 100vh; height: 100dvh; padding-top: var(--safe-top); padding-bottom: var(--safe-bottom); padding-bottom: env(safe-area-inset-bottom, 0px); }
+
+/* ── Icons (inline SVG) ── */
+.ico { width: 18px; height: 18px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0; }
+.ico-sm { width: 16px; height: 16px; }
+.ico-lg { width: 22px; height: 22px; }
+
+/* ── Header ── */
+.header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 16px; border-bottom: 1px solid var(--border);
+  background: var(--surface); flex-shrink: 0; position: relative;
+}
+.header-left { display: flex; align-items: center; gap: 10px; }
+.logo-link { display: flex; align-items: center; text-decoration: none; }
+.header img { width: 34px; height: 34px; border-radius: 8px; }
+.header h1 { font-family: var(--mono); font-size: 16px; font-weight: 700; letter-spacing: 2px; color: var(--accent); }
+.header-right { display: flex; align-items: center; gap: 6px; }
+.status-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--danger); flex-shrink: 0; transition: all 0.3s; }
+.status-dot.on { background: var(--success); box-shadow: 0 0 6px rgba(34,197,94,0.5); }
+.icon-btn {
+  background: none; border: 1px solid var(--border); color: var(--text-muted);
+  width: 30px; height: 30px; border-radius: var(--radius-sm); cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.15s ease;
+}
+.icon-btn:hover { border-color: var(--border-hover); color: var(--text); background: var(--surface-2); }
+.icon-btn:active { transform: scale(0.93); }
+
+/* ── Page Nav ── */
+.page-nav { display: flex; align-items: center; gap: 1px; position: absolute; left: 50%; transform: translateX(-50%); background: var(--surface-2); border-radius: var(--radius-sm); padding: 2px; }
+.nav-link {
+  padding: 5px 14px; color: var(--text-muted); text-decoration: none;
+  font-size: 12px; font-weight: 500; border-radius: 4px;
+  transition: all 0.15s ease; letter-spacing: 0.02em; white-space: nowrap;
+  text-align: center;
+}
+.nav-link:hover { color: var(--text); }
+.nav-link.active { color: var(--accent); background: var(--accent-dim); }
+
+/* ── Side Panel ── */
+.side-panel-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 9990; }
+.side-panel-overlay.open { display: block; }
+.side-panel {
+  position: fixed; top: 0; right: -300px; width: 300px; height: 100%;
+  background: var(--surface); border-left: 1px solid var(--border);
+  z-index: 9991; transition: right 0.3s cubic-bezier(0.4,0,0.2,1);
+  display: flex; flex-direction: column; box-shadow: -4px 0 24px rgba(0,0,0,0.3);
+}
+.side-panel.open { right: 0; }
+.side-panel-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 16px 20px; border-bottom: 1px solid var(--border);
+}
+.side-panel-header h2 { font-family: var(--mono); font-size: 12px; font-weight: 700; color: var(--accent); letter-spacing: 2px; }
+.side-panel-close {
+  background: none; border: none; color: var(--text-muted); font-size: 20px;
+  cursor: pointer; width: 28px; height: 28px; display: flex; align-items: center;
+  justify-content: center; border-radius: 4px; transition: all 0.15s;
+}
+.side-panel-close:hover { color: var(--text); background: var(--surface-2); }
+.side-panel-body { padding: 12px; display: flex; flex-direction: column; gap: 6px; overflow-y: auto; flex: 1; }
+.sp-item {
+  display: flex; align-items: center; gap: 12px; padding: 12px 14px;
+  border: 1px solid var(--border); border-radius: var(--radius-sm);
+  background: var(--surface-2); cursor: pointer; transition: all 0.15s;
+  text-decoration: none; color: var(--text); font-size: 13px; font-weight: 500;
+}
+.sp-item:hover { border-color: var(--border-hover); background: var(--surface-3); color: var(--text); }
+.sp-item svg { flex-shrink: 0; }
+.sp-item-label { flex: 1; text-align: center; }
+.sp-divider { height: 1px; background: var(--border); margin: 6px 0; }
+.menu-btn {
+  background: none; border: 1px solid var(--border); color: var(--text-muted);
+  width: 30px; height: 30px; border-radius: var(--radius-sm); cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.15s ease; font-size: 16px;
+}
+.menu-btn { position: relative; }
+.menu-btn:hover { border-color: var(--border-hover); color: var(--text); background: var(--surface-2); }
+.menu-btn:active { transform: scale(0.93); }
+.menu-notif-dot { position:absolute;top:-3px;right:-3px;width:10px;height:10px;background:var(--accent,#a78bfa);border-radius:50%;border:2px solid var(--surface);display:none;animation:notifPulse 2s infinite; }
+.menu-notif-dot.active { display:block; }
+@keyframes notifPulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.6;transform:scale(1.2)}}
+.sp-item.notif-highlight { border-color:var(--accent,#a78bfa);background:rgba(167,139,250,0.1);box-shadow:0 0 0 1px var(--accent,#a78bfa); }
+
+/* ── Tabs ── */
+.tabs {
+  display: flex; gap: 0; border-bottom: 1px solid var(--border);
+  background: var(--surface); overflow-x: auto; flex-shrink: 0; padding: 0 12px;
+}
+.tab {
+  display: flex; align-items: center; gap: 6px;
+  padding: 10px 14px; font-size: 13px; font-weight: 500;
+  color: var(--text-dim); border: none; background: none; cursor: pointer;
+  border-bottom: 2px solid transparent; transition: all 0.15s;
+  font-family: var(--font); white-space: nowrap;
+}
+.tab:hover { color: var(--text-muted); }
+.tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+.tab .ico { opacity: 0.5; }
+.tab.active .ico { opacity: 1; color: var(--accent); }
+.tab-badge {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 16px; height: 16px; padding: 0 5px; margin-left: 1px;
+  background: var(--accent); color: #fff; font-size: 10px; font-weight: 700;
+  border-radius: 8px; line-height: 1;
+}
+.tab-badge.hidden { display: none; }
+
+/* ── Content ── */
+.content { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+.panel { display: none; padding: 14px; min-height: 100%; }
+.panel.active { display: block; }
+#panel-chat { position: relative; }
+#panel-chat::before {
+  content: ''; position: absolute; top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  width: 200px; height: 200px;
+  background: url('https://i.imgur.com/jD1X5W8.png') center/contain no-repeat;
+  opacity: 0.06; pointer-events: none; z-index: 0;
+}
+
+/* ── Input Area (matches Deep Chat) ── */
+.input-area {
+  padding: 8px 12px; border-top: 1px solid var(--border); background: var(--surface);
+  flex-shrink: 0; padding-bottom: calc(8px + var(--safe-bottom));
+}
+.input-row { display: flex; gap: 6px; align-items: flex-end; }
+.chat-input {
+  flex: 1; background: var(--surface-2); border: 1px solid var(--border); color: var(--text);
+  padding: 9px 14px; border-radius: 20px; font-size: 14px; font-family: var(--font);
+  outline: none; resize: none; min-height: 38px; max-height: 120px; line-height: 1.4;
+}
+.chat-input:focus { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-dim); }
+.chat-input::placeholder { color: var(--text-dim); }
+.ibtn {
+  background: none; border: 1px solid var(--border); color: var(--text-muted);
+  width: 36px; height: 36px; border-radius: 50%; cursor: pointer; font-size: 16px;
+  flex-shrink: 0; display: flex; align-items: center; justify-content: center;
+  transition: all 0.15s;
+}
+.ibtn:active { opacity: 0.7; transform: scale(0.92); }
+.ibtn:hover { border-color: var(--border-hover); color: var(--text); }
+.ibtn.send { background: var(--accent); color: #fff; border-color: var(--accent); }
+.ibtn.recording { background: var(--danger); color: #fff; border-color: var(--danger); animation: pulse 1s infinite; }
+.ibtn.phone { color: var(--accent); }
+@keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:0.6; } }
+
+/* ── Cards ── */
+.card {
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 12px 14px; margin-bottom: 8px; transition: all 0.15s; position: relative;
+}
+.card:hover { border-color: var(--border-hover); }
+.card-time { font-family: var(--mono); font-size: 11px; color: var(--text-dim); margin-bottom: 3px; }
+.card-task { font-size: 14px; color: var(--text); line-height: 1.5; }
+.card-app { font-size: 11px; color: var(--accent); margin-top: 4px; font-weight: 500; }
+.card-response { font-size: 12px; color: var(--text-muted); margin-top: 6px; padding-top: 6px; border-top: 1px solid var(--border); line-height: 1.5; }
+.card-role {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-family: var(--mono); font-size: 11px; font-weight: 600;
+  padding: 2px 8px; border-radius: 4px; margin-bottom: 4px; text-transform: uppercase;
+}
+.card-role.user { background: var(--accent-dim); color: var(--accent); }
+.card-role.assistant { background: rgba(34,197,94,0.08); color: var(--success); }
+[data-theme="light"] .card-role.user { background: rgba(232,113,26,0.12); color: #c45a00; }
+[data-theme="light"] .card-role.assistant { background: rgba(34,197,94,0.12); color: #15803d; }
+
+/* ── Copy button on cards ── */
+.copy-btn {
+  position: absolute; top: 8px; right: 8px;
+  background: var(--surface-2); border: 1px solid var(--border); color: var(--text-dim);
+  width: 26px; height: 26px; border-radius: 5px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  opacity: 0; transition: all 0.15s;
+}
+.card:hover .copy-btn { opacity: 1; }
+.copy-btn:hover { color: var(--accent); border-color: var(--accent); }
+.copy-btn.copied { color: var(--success); border-color: var(--success); }
+
+/* ── Status Panel ── */
+.stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 14px; }
+.stat-card {
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 14px; text-align: center;
+}
+.stat-val { font-family: var(--mono); font-size: 18px; font-weight: 700; color: var(--accent); }
+.stat-label { font-size: 11px; color: var(--text-dim); margin-top: 3px; text-transform: uppercase; letter-spacing: 0.5px; }
+
+/* ── Settings Panel ── */
+.settings-section {
+  margin-bottom: 16px;
+}
+.settings-title {
+  font-family: var(--mono); font-size: 10px; font-weight: 600;
+  color: var(--text-dim); letter-spacing: 1px; text-transform: uppercase;
+  margin-bottom: 8px; padding: 0 2px;
+}
+.settings-card {
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+  overflow: hidden;
+}
+.ui-toggle-group { margin-bottom: 14px; }
+.ui-toggle-group-title { font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--accent); margin: 0 0 6px; font-weight: 600; }
+.ui-toggle-row { display: flex; justify-content: space-between; align-items: center; padding: 7px 0; border-bottom: 1px solid var(--border); }
+.ui-toggle-row:last-child { border-bottom: none; }
+.ui-toggle-label { font-size: 12px; color: var(--text-muted); }
+.ui-switch { position: relative; width: 36px; height: 20px; flex-shrink: 0; }
+.ui-switch input { opacity: 0; width: 0; height: 0; }
+.ui-switch .slider { position: absolute; inset: 0; background: var(--surface-2); border: 1px solid var(--border); border-radius: 20px; cursor: pointer; transition: 0.2s; }
+.ui-switch .slider:before { content: ''; position: absolute; width: 14px; height: 14px; left: 2px; top: 2px; background: var(--text-dim); border-radius: 50%; transition: 0.2s; }
+.ui-switch input:checked + .slider { background: var(--accent); border-color: var(--accent); }
+.ui-switch input:checked + .slider:before { transform: translateX(16px); background: #fff; }
+.setting-row {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 10px 14px; border-bottom: 1px solid var(--border); transition: background 0.1s;
+}
+.setting-row:last-child { border-bottom: none; }
+.setting-row:hover { background: var(--surface-2); }
+.setting-label { font-size: 13px; color: var(--text-muted); font-family: var(--mono); }
+.setting-input {
+  background: var(--surface-2); border: 1px solid var(--border); border-radius: 5px;
+  padding: 5px 10px; color: var(--text); font-size: 12px; font-family: var(--mono);
+  text-align: right; max-width: 55%; outline: none; transition: border 0.15s;
+}
+.setting-input:focus { border-color: var(--accent); }
+.setting-toggle {
+  width: 36px; height: 20px; border-radius: 10px; border: none; cursor: pointer;
+  background: var(--border); position: relative; transition: background 0.2s;
+}
+.setting-toggle::after {
+  content: ''; position: absolute; top: 2px; left: 2px;
+  width: 16px; height: 16px; border-radius: 50%; background: var(--text-dim);
+  transition: all 0.2s;
+}
+.setting-toggle.on { background: var(--accent); }
+.setting-toggle.on::after { left: 18px; background: #fff; }
+[data-theme="light"] .setting-toggle { background: #ccc; }
+[data-theme="light"] .setting-toggle::after { background: #fff; }
+[data-theme="light"] .setting-toggle.on { background: var(--accent); }
+.save-config-btn {
+  width: 100%; padding: 10px; background: var(--accent); color: #fff; border: none;
+  border-radius: var(--radius); font-size: 13px; font-weight: 600; cursor: pointer;
+  font-family: var(--font); transition: all 0.15s; margin-top: 12px;
+}
+.save-config-btn:hover { background: var(--accent-hover); }
+.save-config-btn:active { transform: scale(0.98); }
+.save-config-btn.saved { background: var(--success); }
+
+/* ── Skill Reviews ── */
+.skills-review-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 14px; }
+.skills-review-sub { font-size: 12px; color: var(--text-dim); max-width: 560px; line-height: 1.45; margin-top: 3px; }
+.skills-refresh-btn { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 7px; color: var(--text-dim); cursor: pointer; flex-shrink: 0; display: flex; }
+.skills-refresh-btn:hover { color: var(--accent); border-color: var(--accent); }
+.skill-review-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); margin-bottom: 14px; overflow: hidden; }
+.skill-review-top { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 12px 14px; border-bottom: 1px solid var(--border); flex-wrap: wrap; }
+.skill-review-name { font-family: var(--mono); font-size: 14px; font-weight: 600; color: var(--text); display: flex; align-items: center; gap: 8px; word-break: break-all; }
+.skill-review-meta { font-size: 11px; color: var(--text-dim); font-family: var(--mono); }
+.skill-review-actions { display: flex; gap: 8px; }
+.skill-btn { border: none; border-radius: 6px; padding: 7px 16px; font-weight: 600; font-size: 12px; cursor: pointer; font-family: var(--font); transition: opacity .15s, background .15s, border-color .15s, color .15s; }
+.skill-btn:hover { opacity: .88; }
+.skill-btn.approve { background: var(--success); color: #fff; }
+.skill-btn.reject { background: var(--surface-2); color: var(--text-muted); border: 1px solid var(--border); }
+.skill-btn.reject:hover { color: var(--danger); border-color: var(--danger); opacity: 1; }
+.skill-btn:disabled { opacity: .5; cursor: default; }
+.skill-review-code { margin: 0; padding: 12px 14px; font-family: var(--mono); font-size: 12px; line-height: 1.5; color: var(--text-muted); white-space: pre; overflow: auto; max-height: 340px; background: var(--bg); }
+.skills-empty { text-align: center; color: var(--text-dim); font-size: 13px; padding: 44px 20px; }
+.skills-empty svg { width: 38px; height: 38px; opacity: .3; margin-bottom: 10px; }
+
+/* ── Prompt Editor ── */
+.prompt-card { background:var(--surface-2);border:1px solid var(--border);border-radius:var(--radius);margin-bottom:10px;overflow:hidden;transition:all .2s }
+.prompt-card.modified { border-color:var(--accent) }
+.prompt-header { display:flex;align-items:center;justify-content:space-between;padding:12px 14px;cursor:pointer;gap:8px }
+.prompt-header:hover { background:var(--surface-3) }
+.prompt-label { font-size:13px;font-weight:600;color:var(--text) }
+.prompt-desc { font-size:11px;color:var(--text-dim);margin-top:2px }
+.prompt-file { font-size:10px;color:var(--text-dim);font-family:var(--mono);opacity:.6 }
+.prompt-modified-badge { font-size:9px;background:var(--accent);color:#fff;padding:2px 6px;border-radius:4px;font-weight:600;text-transform:uppercase }
+.prompt-chevron { color:var(--text-dim);transition:transform .2s;flex-shrink:0 }
+.prompt-card.open .prompt-chevron { transform:rotate(180deg) }
+.prompt-body { display:none;padding:0 14px 14px;animation:fadeIn .2s }
+.prompt-card.open .prompt-body { display:block }
+.prompt-textarea { width:100%;min-height:120px;max-height:400px;background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:10px;font-family:var(--mono);font-size:11px;line-height:1.5;resize:vertical;box-sizing:border-box }
+.prompt-textarea:focus { outline:none;border-color:var(--accent) }
+.prompt-actions { display:flex;gap:8px;margin-top:8px;justify-content:flex-end }
+.prompt-btn { padding:6px 14px;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;border:1px solid var(--border);background:var(--surface-2);color:var(--text);transition:all .15s }
+.prompt-btn:hover { background:var(--surface-3) }
+.prompt-btn.save { background:var(--accent);color:#fff;border-color:var(--accent) }
+.prompt-btn.save:hover { opacity:.85 }
+.prompt-btn.reset { color:var(--text-dim) }
+.prompt-btn.reset:hover { color:var(--danger);border-color:var(--danger) }
+@keyframes fadeIn{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:translateY(0)}}
+
+/* ── Audit ── */
+.audit-event {
+  display: flex; align-items: center; gap: 10px; padding: 8px 12px;
+  border-bottom: 1px solid var(--border); font-size: 12px; line-height: 1.5;
+  transition: background 0.1s;
+}
+.audit-event:hover { background: var(--surface-hover, rgba(255,255,255,0.03)); }
+.audit-ts {
+  font-family: var(--mono); color: var(--text-muted); opacity: 0.6; font-size: 10px;
+  white-space: nowrap; min-width: 62px; flex-shrink: 0;
+}
+.audit-cat {
+  display: inline-block; padding: 2px 7px; border-radius: 10px; font-size: 9px; font-weight: 600;
+  text-transform: uppercase; letter-spacing: 0.3px; white-space: nowrap; flex-shrink: 0;
+}
+.audit-cat-auth     { color: #b388ff; border: 1px solid #b388ff; background: rgba(179,136,255,0.12); }
+.audit-cat-cmd, .audit-cat-command { color: #E8711A; border: 1px solid #E8711A; background: rgba(232,113,26,0.12); }
+.audit-cat-skill    { color: #22c55e; border: 1px solid #22c55e; background: rgba(34,197,94,0.12); }
+.audit-cat-error    { color: #ef4444; border: 1px solid #ef4444; background: rgba(239,68,68,0.12); }
+.audit-cat-llm      { color: #448aff; border: 1px solid #448aff; background: rgba(68,138,255,0.12); }
+.audit-cat-system   { color: #78909c; border: 1px solid #78909c; background: rgba(120,144,156,0.12); }
+.audit-cat-security { color: #ff6e40; border: 1px solid #ff6e40; background: rgba(255,110,64,0.12); }
+.audit-cat-voice    { color: #26c6da; border: 1px solid #26c6da; background: rgba(38,198,218,0.12); }
+.audit-cat-vision   { color: #f06292; border: 1px solid #f06292; background: rgba(240,98,146,0.12); }
+.audit-cat-scheduled { color: #ffd740; border: 1px solid #ffd740; background: rgba(255,215,64,0.12); }
+.audit-cat-hotkey   { color: #ffab00; border: 1px solid #ffab00; background: rgba(255,171,0,0.12); }
+.audit-cat-tts, .audit-cat-stt { color: #26a69a; border: 1px solid #26a69a; background: rgba(38,166,154,0.12); }
+.audit-cat-screenshot, .audit-cat-config, .audit-cat-draft { color: #78909c; border: 1px solid #78909c; background: rgba(120,144,156,0.12); }
+.audit-summary { flex: 1; min-width: 0; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.audit-footer {
+  padding: 12px; text-align: center; border-top: 1px solid var(--border);
+}
+.audit-footer a {
+  color: var(--accent, #E8711A); text-decoration: none; font-size: 12px; font-weight: 500;
+  font-family: var(--mono); letter-spacing: 0.5px;
+}
+.audit-footer a:hover { text-decoration: underline; }
+[data-theme="light"] .audit-event:hover { background: rgba(0,0,0,0.03); }
+
+/* ── Audit Full Panel ── */
+.audit-stats-bar {
+  display: flex; align-items: center; gap: 0; padding: 0;
+  border-bottom: 1px solid var(--border); background: var(--surface); flex-shrink: 0;
+  overflow-x: auto; border-radius: var(--radius) var(--radius) 0 0;
+}
+.audit-stat-item {
+  display: flex; align-items: center; gap: 8px; padding: 10px 16px;
+  border-right: 1px solid var(--border); font-size: 12px; white-space: nowrap;
+}
+.audit-stat-item:last-child { border-right: none; }
+.audit-stat-label { color: var(--dim, #6a6a70); font-size: 10px; text-transform: uppercase; letter-spacing: 1px; }
+.audit-stat-value { font-family: var(--mono); font-weight: 600; font-size: 16px; }
+.audit-stat-value.a-errors { color: #ef4444; }
+.audit-stat-value.a-commands { color: var(--accent, #E8711A); }
+.audit-stat-value.a-skills { color: #22c55e; }
+.audit-stat-value.a-llm { color: #448aff; }
+.audit-filter-bar {
+  display: flex; align-items: center; gap: 10px; padding: 10px 14px;
+  border-bottom: 1px solid var(--border); background: var(--surface-2, #212125);
+  flex-shrink: 0; flex-wrap: wrap;
+}
+.audit-pills { display: flex; gap: 4px; flex-wrap: wrap; flex: 1; min-width: 180px; }
+.audit-pill {
+  padding: 4px 10px; border-radius: 12px; font-size: 10px; font-weight: 500;
+  letter-spacing: 0.5px; cursor: pointer; border: 1px solid transparent;
+  transition: all 0.15s; opacity: 0.45; user-select: none; text-transform: uppercase;
+}
+.audit-pill.active { opacity: 1; }
+.audit-pill[data-cat="command"]  { color: #E8711A; border-color: #E8711A; }
+.audit-pill[data-cat="command"].active  { background: rgba(232,113,26,0.15); }
+.audit-pill[data-cat="skill"]    { color: #22c55e; border-color: #22c55e; }
+.audit-pill[data-cat="skill"].active    { background: rgba(34,197,94,0.15); }
+.audit-pill[data-cat="llm"]      { color: #448aff; border-color: #448aff; }
+.audit-pill[data-cat="llm"].active      { background: rgba(68,138,255,0.15); }
+.audit-pill[data-cat="auth"]     { color: #b388ff; border-color: #b388ff; }
+.audit-pill[data-cat="auth"].active     { background: rgba(179,136,255,0.15); }
+.audit-pill[data-cat="error"]    { color: #ef4444; border-color: #ef4444; }
+.audit-pill[data-cat="error"].active    { background: rgba(239,68,68,0.15); }
+.audit-pill[data-cat="scheduled"]{ color: #ffd740; border-color: #ffd740; }
+.audit-pill[data-cat="scheduled"].active{ background: rgba(255,215,64,0.15); }
+.audit-pill[data-cat="voice"]    { color: #26c6da; border-color: #26c6da; }
+.audit-pill[data-cat="voice"].active    { background: rgba(38,198,218,0.15); }
+.audit-pill[data-cat="vision"]   { color: #f06292; border-color: #f06292; }
+.audit-pill[data-cat="vision"].active   { background: rgba(240,98,146,0.15); }
+.audit-pill[data-cat="tts"], .audit-pill[data-cat="stt"] { color: #26a69a; border-color: #26a69a; }
+.audit-pill[data-cat="tts"].active, .audit-pill[data-cat="stt"].active { background: rgba(38,166,154,0.15); }
+.audit-pill[data-cat="system"]   { color: #78909c; border-color: #78909c; }
+.audit-pill[data-cat="system"].active   { background: rgba(120,144,156,0.15); }
+.audit-pill[data-cat="security"] { color: #ff6e40; border-color: #ff6e40; }
+.audit-pill[data-cat="security"].active { background: rgba(255,110,64,0.15); }
+.audit-pill[data-cat="hotkey"]   { color: #ffab00; border-color: #ffab00; }
+.audit-pill[data-cat="hotkey"].active   { background: rgba(255,171,0,0.15); }
+.audit-pill[data-cat="screenshot"], .audit-pill[data-cat="config"], .audit-pill[data-cat="draft"] {
+  color: #78909c; border-color: #78909c;
+}
+.audit-pill[data-cat="screenshot"].active, .audit-pill[data-cat="config"].active, .audit-pill[data-cat="draft"].active {
+  background: rgba(120,144,156,0.15);
+}
+.audit-filter-right { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+.audit-time-btns { display: none; }
+.audit-time-btn {
+  padding: 4px 10px; font-size: 10px; font-weight: 500; border: none;
+  background: none; color: var(--dim, #6a6a70); cursor: pointer; border-radius: 4px;
+  font-family: var(--mono); transition: all 0.15s;
+}
+.audit-time-btn.active { background: var(--accent, #E8711A); color: #000; font-weight: 600; }
+.audit-time-btn:hover:not(.active) { color: var(--text); }
+.audit-search-input {
+  background: var(--surface, #1a1a1d); border: 1px solid var(--border); border-radius: 6px;
+  padding: 5px 10px; color: var(--text); font-size: 11px; width: 140px;
+  font-family: var(--font); outline: none; transition: border-color 0.15s;
+}
+.audit-search-input::placeholder { color: var(--dim, #6a6a70); }
+.audit-search-input:focus { border-color: var(--accent, #E8711A); }
+.audit-live-btn {
+  padding: 5px 12px; border-radius: 6px; font-size: 10px;
+  font-weight: 600; letter-spacing: 1px; cursor: pointer; border: 1px solid var(--border);
+  background: var(--surface, #1a1a1d); color: var(--dim, #6a6a70); transition: all 0.2s;
+  font-family: var(--mono);
+}
+.audit-live-btn.active { border-color: #22c55e; color: #22c55e; background: rgba(34,197,94,0.08); }
+.audit-timeline-wrap { overflow-y: auto; }
+.audit-timeline { display: flex; flex-direction: column; }
+[data-theme="light"] .audit-pill { opacity: 0.5; }
+[data-theme="light"] .audit-pill.active { opacity: 1; }
+[data-theme="light"] .tag-auth { background: rgba(59,130,246,0.12); color: #2563eb; }
+[data-theme="light"] .tag-crew { background: rgba(34,197,94,0.12); color: #15803d; }
+
+/* ── Skills & Triggers ── */
+.skill-card {
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 12px 14px; margin-bottom: 6px; position: relative;
+}
+.skill-card.customized { border-left: 3px solid var(--accent); }
+.skill-header { display: flex; justify-content: space-between; align-items: center; }
+.skill-name { font-family: var(--mono); font-weight: 600; color: var(--accent); font-size: 14px; }
+.skill-desc { font-size: 11px; color: var(--text-dim); margin-top: 2px; }
+.skill-triggers { font-size: 11px; color: var(--text-muted); margin-top: 3px; line-height: 1.6; }
+.skill-triggers .trig { display: inline-block; background: var(--surface-2); border: 1px solid var(--border); border-radius: 4px; padding: 1px 6px; margin: 1px 2px; font-family: var(--mono); font-size: 10px; }
+.skill-edit-btn { background: none; border: 1px solid var(--border); color: var(--text-dim); font-size: 10px; padding: 2px 8px; border-radius: 4px; cursor: pointer; font-family: var(--font); }
+.skill-edit-btn:hover { border-color: var(--accent); color: var(--accent); }
+.skill-edit-area { margin-top: 8px; }
+.skill-edit-area textarea { width: 100%; min-height: 60px; background: var(--surface-2); border: 1px solid var(--border); color: var(--text); font-family: var(--mono); font-size: 11px; border-radius: 4px; padding: 6px 8px; resize: vertical; }
+.skill-edit-actions { display: flex; gap: 6px; margin-top: 6px; }
+.skill-edit-actions button { font-size: 11px; padding: 3px 10px; border-radius: 4px; cursor: pointer; border: 1px solid var(--border); font-family: var(--font); }
+.skill-save-btn { background: var(--accent); color: #fff; border-color: var(--accent) !important; }
+.skill-reset-btn { background: none; color: var(--text-dim); }
+.hotkey-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 8px 14px; margin-bottom: 4px; display: flex; justify-content: space-between; align-items: center; }
+.hotkey-key { font-family: var(--mono); font-weight: 600; color: var(--accent); font-size: 13px; }
+.hotkey-action { font-size: 12px; color: var(--text-muted); }
+
+/* ── Empty state ── */
+.empty { text-align: center; padding: 50px 20px; color: var(--text-dim); }
+.empty-icon { margin-bottom: 10px; opacity: 0.25; }
+.empty-text { font-size: 14px; }
+
+/* ── Refreshing ── */
+.refreshing { text-align: center; padding: 12px; color: var(--text-dim); font-size: 12px; }
+
+/* ── Screenshot Modal ── */
+.modal-overlay { display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.85); z-index:100; justify-content:center; align-items:center; padding:20px; }
+.modal-overlay.show { display:flex; }
+.modal-overlay img { max-width:100%; max-height:90vh; border-radius:var(--radius); border:1px solid var(--border); }
+.modal-close { position:fixed; top:16px; right:16px; background:rgba(30,30,30,0.9); color:#fff; border:2px solid rgba(255,255,255,0.3); width:48px; height:48px; border-radius:50%; font-size:28px; cursor:pointer; z-index:101; display:flex; align-items:center; justify-content:center; transition:background 0.2s,transform 0.2s; }
+.modal-close:hover { background:rgba(220,50,50,0.9); transform:scale(1.1); }
+@media(max-width:600px){ .modal-close { width:56px; height:56px; font-size:32px; top:10px; right:10px; } }
+
+/* ── Toast ── */
+.toast {
+  position: fixed; bottom: 100px; left: 50%; transform: translateX(-50%) translateY(20px);
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 8px 16px; font-size: 12px; color: var(--text); opacity: 0;
+  transition: all 0.2s ease; z-index: 200; pointer-events: none;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+}
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+/* ── Scrollbar ── */
+* { scrollbar-width: thin; scrollbar-color: var(--border) transparent; }
+::-webkit-scrollbar { width: 3px; height: 3px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+
+/* ── Light mode extra overrides ── */
+[data-theme="light"] .icon-btn { border-color: #bbb; color: #444; }
+[data-theme="light"] .icon-btn:hover { border-color: #999; color: #1a1a1a; background: #e8e4de; }
+[data-theme="light"] .status-dot { box-shadow: none; }
+[data-theme="light"] .status-dot.on { box-shadow: 0 0 6px rgba(34,197,94,0.4); }
+[data-theme="light"] .nav-link.active { color: var(--accent); background: var(--accent-dim); }
+
+/* ── Mobile Responsive ── */
+@media (max-width: 768px) {
+  .page-nav{position:fixed;bottom:0;left:0;right:0;z-index:9998;transform:none;border-radius:0;padding:6px 0;justify-content:center;background:var(--surface);border-top:1px solid var(--border);gap:0;overflow-x:auto}
+  .nav-link{padding:8px 8px;font-size:10px}
+  .header h1 { font-size: 14px; }
+  .header img { width: 26px; height: 26px; }
+  .tabs { -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+  .tabs::-webkit-scrollbar { display: none; }
+  .stat-grid { grid-template-columns: 1fr 1fr; }
+  .settings-section { width: 100%; }
+  .card { overflow: hidden; word-break: break-word; }
+  .panel { padding: 10px; }
+  .input-area{padding-bottom:calc(60px + env(safe-area-inset-bottom, 8px))}
+  .ibtn { width: 36px; height: 36px; }
+  .side-panel { width: 280px; right: -280px; }
+}
+@media (max-width: 480px) {
+  .header { padding: 8px 10px; }
+  .header-right { gap: 4px; }
+  .tab { padding: 8px 10px; font-size: 12px; }
+  .stat-val { font-size: 16px; }
+  .stat-card { padding: 10px; }
+  .card { padding: 10px 12px; }
+  .nav-link{padding:8px 6px;font-size:9px}
+}
+.notif-bell{position:relative;font-weight:400}.notif-badge{position:absolute;top:-4px;right:-4px;min-width:16px;height:16px;background:var(--accent);color:#fff;font-size:10px;font-weight:700;border-radius:8px;display:flex;align-items:center;justify-content:center;padding:0 4px;line-height:1;pointer-events:none}.notif-badge.hidden{display:none}
+.dragover #panel-chat{border:2px dashed var(--accent)!important;border-radius:12px;background:rgba(167,139,250,0.06)}
+.drag-hint{display:none;text-align:center;padding:24px;color:var(--accent);font-size:14px;font-weight:600;letter-spacing:.5px}
+.dragover .drag-hint{display:block}
+.webcam-pip{position:fixed;bottom:80px;right:20px;width:240px;border-radius:14px;overflow:hidden;border:2px solid var(--accent);box-shadow:0 4px 24px rgba(0,0,0,.5);z-index:9999;display:none;background:#000;transition:width .3s,height .3s,border-radius .3s}
+.webcam-pip img,.webcam-pip video{width:100%;display:block}
+.webcam-pip.expanded{width:640px;max-width:90vw;border-radius:10px}
+.pip-bar{display:flex;justify-content:center;gap:10px;padding:6px;background:rgba(0,0,0,.6)}
+.pip-btn{background:rgba(255,255,255,.15);border:none;color:#fff;width:34px;height:34px;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .15s}
+.pip-btn:hover{background:var(--accent)}
+.pip-btn.snap-btn{background:rgba(255,80,80,.7)}
+.pip-btn.snap-btn:hover{background:#e33}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="header">
+    <div class="header-left">
+      <a href="/" class="logo-link"><img src="https://i.imgur.com/jD1X5W8.png" alt="CODEC"></a>
+      <h1><a href="/" style="color:inherit;text-decoration:none">CODEC</a></h1>
+      <div class="status-dot" id="statusDot" title="CODEC status"></div>
+    </div>
+    <nav class="page-nav">
+      <a href="/" class="nav-link active">Home</a>
+      <a href="/chat" class="nav-link">Chat</a>
+      <a href="/voice" class="nav-link">Voice</a>
+      <a href="/vibe" class="nav-link">Vibe</a>
+      <a href="/tasks" class="nav-link">Tasks</a>
+    </nav>
+    <div class="header-right">
+      <span id="e2eBadge" style="display:none !important"></span>
+      <button class="menu-btn" onclick="openSidePanel()" title="Home" id="menuBtn"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg><span class="menu-notif-dot" id="menuNotifDot"></span></button>
+    </div>
+  </div>
+  <!-- Sparkle-compatible update banner (shown only when /api/update/check reports one) -->
+  <div id="updateBanner" style="display:none;align-items:center;gap:12px;margin:10px 16px 0;padding:10px 14px;background:var(--accent-dim);border:1px solid var(--accent);border-radius:var(--radius-sm);font-size:13px;color:var(--text)">
+    <span style="font-size:16px">⬆️</span>
+    <span id="updateBannerText" style="flex:1"></span>
+    <button id="updateBannerBtn" class="btn btn-primary" onclick="downloadUpdate()" style="padding:6px 14px;font-size:12px;white-space:nowrap">Download &amp; open</button>
+    <a href="#" onclick="dismissUpdate(event)" style="color:var(--text-muted);text-decoration:none;font-size:13px" title="Dismiss until next launch">✕</a>
+  </div>
+  <!-- Side Panel -->
+  <div class="side-panel-overlay" id="sidePanelOverlay" onclick="closeSidePanel()"></div>
+  <div class="side-panel" id="sidePanel">
+    <div class="side-panel-header">
+      <h2>MENU</h2>
+      <button class="side-panel-close" onclick="closeSidePanel()">&times;</button>
+    </div>
+    <div class="side-panel-body">
+      <a href="/" class="sp-item"><svg class="ico" viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg><span class="sp-item-label">Home</span></a>
+      <div class="sp-divider"></div>
+      <button class="sp-item" id="voiceBtn" onclick="toggleVoice();closeSidePanel()"><svg class="ico" viewBox="0 0 24 24"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 010 14.14"/><path d="M15.54 8.46a5 5 0 010 7.07"/><line id="muteX1" x1="4" y1="4" x2="20" y2="20" stroke-width="2.5" style="display:none"/><line id="muteX2" x1="4" y1="20" x2="20" y2="4" stroke-width="2.5" style="display:none"/></svg><span class="sp-item-label" style="flex:none">Voice Replies</span><span id="voiceState" style="font-size:11px;font-weight:700;padding:2px 8px;border-radius:4px"></span></button>
+      <button class="sp-item" id="wakeBtn" onclick="toggleWakeWord()" title="Always-on 'Hey CODEC' wake word"><svg class="ico" viewBox="0 0 24 24"><path d="M12 2a3 3 0 00-3 3v6a3 3 0 006 0V5a3 3 0 00-3-3z"/><path d="M19 10v1a7 7 0 01-14 0v-1"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg><span class="sp-item-label" style="flex:none">Wake Word</span><span id="wakeState" style="font-size:11px;font-weight:700;padding:2px 8px;border-radius:4px"></span></button>
+      <button class="sp-item" id="screenBtn" onclick="takeScreenshot();closeSidePanel()"><svg class="ico" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg><span class="sp-item-label">Screenshot</span></button>
+      <button class="sp-item" id="photoBtn" onclick="takeServerPhoto();closeSidePanel()"><svg class="ico" viewBox="0 0 24 24"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg><span class="sp-item-label">Photo (Webcam)</span></button>
+      <button class="sp-item" id="camBtn" onclick="toggleWebcamPip();closeSidePanel()"><svg class="ico" viewBox="0 0 24 24"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg><span class="sp-item-label">Live Video (PIP)</span></button>
+      <div class="sp-divider"></div>
+      <a href="/tasks#reports" class="sp-item notif-bell" id="notifBellBtn"><svg class="ico" viewBox="0 0 24 24"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg><span class="sp-item-label">Notifications</span><span class="notif-badge hidden" id="notifBadge">0</span></a>
+      <button class="sp-item" id="themeBtn" onclick="toggleTheme()"><svg class="ico" viewBox="0 0 24 24" id="themeIco"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg><span class="sp-item-label">Toggle Theme</span></button>
+      <button class="sp-item" onclick="showTab('settings');closeSidePanel()"><svg class="ico" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg><span class="sp-item-label">Settings</span></button>
+      <div class="sp-divider"></div>
+      <button class="sp-item" onclick="lockSession()" style="color:var(--danger)"><svg class="ico" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg><span class="sp-item-label">Lock Session</span></button>
+    </div>
+  </div>
+
+  <div class="tabs">
+    <button class="tab active" onclick="showTab('chat')" id="tab-chat">
+      <svg class="ico ico-sm" viewBox="0 0 24 24"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>Flash
+    </button>
+    <button class="tab" onclick="showTab('history')" id="tab-history">
+      <svg class="ico ico-sm" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>History
+    </button>
+    <button class="tab" onclick="showTab('audit')" id="tab-audit">
+      <svg class="ico ico-sm" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>Audit
+    </button>
+    <button class="tab" onclick="showTab('cortex')" id="tab-cortex">
+      <svg class="ico ico-sm" viewBox="0 0 24 24"><path d="M12 2C9 2 6.5 3.8 5.5 6.5c-1.5.5-2.7 1.5-3.3 3-.6 1.4-.4 3.1.5 4.3-.3 1.5 0 3.1 1 4.3s2.6 1.9 4.2 1.9h.1c1 1.2 2.5 2 4 2s3-.8 4-2h.1c1.6 0 3.2-.7 4.2-1.9s1.3-2.8 1-4.3c.9-1.2 1.1-2.9.5-4.3-.6-1.5-1.8-2.5-3.3-3C17.5 3.8 15 2 12 2z"/></svg>Cortex
+    </button>
+    <button class="tab" onclick="showTab('skills')" id="tab-skills">
+      <svg class="ico ico-sm" viewBox="0 0 24 24"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>Skills<span class="tab-badge hidden" id="skillsBadge">0</span>
+    </button>
+    <button class="tab" onclick="showTab('connector')" id="tab-connector">
+      <svg class="ico ico-sm" viewBox="0 0 24 24"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg>Connector
+    </button>
+    <button class="tab" onclick="showTab('settings')" id="tab-settings">
+      <svg class="ico ico-sm" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>Settings
+    </button>
+  </div>
+
+  <!-- Approval Banner (floats above content) -->
+  <div id="approvalBanner" style="display:none;position:fixed;top:0;left:0;right:0;z-index:9999;background:linear-gradient(135deg,#1a0a00,#2a1500);border-bottom:2px solid #E8711A;padding:12px 16px;animation:slideDown .3s ease">
+    <div id="approvalList" style="max-width:800px;margin:0 auto"></div>
+  </div>
+  <style>
+  @keyframes slideDown{from{transform:translateY(-100%)}to{transform:translateY(0)}}
+  .approval-card{background:#111;border:1px solid #E8711A;border-radius:8px;padding:12px 16px;margin-bottom:8px;display:flex;align-items:center;gap:12px}
+  .approval-card.danger{border-color:#ff3333}
+  .approval-card .cmd{flex:1;font-family:'SF Mono',monospace;font-size:12px;color:#e0e0e0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .approval-card .explain{font-size:11px;color:#aaddff;margin-top:2px}
+  .approval-card.danger .explain{color:#ffaaaa}
+  .approval-card .label{font-size:11px;font-weight:700;color:#E8711A;text-transform:uppercase;white-space:nowrap}
+  .approval-card.danger .label{color:#ff3333}
+  .approval-btn{border:none;border-radius:6px;padding:8px 18px;font-weight:700;font-size:13px;cursor:pointer;transition:opacity .2s}
+  .approval-btn:hover{opacity:.85}
+  .approval-btn.allow{background:#00cc55;color:#000}
+  .approval-btn.deny{background:#555;color:#fff}
+  .approval-card.danger .approval-btn.allow{background:#ff3333;color:#fff}
+  </style>
+
+  <div class="content">
+    <!-- Chat Panel (main) -->
+    <div class="panel active" id="panel-chat">
+      <div class="drag-hint">📎 Drop files or images here</div>
+      <div id="cmdResult" style="display:none" class="card">
+        <div class="card-task" id="cmdResultText"></div>
+      </div>
+      <div id="chatList"></div>
+    </div>
+
+    <!-- History Panel -->
+    <div class="panel" id="panel-history">
+      <div id="historyList"></div>
+    </div>
+
+    <!-- Audit Panel -->
+    <div class="panel" id="panel-audit">
+      <div class="audit-stats-bar" id="auditStatsBar">
+        <div class="audit-stat-item"><div><div class="audit-stat-label">Events</div><div class="audit-stat-value" id="auditStatTotal">--</div></div></div>
+        <div class="audit-stat-item"><div><div class="audit-stat-label">Errors</div><div class="audit-stat-value a-errors" id="auditStatErrors">--</div></div></div>
+        <div class="audit-stat-item"><div><div class="audit-stat-label">Commands</div><div class="audit-stat-value a-commands" id="auditStatCommands">--</div></div></div>
+        <div class="audit-stat-item"><div><div class="audit-stat-label">Skills</div><div class="audit-stat-value a-skills" id="auditStatSkills">--</div></div></div>
+        <div class="audit-stat-item"><div><div class="audit-stat-label">LLM Calls</div><div class="audit-stat-value a-llm" id="auditStatLLM">--</div></div></div>
+      </div>
+      <div class="audit-filter-bar">
+        <div class="audit-pills" id="auditPills"></div>
+        <div class="audit-filter-right">
+          <!-- time range removed — always shows last 24h -->
+          <input type="text" class="audit-search-input" id="auditSearchInput" placeholder="Search events...">
+          <button class="audit-live-btn" id="auditLiveBtn">&#9679; LIVE</button>
+        </div>
+      </div>
+      <div class="audit-timeline-wrap" id="auditTimelineWrap">
+        <div class="audit-timeline" id="auditTimeline"></div>
+      </div>
+    </div>
+
+    <!-- Cortex Panel -->
+    <div class="panel" id="panel-cortex">
+      <iframe id="cortexFrame" src="" style="width:100%;height:calc(100vh - 160px);border:none;border-radius:8px" allowfullscreen></iframe>
+    </div>
+
+    <!-- Skills Review Panel -->
+    <div class="panel" id="panel-skills">
+      <div class="skills-review-head">
+        <div>
+          <div class="settings-title" style="margin-bottom:0">Skill Reviews</div>
+          <div class="skills-review-sub">Skills generated by voice or chat are staged here. Review the code, then Approve to activate it or Reject to discard. Nothing runs until you approve.</div>
+        </div>
+        <button class="skills-refresh-btn" onclick="loadSkillReviews()" title="Refresh">
+          <svg class="ico ico-sm" viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
+        </button>
+      </div>
+      <div id="skillReviewsList">
+        <div class="refreshing">Loading staged skills...</div>
+      </div>
+    </div>
+
+    <!-- Connector Panel (external MCP servers) -->
+    <div class="panel" id="panel-connector">
+      <div class="mcp-intro">
+        <div class="mcp-intro-title">External MCP connectors</div>
+        <p class="mcp-intro-sub">Platforms CODEC can plug into as a client. Flip one on here, then drive it by voice or chat &mdash; e.g. say <span class="mcp-kbd">connect to notion</span> or <span class="mcp-kbd">list tools on github</span>.</p>
+      </div>
+      <div id="connectorList" class="mcp-list">
+        <div class="refreshing">Loading connectors...</div>
+      </div>
+    </div>
+    <style>
+    .mcp-intro{margin-bottom:16px}
+    .mcp-intro-title{font-family:var(--mono);font-size:12px;font-weight:700;color:var(--accent);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:5px}
+    .mcp-intro-sub{font-size:12.5px;color:var(--text-muted);line-height:1.55;margin:0}
+    .mcp-kbd{font-family:var(--mono);font-size:11px;background:var(--surface-3);border:1px solid var(--border);border-radius:4px;padding:1px 6px;color:var(--text);white-space:nowrap}
+    .mcp-list{display:flex;flex-direction:column;gap:10px}
+    .mcp-card{display:flex;align-items:center;gap:14px;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 16px}
+    .mcp-card:hover{border-color:var(--border-hover)}
+    .mcp-card-main{flex:1;min-width:0}
+    .mcp-card-top{display:flex;align-items:center;gap:8px;margin-bottom:4px}
+    .mcp-name{font-weight:700;font-size:14px;color:var(--text);text-transform:capitalize}
+    .mcp-badge{font-family:var(--mono);font-size:9.5px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;padding:2px 6px;border-radius:4px;background:var(--accent-dim);color:var(--accent);border:1px solid var(--accent)}
+    .mcp-note{font-size:12px;color:var(--text-muted);margin-bottom:3px}
+    .mcp-url{font-family:var(--mono);font-size:11px;color:var(--text-dim,var(--text-muted));white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .mcp-auth{display:inline-flex;align-items:center;gap:5px;font-size:11px;color:#d99a33;margin-top:5px}
+    .mcp-auth svg{width:12px;height:12px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+    .mcp-empty{font-size:12.5px;color:var(--text-muted);line-height:1.6;padding:22px 18px;text-align:center;border:1px dashed var(--border);border-radius:10px}
+    /* Connector state row: sits on its own line under the url so the button
+       never crowds the auth note (the old inline-styled button did). */
+    .mcp-state{display:flex;align-items:center;gap:10px;margin-top:8px;flex-wrap:wrap}
+    .mcp-btn{font:inherit;font-size:12px;font-weight:600;padding:5px 14px;border-radius:6px;
+      border:1px solid var(--border);background:var(--surface-3);color:var(--text);cursor:pointer;
+      transition:border-color .12s,background .12s}
+    .mcp-btn:hover:not(:disabled){border-color:var(--border-hover)}
+    .mcp-btn:disabled{opacity:.55;cursor:default}
+    .mcp-btn-primary{background:var(--accent);border-color:var(--accent);color:#fff}
+    .mcp-btn-primary:hover:not(:disabled){filter:brightness(1.08)}
+    .mcp-connected{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;font-weight:600;color:#3fa45b}
+    .mcp-connected .dot{width:7px;height:7px;border-radius:50%;background:currentColor;flex:none}
+    .mcp-hint{font-size:11.5px;color:var(--text-muted)}
+    /* Sign-in failures stay ON the card. A toast disappears before the user has
+       read it, which is how "GitHub sign-in does nothing" went unexplained. */
+    .mcp-err{margin-top:8px;padding:8px 11px;border-radius:6px;font-size:11.5px;line-height:1.55;
+      background:rgba(212,76,53,.09);border:1px solid rgba(212,76,53,.35);color:#c2452f}
+    .mcp-err[hidden]{display:none}
+    .mcp-switch{position:relative;display:inline-block;width:44px;height:24px;flex-shrink:0}
+    .mcp-switch input{opacity:0;width:0;height:0}
+    .mcp-slider{position:absolute;cursor:pointer;inset:0;background:var(--surface-3);border:1px solid var(--border);border-radius:24px;transition:.2s}
+    .mcp-slider:before{content:"";position:absolute;height:16px;width:16px;left:3px;bottom:3px;background:var(--text-muted);border-radius:50%;transition:.2s}
+    .mcp-switch input:checked+.mcp-slider{background:var(--accent);border-color:var(--accent)}
+    .mcp-switch input:checked+.mcp-slider:before{transform:translateX(20px);background:#fff}
+    .mcp-switch input:disabled+.mcp-slider{opacity:.5;cursor:wait}
+    </style>
+
+    <!-- Settings Panel -->
+    <div class="panel" id="panel-settings">
+      <div class="stat-grid" id="statGrid"></div>
+      <div id="settingsContent">
+        <div class="refreshing">Loading settings...</div>
+      </div>
+      <button class="save-config-btn" id="saveConfigBtn" onclick="saveConfig()">Save Changes</button>
+      <div class="settings-section" style="margin-top:20px">
+        <div class="settings-title">Two-Factor Authentication (2FA)</div>
+        <div class="settings-card" id="twoFactorCard">
+          <div class="setting-row" style="justify-content:space-between;align-items:center">
+            <span class="setting-label">TOTP Status</span>
+            <span id="totpStatus" style="font-family:var(--mono);font-size:12px;color:var(--text-dim)">Checking...</span>
+          </div>
+          <div class="setting-row" style="justify-content:center;padding-top:8px" id="totpActions"></div>
+        </div>
+      </div>
+      <div class="settings-section" style="margin-top:20px">
+        <div class="settings-title">Page Customization</div>
+        <div class="settings-card" style="padding:12px 16px">
+          <p style="font-size:12px;color:var(--text-dim);margin:0 0 12px">Show or hide UI elements across all CODEC pages. Changes apply instantly.</p>
+          <div id="uiToggles"></div>
+        </div>
+      </div>
+      <div class="settings-section" style="margin-top:20px">
+        <div class="settings-title">System Prompts</div>
+        <p style="font-size:12px;color:var(--text-dim);margin:0 0 12px;padding:0 4px">These define CODEC's personality and behavior across all interfaces. Edit to customize.</p>
+        <div id="promptsContainer"><div class="refreshing">Loading prompts...</div></div>
+      </div>
+      <div class="settings-section" style="margin-top:20px">
+        <div class="settings-title">Keyboard Shortcuts</div>
+        <p style="font-size:12px;color:var(--text-dim);margin:0 0 8px;padding:0 4px">Hardcoded hotkeys — these require code changes to modify.</p>
+        <div id="hotkeysList"></div>
+      </div>
+      <div class="settings-section" style="margin-top:20px">
+        <div class="settings-title">Voice Triggers <span style="font-size:11px;font-weight:400;color:var(--text-dim);margin-left:6px" id="skillCount"></span></div>
+        <p style="font-size:12px;color:var(--text-dim);margin:0 0 4px;padding:0 4px">Each skill is activated by trigger phrases. Click <b>Edit</b> to customize triggers — one per line. Changes apply after CODEC restart (F13 off/on).</p>
+        <input type="text" id="skillFilter" placeholder="Filter skills..." style="width:100%;padding:7px 10px;margin-bottom:8px;background:var(--surface-2);border:1px solid var(--border);color:var(--text);border-radius:6px;font-size:12px;font-family:var(--font)" oninput="filterSkills(this.value)">
+        <div id="skillsList"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="input-area">
+    <div class="input-row">
+      <button class="ibtn" id="micBtn" onclick="toggleMic()" title="Voice input">
+        <svg class="ico" viewBox="0 0 24 24"><path d="M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3z"/><path d="M19 10v2a7 7 0 01-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
+      </button>
+      <button class="ibtn phone" onclick="startLiveChat()" title="Start voice call">
+        <svg class="ico" viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72c.127.96.362 1.903.7 2.81a2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.338 1.85.573 2.81.7A2 2 0 0122 16.92z"/></svg>
+      </button>
+      <textarea class="chat-input" id="cmdInput" placeholder="Flash — ask anything..." rows="1" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendCmd()}"></textarea>
+      <button class="ibtn" onclick="uploadFile()" title="Upload file">
+        <svg class="ico" viewBox="0 0 24 24"><path d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.2 9.19a2 2 0 01-2.83-2.83l8.49-8.48"/></svg>
+      </button>
+      <button class="ibtn send" onclick="sendCmd()" title="Send">
+        <svg class="ico" viewBox="0 0 24 24" style="stroke:#fff"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg>
+      </button>
+    </div>
+    <input type="file" id="fileInput" accept="image/*,.pdf,.txt,.md,.csv,.json,.py,.doc,.docx" style="display:none" onchange="handleFile(event)">
+  </div>
+</div>
+
+<div class="modal-overlay" id="screenModal" onclick="closeScreenshot()">
+  <button class="modal-close" onclick="event.stopPropagation(); closeScreenshot()" aria-label="Close screenshot">&times;</button>
+  <img id="screenImg" src="" onclick="event.stopPropagation()">
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// Side panel open/close
+function openSidePanel(){document.getElementById('sidePanel').classList.add('open');document.getElementById('sidePanelOverlay').classList.add('open');if(typeof refreshWakeState==='function')refreshWakeState()}
+function closeSidePanel(){document.getElementById('sidePanel').classList.remove('open');document.getElementById('sidePanelOverlay').classList.remove('open')}
+// Auth + CSRF: inject session token and CSRF header on all requests
+// On mobile (Android Chrome), cookies may not persist — fallback to sessionStorage
+(function(){
+var _f=window.fetch;
+function _getSession(){return document.cookie.match(/codec_session=([^;]+)/)?.[1]||sessionStorage.getItem('codec_session')||''}
+function _injectSession(url){var s=_getSession();if(!s)return url;var sep=url.indexOf('?')>=0?'&':'?';return url+sep+'s='+s}
+window.fetch=function(u,o){
+  o=o||{};
+  // Always append session token as query param (mobile cookie fallback)
+  if(typeof u==='string')u=_injectSession(u);
+  // CSRF for state-changing requests
+  if(o.method&&o.method!=='GET'){var c=document.cookie.match(/codec_csrf=([^;]+)/);if(c){o.headers=o.headers||{};if(o.headers instanceof Headers){o.headers.set('x-csrf-token',c[1])}else{o.headers['x-csrf-token']=c[1]}}}
+  return _f.call(this,u,o).then(function(resp){
+    if(resp.status===401&&typeof u==='string'&&u.indexOf('/api/')>=0){
+      window.location.href='/auth?redirect='+encodeURIComponent(window.location.pathname+window.location.search);
+    }
+    return resp;
+  })};
+})();
+// E2E encryption layer — AES-256-GCM via ECDH key exchange
+var _e2eKey=null;
+(function(){var _f2=window.fetch;function _b64(buf){var bytes=new Uint8Array(buf),CHUNK=8192,str='';for(var i=0;i<bytes.length;i+=CHUNK){str+=String.fromCharCode.apply(null,bytes.subarray(i,i+CHUNK))}return btoa(str)}function _unb64(s){var b=atob(s),a=new Uint8Array(b.length);for(var i=0;i<b.length;i++)a[i]=b.charCodeAt(i);return a}
+window._e2eNegotiate=function(){return crypto.subtle.generateKey({name:'ECDH',namedCurve:'P-256'},true,['deriveBits']).then(function(kp){return crypto.subtle.exportKey('raw',kp.publicKey).then(function(pub){return _f2('/api/auth/keyexchange',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({pub:_b64(pub)})}).then(function(r){return r.json()}).then(function(d){var srvPub=_unb64(d.pub);return crypto.subtle.importKey('raw',srvPub,{name:'ECDH',namedCurve:'P-256'},false,[]).then(function(srvKey){return crypto.subtle.deriveBits({name:'ECDH',public:srvKey},kp.privateKey,256)}).then(function(bits){return crypto.subtle.importKey('raw',bits,{name:'HKDF'},false,['deriveKey'])}).then(function(hkdfKey){return crypto.subtle.deriveKey({name:'HKDF',hash:'SHA-256',salt:new Uint8Array(0),info:new TextEncoder().encode('codec-e2e')},hkdfKey,{name:'AES-GCM',length:256},false,['encrypt','decrypt'])}).then(function(k){_e2eKey=k;sessionStorage.setItem('_e2eReady','1');var eb=document.getElementById('e2eBadge');if(eb)eb.style.display=''})})})}).catch(function(e){console.warn('E2E negotiation failed:',e)})};
+var _e2eRetrying=false;
+window.fetch=function(u,o){o=o||{};var _origBody=o.body;if(!_e2eKey)return _f2.call(this,u,o);var method=(o.method||'GET').toUpperCase();if(method!=='GET'&&o.body){var iv=crypto.getRandomValues(new Uint8Array(12));return crypto.subtle.encrypt({name:'AES-GCM',iv:iv},_e2eKey,new TextEncoder().encode(o.body)).then(function(ct){o.body=JSON.stringify({iv:_b64(iv),ct:_b64(ct)});o.headers=o.headers||{};if(o.headers instanceof Headers){o.headers.set('x-e2e','1');o.headers.set('Content-Type','application/json')}else{o.headers['x-e2e']='1';o.headers['Content-Type']='application/json'}return _f2.call(this,u,o)}.bind(this)).then(function(r){if(r.status===428&&!_e2eRetrying){_e2eRetrying=true;_e2eKey=null;return window._e2eNegotiate().then(function(){_e2eRetrying=false;o.body=_origBody;delete o.headers['x-e2e'];return window.fetch(u,o)}).catch(function(){_e2eRetrying=false;return r})}return _decResp(r)})}return _f2.call(this,u,o).then(_decResp)};
+function _decResp(r){if(!_e2eKey||r.headers.get('x-e2e')!=='1')return r;return r.clone().json().then(function(d){if(!d.iv||!d.ct)return r;var iv=_unb64(d.iv),ct=_unb64(d.ct);return crypto.subtle.decrypt({name:'AES-GCM',iv:iv},_e2eKey,ct).then(function(pt){var txt=new TextDecoder().decode(pt);return new Response(txt,{status:r.status,headers:r.headers})})}).catch(function(){return r})}
+if(sessionStorage.getItem('_e2eReady'))window._e2eNegotiate();
+})();
+// ── State ──
+var currentTab = 'chat';
+var isRecording = false;
+var recognition = null;
+
+// ── Toast ──
+function showToast(msg) {
+  var t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(function() { t.classList.remove('show'); }, 1800);
+}
+
+// ── Copy to clipboard ──
+// Two-path implementation: prefer navigator.clipboard (secure-context API),
+// fall back to a hidden textarea + document.execCommand('copy') if the
+// modern API is unavailable (HTTP non-localhost) or the promise rejects
+// (permissions, focus loss, etc.). Always surfaces a toast — success or
+// failure — so the click is never silent.
+// iOS Safari needs contentEditable + a Range selection (plain .select() is
+// ignored), and must NOT have pointer-events:none — that silently blocks the
+// selection, so the fallback returned false on every phone. 16px font-size stops
+// iOS zooming the viewport while the node is focused. Mirrors codec_chat.html.
+function _copyFallback(text) {
+  try {
+    var ta = document.createElement('textarea');
+    ta.value = text;
+    ta.contentEditable = 'true';
+    ta.readOnly = false;
+    ta.style.position = 'fixed';
+    ta.style.top = '0';
+    ta.style.left = '0';
+    ta.style.width = '1px';
+    ta.style.height = '1px';
+    ta.style.padding = '0';
+    ta.style.border = 'none';
+    ta.style.outline = 'none';
+    ta.style.boxShadow = 'none';
+    ta.style.background = 'transparent';
+    ta.style.fontSize = '16px';
+    ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    var sel = window.getSelection();
+    var range = document.createRange();
+    range.selectNodeContents(ta);
+    sel.removeAllRanges();
+    sel.addRange(range);
+    ta.setSelectionRange(0, ta.value.length);
+    ta.focus();
+    var ok = document.execCommand('copy');
+    sel.removeAllRanges();
+    document.body.removeChild(ta);
+    return ok;
+  } catch (e) {
+    return false;
+  }
+}
+
+// Copy buttons never carry the text inside an inline onclick. Embedding user
+// prose in a JS string literal breaks on the FIRST apostrophe — "don't" ends the
+// string and the handler dies with a SyntaxError, so the click silently does
+// nothing. escAttr() does not save it either: `&#39;` is decoded back to `'`
+// before the handler is parsed. (Both variants verified broken in a browser.)
+// Instead the text lives in this buffer and the button carries only an index —
+// no escaping, and no way for message content to become executable.
+// Markup emits a bare <button class="copy-btn" data-copy>; the text is attached
+// to the element afterwards, in render order. Nothing is stored globally (no
+// leak across re-renders) and newlines survive intact, unlike an attribute.
+function bindCopyButtons(root, texts) {
+  var btns = (root || document).querySelectorAll('button[data-copy]');
+  for (var i = 0; i < btns.length; i++) {
+    (function(b, text) {
+      b.addEventListener('click', function() { copyText(text, b); });
+    })(btns[i], texts[i] == null ? '' : String(texts[i]));
+  }
+}
+
+function copyText(text, btn) {
+  function onOk() {
+    btn.classList.add('copied');
+    showToast('Copied to clipboard');
+    setTimeout(function() { btn.classList.remove('copied'); }, 1500);
+  }
+  function onFail() {
+    if (_copyFallback(text)) { onOk(); }
+    else { showToast('Copy failed — clipboard not available'); }
+  }
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).then(onOk, onFail).catch(onFail);
+  } else {
+    onFail();
+  }
+}
+
+// ── Theme ──
+function toggleTheme() {
+  var html = document.documentElement;
+  var current = html.getAttribute('data-theme');
+  var next = current === 'light' ? 'dark' : 'light';
+  html.setAttribute('data-theme', next);
+  localStorage.setItem('codec-theme', next);
+  document.querySelector('meta[name="theme-color"]').content = next === 'light' ? '#f7f5f2' : '#0a0a0a';
+  updateThemeIcon(next);
+}
+function updateThemeIcon(theme) {
+  var ico = document.getElementById('themeIco');
+  if (theme === 'light') {
+    ico.innerHTML = '<path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/>';
+  } else {
+    ico.innerHTML = '<circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>';
+  }
+}
+(function() {
+  var saved = localStorage.getItem('codec-theme') || 'dark';
+  if (saved === 'light') {
+    document.documentElement.setAttribute('data-theme', 'light');
+    updateThemeIcon('light');
+  }
+})();
+
+// ── Tabs ──
+function showTab(id) {
+  document.querySelectorAll('.tab').forEach(function(t) { t.classList.remove('active'); });
+  document.querySelectorAll('.panel').forEach(function(p) { p.classList.remove('active'); });
+  document.getElementById('tab-' + id).classList.add('active');
+  document.getElementById('panel-' + id).classList.add('active');
+  currentTab = id;
+  if (id === 'history') loadHistory();
+  if (id === 'chat') loadChat();
+  if (id === 'audit') loadAudit();
+  if (id === 'cortex') {
+    var cf = document.getElementById('cortexFrame');
+    if (cf && !cf.src.includes('/cortex')) cf.src = '/cortex?embed=1';
+  }
+  if (id === 'skills') loadSkillReviews();
+  if (id === 'connector') renderConnectors();
+  if (id === 'settings') { loadSettings(); renderUIToggles(); loadPrompts(); }
+}
+
+// ── Skill Reviews (staged create_skill output → review → approve/reject) ──
+var _skillReviewsBusy = false;
+function _skillEmptyState() {
+  return '<div class="skills-empty">' +
+    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>' +
+    '<div>No skills waiting for review.</div>' +
+    '<div style="font-size:12px;margin-top:4px;color:var(--text-dim)">Ask CODEC to "create a skill that..." by voice or chat, and it will appear here.</div>' +
+    '</div>';
+}
+async function loadSkillReviews() {
+  var box = document.getElementById('skillReviewsList');
+  if (!box) return;
+  box.innerHTML = '<div class="refreshing">Loading staged skills...</div>';
+  try {
+    var r = await fetch('/api/skill/reviews');
+    var d = await r.json();
+    var reviews = (d && d.reviews) || [];
+    _setSkillsBadge(reviews.length);
+    if (!reviews.length) { box.innerHTML = _skillEmptyState(); return; }
+    box.innerHTML = reviews.map(function(rev) {
+      var name = _escHtml(rev.filename || rev.id || 'skill.py');
+      var staged = rev.staged_at ? _escHtml(_fmtStaged(rev.staged_at)) : '';
+      var meta = staged ? '<span class="skill-review-meta">staged ' + staged + '</span>' : '';
+      var rid = _escHtml(rev.id || '');
+      return '<div class="skill-review-card" data-rid="' + rid + '">' +
+        '<div class="skill-review-top">' +
+          '<span class="skill-review-name">' + name + ' ' + meta + '</span>' +
+          '<span class="skill-review-actions">' +
+            '<button class="skill-btn approve" onclick="approveSkill(this,\'' + rid + '\')">Approve</button>' +
+            '<button class="skill-btn reject" onclick="rejectSkill(this,\'' + rid + '\')">Reject</button>' +
+          '</span>' +
+        '</div>' +
+        '<pre class="skill-review-code">' + _escHtml(rev.code || '') + '</pre>' +
+      '</div>';
+    }).join('');
+  } catch (e) {
+    box.innerHTML = '<div class="skills-empty">Could not load staged skills: ' + _escHtml(String(e)) + '</div>';
+  }
+}
+function _fmtStaged(iso) {
+  try {
+    var dt = new Date(iso);
+    if (isNaN(dt.getTime())) return iso;
+    return dt.toLocaleString([], {month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'});
+  } catch (e) { return iso; }
+}
+function _setSkillsBadge(n) {
+  var b = document.getElementById('skillsBadge');
+  if (!b) return;
+  b.textContent = n;
+  b.classList.toggle('hidden', !n);
+}
+async function refreshSkillsBadge() {
+  try {
+    var r = await fetch('/api/skill/reviews');
+    var d = await r.json();
+    _setSkillsBadge(((d && d.reviews) || []).length);
+  } catch (e) { /* leave badge as-is */ }
+}
+async function approveSkill(btn, rid) {
+  if (_skillReviewsBusy) return;
+  _skillReviewsBusy = true;
+  var card = btn.closest('.skill-review-card');
+  if (card) card.querySelectorAll('.skill-btn').forEach(function(b){ b.disabled = true; });
+  try {
+    var r = await fetch('/api/skill/approve', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({review_id: rid})
+    });
+    var d = await r.json().catch(function(){ return {}; });
+    if (r.ok) {
+      showToast('Approved: ' + (d.skill || 'skill') + ' is now active');
+    } else {
+      showToast('Approve failed: ' + (d.error || ('HTTP ' + r.status)));
+    }
+  } catch (e) {
+    showToast('Approve failed: ' + String(e));
+  } finally {
+    _skillReviewsBusy = false;
+    loadSkillReviews();
+  }
+}
+async function rejectSkill(btn, rid) {
+  if (_skillReviewsBusy) return;
+  _skillReviewsBusy = true;
+  var card = btn.closest('.skill-review-card');
+  if (card) card.querySelectorAll('.skill-btn').forEach(function(b){ b.disabled = true; });
+  try {
+    var r = await fetch('/api/skill/reject/' + encodeURIComponent(rid), {method: 'POST'});
+    var d = await r.json().catch(function(){ return {}; });
+    if (r.ok) {
+      showToast('Rejected: ' + (d.filename || 'skill') + ' discarded');
+    } else {
+      showToast('Reject failed: ' + (d.error || ('HTTP ' + r.status)));
+    }
+  } catch (e) {
+    showToast('Reject failed: ' + String(e));
+  } finally {
+    _skillReviewsBusy = false;
+    loadSkillReviews();
+  }
+}
+
+// ── Connector (external MCP) tab ──
+async function renderConnectors() {
+  var box = document.getElementById('connectorList');
+  if (!box) return;
+  box.innerHTML = '<div class="refreshing">Loading connectors...</div>';
+  try {
+    var r = await fetch('/api/mcp/servers');
+    var d = await r.json();
+    var servers = (d && d.servers) || [];
+    if (!servers.length) {
+      box.innerHTML = '<div class="mcp-empty">No MCP connectors configured yet. In chat or voice, say <span class="mcp-kbd">list mcp</span> to seed the default menu, then reopen this tab.</div>';
+      return;
+    }
+    box.innerHTML = servers.map(function(s) {
+      var checked = s.enabled ? 'checked' : '';
+      var badge = escHtml((s.transport || 'http').toUpperCase());
+      var note = s.note ? '<div class="mcp-note">' + escHtml(s.note) + '</div>' : '';
+      var lock = '<svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>';
+      var nm = escHtml(s.name);
+      // State machine, in the order a user actually experiences it:
+      //   off                       → nothing (just the toggle)
+      //   on + oauth + !signed in   → why + how to fix it (Sign in)
+      //   on + oauth + signed in    → Signed in + the way back out (Sign out)
+      //   on + api key              → Connected via API key (no session to end)
+      //   on + open endpoint        → "No sign-in needed" — NOT "Connected".
+      //     Saying "Connected" for an anonymous endpoint reads as "someone
+      //     signed in here", which is a lie: there is no session, which is also
+      //     why there's no Sign out to offer.
+      var state = '';
+      if (s.enabled && s.auth === 'oauth' && s.connected) {
+        state = '<div class="mcp-state">' +
+          '<span class="mcp-connected"><span class="dot"></span>Signed in</span>' +
+          '<button class="mcp-btn" data-disconnect="' + nm + '">Sign out</button>' +
+          '</div>';
+      } else if (s.enabled && s.auth === 'oauth') {
+        state = '<div class="mcp-state">' +
+          '<span class="mcp-auth">' + lock + 'Needs OAuth sign-in</span>' +
+          '<button class="mcp-btn mcp-btn-primary" data-signin="' + nm + '">Sign in</button>' +
+          '</div>';
+      } else if (s.enabled && s.auth === 'api_key') {
+        state = s.connected
+          ? '<div class="mcp-state"><span class="mcp-connected"><span class="dot"></span>' +
+            'Connected via API key</span></div>'
+          : '<div class="mcp-state"><span class="mcp-auth">' + lock +
+            'Needs an API key in mcp_servers.json</span></div>';
+      } else if (s.enabled) {
+        state = '<div class="mcp-state">' +
+          '<span class="mcp-connected"><span class="dot"></span>Ready</span>' +
+          '<span class="mcp-hint">Open endpoint — no sign-in needed</span>' +
+          '</div>';
+      }
+      state += '<div class="mcp-err" data-err="' + nm + '" hidden></div>';
+      return '<div class="mcp-card">' +
+        '<div class="mcp-card-main">' +
+          '<div class="mcp-card-top"><span class="mcp-name">' + nm + '</span>' +
+          '<span class="mcp-badge">' + badge + '</span></div>' +
+          note +
+          '<div class="mcp-url">' + escHtml(s.url || '') + '</div>' +
+          state +
+        '</div>' +
+        '<label class="mcp-switch" title="Enable / disable connector">' +
+          '<input type="checkbox" ' + checked + ' data-mcp="' + escHtml(s.name) + '">' +
+          '<span class="mcp-slider"></span>' +
+        '</label>' +
+      '</div>';
+    }).join('');
+    // Bind via listener (not an inline onchange attr) so a connector name can't
+    // break out of the attribute quoting.
+    box.querySelectorAll('input[type="checkbox"][data-mcp]').forEach(function(cb) {
+      cb.addEventListener('change', function() { toggleConnector(this.dataset.mcp, this); });
+    });
+    box.querySelectorAll('button[data-signin]').forEach(function(b) {
+      b.addEventListener('click', function() { mcpSignin(this.dataset.signin, this); });
+    });
+    box.querySelectorAll('button[data-disconnect]').forEach(function(b) {
+      b.addEventListener('click', function() { mcpDisconnect(this.dataset.disconnect, this); });
+    });
+  } catch (e) {
+    box.innerHTML = '<div class="mcp-empty">Could not load connectors: ' + escHtml(String(e)) + '</div>';
+  }
+}
+
+async function toggleConnector(name, el) {
+  var enabled = el.checked;
+  el.disabled = true;
+  try {
+    // The global fetch wrapper already injects x-csrf-token on non-GET; we set
+    // it explicitly too (belt + suspenders, matches the post-PR#251 pattern).
+    var csrf = (document.cookie.match(/codec_csrf=([^;]+)/) || [])[1] || '';
+    var r = await fetch('/api/mcp/servers/' + encodeURIComponent(name) + '/toggle', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json', 'x-csrf-token': csrf},
+      body: JSON.stringify({enabled: enabled})
+    });
+    var d = await r.json().catch(function() { return {}; });
+    if (!r.ok || d.ok === false) {
+      el.checked = !enabled; // revert on failure
+      el.disabled = false;
+      return;
+    }
+    // Re-render so the card moves to its next state immediately (toggling on an
+    // auth server must surface "Sign in" right away — that's the whole point).
+    renderConnectors();
+    return;
+  } catch (e) {
+    el.checked = !enabled; // revert on network error
+  }
+  el.disabled = false;
+}
+
+// OAuth sign-in: opens the server's authorize page in the browser (fastmcp runs
+// the flow + caches the token). Can take a while — the user has to authorize.
+// Show a sign-in failure ON the card and keep it there. Toasts vanish in a few
+// seconds, so a failure the user needs to act on (add a token, retry the browser
+// approval) was effectively invisible.
+function mcpShowError(name, msg) {
+  var el = document.querySelector('.mcp-err[data-err="' + (window.CSS && CSS.escape ? CSS.escape(name) : name) + '"]');
+  if (!el) { showToast(msg, true); return; }
+  el.textContent = msg;
+  el.hidden = false;
+}
+
+async function mcpSignin(name, btn) {
+  btn.disabled = true; var orig = btn.textContent; btn.textContent = 'Opening browser…';
+  var errBox = document.querySelector('.mcp-err[data-err="' + (window.CSS && CSS.escape ? CSS.escape(name) : name) + '"]');
+  if (errBox) errBox.hidden = true;
+  try {
+    var csrf = (document.cookie.match(/codec_csrf=([^;]+)/) || [])[1] || '';
+    var r = await fetch('/api/mcp/servers/' + encodeURIComponent(name) + '/signin', {
+      method: 'POST', headers: {'Content-Type': 'application/json', 'x-csrf-token': csrf}
+    });
+    var d = await r.json().catch(function() { return {}; });
+    var okay = r.ok && d.ok !== false;
+    if (okay) {
+      showToast(d.message || 'Signed in.');
+      renderConnectors();
+    } else {
+      mcpShowError(name, d.message || 'Sign-in failed.');
+    }
+  } catch (e) {
+    mcpShowError(name, 'Sign-in failed: ' + e);
+  } finally {
+    btn.disabled = false; btn.textContent = orig;
+  }
+}
+
+// Disconnect: forget the stored token. Card returns to "Sign in".
+async function mcpDisconnect(name, btn) {
+  btn.disabled = true; var orig = btn.textContent; btn.textContent = 'Disconnecting…';
+  try {
+    var csrf = (document.cookie.match(/codec_csrf=([^;]+)/) || [])[1] || '';
+    var r = await fetch('/api/mcp/servers/' + encodeURIComponent(name) + '/disconnect', {
+      method: 'POST', headers: {'Content-Type': 'application/json', 'x-csrf-token': csrf}
+    });
+    var d = await r.json().catch(function() { return {}; });
+    var okay = r.ok && d.ok !== false;
+    showToast(d.message || (okay ? 'Disconnected.' : 'Disconnect failed.'), !okay);
+    if (okay) { renderConnectors(); return; }
+  } catch (e) {
+    showToast('Disconnect failed: ' + e, true);
+  }
+  btn.disabled = false; btn.textContent = orig;
+}
+
+var _pendingImage = null; // {base64, name}
+
+// ── Send Command ──
+async function sendCmd() {
+  var input = document.getElementById('cmdInput');
+  var task = input.value.trim();
+  if (!task && !_pendingImage) return;
+  input.value = '';
+  var result = document.getElementById('cmdResult');
+  var text = document.getElementById('cmdResultText');
+  result.style.display = 'block';
+  var imgChip = document.getElementById('flashImageChip');
+  if (imgChip) imgChip.remove();
+
+  // ── Image mode: send to vision ──
+  if (_pendingImage) {
+    var imgData = _pendingImage;
+    _pendingImage = null;
+    var prompt = task || 'Describe and analyze this image in detail.';
+    if (!window._flashSessionId) {
+      var today = new Date().toISOString().slice(0, 10);
+      window._flashSessionId = 'flash-' + today;
+    }
+    // Show the thumbnail (already a small data URL on _pendingImage.thumb) in
+    // the result panel immediately so the user sees what they're sending,
+    // and so it's visible while the vision model thinks.
+    var thumbUrl = imgData.thumb || ('data:image/jpeg;base64,' + imgData.base64);
+    var thumbHtml = '<img src="' + thumbUrl + '" alt="' + escHtml(imgData.name || 'image') +
+                    '" style="max-width:240px;max-height:240px;border-radius:8px;display:block;margin:6px 0;border:1px solid var(--border)">';
+    text.innerHTML = thumbHtml +
+      '<span style="color:var(--accent)">Analyzing image...</span> ' + escHtml(imgData.name || '');
+    try {
+      var r = await fetch('/api/vision', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({
+          prompt: prompt,
+          image: imgData.base64,
+          thumb: imgData.thumb_b64 || '',         // small jpeg b64 for storage
+          session_id: window._flashSessionId
+        })
+      });
+      var data = await r.json();
+      if (data.response) {
+        text.innerHTML = thumbHtml +
+          '<span style="color:var(--success)">Flash:</span> ' + escHtml(data.response);
+        loadChat(); playResponse(data.response);
+      } else {
+        text.innerHTML = thumbHtml +
+          '<span style="color:var(--danger)">Vision error:</span> ' + escHtml(data.error || 'No response');
+      }
+    } catch(e) {
+      text.innerHTML = thumbHtml +
+        '<span style="color:var(--danger)">Failed:</span> ' + escHtml(e.message);
+    }
+    return;
+  }
+
+  // ── Text mode: send to LLM ──
+  // Persistent Flash Chat session — date-based so all messages in a day share context
+  if (!window._flashSessionId) {
+    var today = new Date().toISOString().slice(0, 10);
+    window._flashSessionId = 'flash-' + today;
+  }
+  text.innerHTML = '<span style="color:var(--accent)">Sending...</span> ' + escHtml(task);
+  try {
+    var r = await fetch('/api/command', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({task: task, session_id: window._flashSessionId}) });
+    var data = await r.json();
+    // Server-authoritative correlation token (conversations.id of the user row).
+    // /api/response matches the assistant reply by id > request_id (C-2/PR-4B).
+    var afterId = data.request_id || 0;
+    if (data.status === 'queued' || data.status === 'processing') {
+      text.innerHTML = '<span style="color:var(--accent)">Processing...</span> ' + escHtml(task);
+    } else if (data.error) {
+      text.innerHTML = '<span style="color:var(--danger)">Error:</span> ' + escHtml(data.error);
+    } else {
+      text.innerHTML = '<span style="color:var(--accent)">Processing...</span> ' + escHtml(task);
+    }
+  } catch(e) {
+    text.innerHTML = '<span style="color:var(--danger)">Failed:</span> ' + escHtml(e.message);
+  }
+  loadChat();
+  // Clear any previous poll to prevent stacking
+  if (window._flashPollTimer) clearInterval(window._flashPollTimer);
+  var pollCount = 0;
+  var pollStart = Date.now();
+  var afterTs = new Date().toISOString();
+  var sid = encodeURIComponent(window._flashSessionId || '');
+  var pollResp = setInterval(async function() {
+    pollCount++;
+    var elapsed = Math.round((Date.now() - pollStart) / 1000);
+    if (pollCount % 4 === 0) text.innerHTML = '<span style="color:var(--accent)">Processing...</span> ' + escHtml(task) + ' <span style="opacity:.5;font-size:11px">(' + elapsed + 's)</span>';
+    if (pollCount > 200) { clearInterval(pollResp); window._flashPollTimer = null; text.innerHTML = '<span style="color:var(--danger)">Timeout:</span> No response after 5 min. Try again.'; return; }
+    try {
+      var pr = await fetch('/api/response?_t=' + Date.now() + '&session_id=' + sid + '&after_id=' + encodeURIComponent(afterId) + '&after=' + encodeURIComponent(afterTs), {cache: 'no-store'});
+      if (pr.status === 401 || pr.status === 403) {
+        clearInterval(pollResp); window._flashPollTimer = null;
+        text.innerHTML = '<span style="color:var(--danger)">Session expired</span> — refreshing...';
+        setTimeout(function(){ window.location.href = '/auth'; }, 1500);
+        return;
+      }
+      var pd = await pr.json();
+      if (pd.response) {
+        text.innerHTML = '<span style="color:var(--success)">Flash:</span> ' + escHtml(pd.response);
+        clearInterval(pollResp); window._flashPollTimer = null;
+        loadChat();
+        playResponse(pd.response);
+      }
+    } catch(e) { console.warn('Poll error:', e); }
+  }, 1500);
+  window._flashPollTimer = pollResp;
+}
+
+document.getElementById('cmdInput').addEventListener('keydown', function(e) { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendCmd(); } });
+document.getElementById('cmdInput').addEventListener('input', function() { this.style.height = 'auto'; this.style.height = Math.min(this.scrollHeight, 120) + 'px'; });
+
+// ── Paste image into chat (Cmd+V on a screenshot) ──
+// Document-level handler so paste anywhere on the page routes the image
+// through handleFile (same flow as drag-drop / file-picker). Without
+// document-level binding, the user has to click into cmdInput FIRST
+// before Cmd+V — and most don't.
+//
+// Detection is permissive: walk both `clipboardData.files` (newer) AND
+// `clipboardData.items` (older), accept anything `type.startsWith('image/')`
+// regardless of `kind`. Safari and Chrome populate these slightly
+// differently; we accept the union.
+//
+// Text paste in any input/textarea is preserved — we only preventDefault
+// when we actually find an image. The toast on success makes the
+// behaviour visible so the user knows the paste was caught.
+function _extractPastedImage(e) {
+  if (!e.clipboardData) return null;
+  // Newer API — `clipboardData.files` is a FileList of attachments.
+  var files = e.clipboardData.files;
+  if (files && files.length) {
+    for (var i = 0; i < files.length; i++) {
+      var f = files[i];
+      if (f && f.type && f.type.indexOf('image/') === 0) return f;
+    }
+  }
+  // Older API — `clipboardData.items` walk.
+  var items = e.clipboardData.items;
+  if (items && items.length) {
+    for (var j = 0; j < items.length; j++) {
+      var it = items[j];
+      if (it && it.type && it.type.indexOf('image/') === 0
+          && typeof it.getAsFile === 'function') {
+        var got = it.getAsFile();
+        if (got) return got;
+      }
+    }
+  }
+  return null;
+}
+
+document.addEventListener('paste', function(e) {
+  // Skip if paste is into a contenteditable (Notion-style rich editors —
+  // we have none, but defensive). Plain inputs/textareas are fine: we
+  // only intercept image-type clipboard items below; text paste
+  // still flows through unchanged because we don't preventDefault unless
+  // we found an image.
+  var img = _extractPastedImage(e);
+  if (!img) return;
+  e.preventDefault();
+  try {
+    var ext = (img.type.split('/')[1] || 'png').split('+')[0];
+    var renamed = new File([img], 'pasted-' + Date.now() + '.' + ext, { type: img.type });
+    var dt = new DataTransfer();
+    dt.items.add(renamed);
+    var fi = document.getElementById('fileInput');
+    fi.files = dt.files;
+    handleFile({ target: fi });
+    try { showToast('Screenshot pasted'); } catch (_e) {}
+    // Make sure the cmd input is focused so the user can type their
+    // question and hit Send without an extra click.
+    var ci = document.getElementById('cmdInput');
+    if (ci) ci.focus();
+  } catch (err) {
+    console.warn('Paste image into chat failed:', err);
+  }
+}, true);  // useCapture=true so we run before any sub-element handlers
+
+function lockSession(){fetch('/api/auth/logout',{method:'POST'}).then(function(){document.cookie='codec_session=;path=/;max-age=0;SameSite=Lax'+(location.protocol==='https:'?';Secure':'');window.location.href='/auth'})}
+
+// ── Voice Input ──
+function toggleMic() {
+  var btn = document.getElementById('micBtn');
+  var input = document.getElementById('cmdInput');
+  if (isRecording) {
+    recognition && recognition.stop();
+    isRecording = false;
+    btn.classList.remove('recording');
+    btn.innerHTML = '<svg class="ico" viewBox="0 0 24 24"><path d="M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3z"/><path d="M19 10v2a7 7 0 01-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>';
+    return;
+  }
+  if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) { showToast('Speech recognition not supported'); return; }
+  var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  recognition = new SR();
+  recognition.lang = 'en-US';
+  recognition.interimResults = true;
+  recognition.continuous = true;
+  var baseText = input.value;
+  var lastFinal = '';
+  recognition.onresult = function(e) {
+    var final = '', interim = '';
+    for (var i = 0; i < e.results.length; i++) {
+      if (e.results[i].isFinal) { final += e.results[i][0].transcript; }
+      else { interim += e.results[i][0].transcript; }
+    }
+    if (final && final !== lastFinal) { baseText += (baseText ? ' ' : '') + final.trim(); lastFinal = final; }
+    input.value = baseText + (interim ? ' ' + interim : '');
+  };
+  recognition.onerror = function(e) { if (e.error !== 'no-speech') { isRecording = false; btn.classList.remove('recording'); btn.innerHTML = '<svg class="ico" viewBox="0 0 24 24"><path d="M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3z"/><path d="M19 10v2a7 7 0 01-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>'; } };
+  recognition.onend = function() { if (isRecording) recognition.start(); };
+  recognition.start();
+  isRecording = true;
+  btn.classList.add('recording');
+  btn.innerHTML = '<svg class="ico" viewBox="0 0 24 24" style="fill:var(--danger,#ef4444);stroke:var(--danger,#ef4444)"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>';
+}
+
+// ── Load Data ──
+async function loadHistory() {
+  var el = document.getElementById('historyList');
+  el.innerHTML = '<div class="refreshing">Loading...</div>';
+  try {
+    var r = await fetch('/api/history?limit=50');
+    var data = await r.json();
+    if (!data.length) { el.innerHTML = '<div class="empty"><div class="empty-icon"><svg class="ico ico-lg" viewBox="0 0 24 24" style="width:40px;height:40px"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div><div class="empty-text">No task history yet.</div></div>'; return; }
+    var copyTexts = [];
+    el.innerHTML = data.map(function(d) {
+      var content = escHtml(d.task || '');
+      copyTexts.push(d.task || '');
+      return '<div class="card"><button class="copy-btn" data-copy title="Copy"><svg class="ico ico-sm" viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg></button><div class="card-time">' + fmtTime(d.timestamp) + '</div><div class="card-task">' + content + '</div><div class="card-app">' + escHtml(d.app || '') + '</div>' + (d.response ? '<div class="card-response">' + escHtml(d.response) + '</div>' : '') + '</div>';
+    }).join('');
+    bindCopyButtons(el, copyTexts);
+  } catch(e) { el.innerHTML = '<div class="empty"><div class="empty-text">Error loading history</div></div>'; }
+}
+
+var _chatLoaded = false;
+async function loadChat() {
+  var el = document.getElementById('chatList');
+  if (!_chatLoaded) el.innerHTML = '<div class="refreshing">Loading...</div>';
+  try {
+    var r = await fetch('/api/conversations?limit=100&source=flash');
+    var data = await r.json();
+    if (!Array.isArray(data)) return;
+    _chatLoaded = true;
+    if (!data.length) { el.innerHTML = '<div class="empty"><div class="empty-icon"><svg class="ico" viewBox="0 0 24 24" style="width:40px;height:40px"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg></div><div class="empty-text">No conversations yet.</div></div>'; return; }
+    data.reverse();
+    var copyTexts = [];
+    el.innerHTML = data.map(function(d) {
+      var roleClass = d.role === 'user' ? 'user' : 'assistant';
+      var label = d.role === 'user' ? 'YOU' : 'CODEC';
+      // Pull out any embedded [CODEC_IMG_THUMB:data:image/...;base64,...]
+      // markers and render them inline as <img>. The base64 data URL must
+      // survive escHtml verbatim, so we walk the regex and only escape the
+      // text spans between markers — never the markers themselves.
+      var raw = d.content || '';
+      var IMG_RE = /\[CODEC_IMG_THUMB:(data:image\/[a-zA-Z0-9+.\-]+;base64,[A-Za-z0-9+/=]+)\]/g;
+      // Plain text version for the copy button: strip every marker.
+      // NB: named plainText, not copyText — a local `copyText` here shadowed the
+      // global copy function of the same name.
+      var plainText = raw.replace(IMG_RE, '').trim();
+      copyTexts.push(plainText);
+      // Render: walk the regex, alternating escaped text + img tags.
+      // Avoids placeholder-collision risk with arbitrary user prose.
+      var rendered = '';
+      var lastIdx = 0;
+      IMG_RE.lastIndex = 0;
+      var mm;
+      while ((mm = IMG_RE.exec(raw)) !== null) {
+        rendered += escHtml(raw.substring(lastIdx, mm.index));
+        rendered += '<img src="' + mm[1] + '" alt="image" style="max-width:240px;max-height:240px;border-radius:8px;display:block;margin:8px 0;border:1px solid var(--border)">';
+        lastIdx = mm.index + mm[0].length;
+      }
+      rendered += escHtml(raw.substring(lastIdx));
+      return '<div class="card"><button class="copy-btn" data-copy title="Copy"><svg class="ico ico-sm" viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg></button><div class="card-role ' + roleClass + '">' + label + '</div><div class="card-time">' + fmtTime(d.timestamp) + '</div><div class="card-task">' + rendered + '</div></div>';
+    }).join('');
+    bindCopyButtons(el, copyTexts);
+    var scroller = el.closest('.content') || el.parentElement;
+    setTimeout(function(){ scroller.scrollTop = scroller.scrollHeight; }, 50);
+  } catch(e) { if (!_chatLoaded) el.innerHTML = '<div class="empty"><div class="empty-text">Error loading chat</div></div>'; }
+}
+
+var _auditRefreshTimer = null;
+var _auditLiveTimer = null;
+var _auditStatsTimer = null;
+var _auditActiveCategories = new Set([
+  'command','skill','llm','auth','error','scheduled',
+  'voice','vision','tts','stt','system','security',
+  'hotkey','screenshot','config','draft'
+]);
+var _auditAllCategories = [
+  'command','skill','llm','auth','error','scheduled',
+  'voice','vision','tts','stt','system','security',
+  'hotkey','screenshot','config','draft'
+];
+var _auditCurrentRange = '24h';
+var _auditSearchQuery = '';
+var _auditLiveMode = false;
+var _auditEvents = [];
+var _auditLastTimestamp = null;
+var _auditInitialized = false;
+
+function _auditCatClass(cat) {
+  if (!cat) return 'audit-cat-system';
+  var c = cat.toLowerCase();
+  var map = {auth:1,cmd:1,command:1,skill:1,error:1,llm:1,system:1,security:1,voice:1,vision:1,scheduled:1,hotkey:1,tts:1,stt:1,screenshot:1,config:1,draft:1};
+  return map[c] ? 'audit-cat-' + c : 'audit-cat-system';
+}
+
+function _auditCatLabel(cat) {
+  if (!cat) return 'SYSTEM';
+  return cat.toUpperCase();
+}
+
+function _auditFormatTime(iso) {
+  if (!iso) return '--:--:--';
+  try {
+    var d = new Date(iso);
+    return d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  } catch(e) { return iso; }
+}
+
+function _auditSinceFromRange(range) {
+  var now = new Date();
+  var ms = { '1h': 3600000, '6h': 21600000, '24h': 86400000, '7d': 604800000 };
+  return new Date(now.getTime() - (ms[range] || 86400000)).toISOString();
+}
+
+function _renderAuditEvents(el, events) {
+  if (!events.length) {
+    el.innerHTML = '<div class="empty"><div class="empty-icon"><svg class="ico" viewBox="0 0 24 24" style="width:40px;height:40px"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></div><div class="empty-text">No events found. Try adjusting filters or time range.</div></div>';
+    return;
+  }
+  el.innerHTML = events.map(function(ev) {
+    var cat = ev.cat || ev.category || ev.source || 'system';
+    var ts = _auditFormatTime(ev.ts || ev.timestamp);
+    var summary = escHtml(ev.sum || ev.summary || ev.message || ev.event || ev.detail || '--');
+    var levelCls = '';
+    if (cat === 'error' || ev.level === 'error') levelCls = ' style="border-left:3px solid #ef4444"';
+    else if (ev.level === 'warning') levelCls = ' style="border-left:3px solid #ffd740"';
+    return '<div class="audit-event"' + levelCls + '>' +
+      '<span class="audit-ts">' + ts + '</span>' +
+      '<span class="audit-cat ' + _auditCatClass(cat) + '">' + _auditCatLabel(cat) + '</span>' +
+      '<span class="audit-summary">' + summary + '</span>' +
+      '</div>';
+  }).join('');
+}
+
+function _parseLegacyAudit(data) {
+  return data.map(function(d) {
+    var raw = d.line || '';
+    try {
+      var j = JSON.parse(raw);
+      var cat = 'system';
+      var text = (j.event || j.type || '');
+      var detail = j.detail || j.command || '';
+      var summary = text + (detail ? ': ' + String(detail).substring(0, 200) : '');
+      if (!summary) summary = JSON.stringify(j).substring(0, 300);
+      var low = (text + ' ' + summary).toLowerCase();
+      if (low.includes('auth') || low.includes('login') || low.includes('totp') || low.includes('pin')) cat = 'auth';
+      else if (low.includes('error') || low.includes('fail')) cat = 'error';
+      else if (low.includes('skill') || low.includes('forge')) cat = 'skill';
+      else if (low.includes('command') || low.includes('cmd')) cat = 'command';
+      else if (low.includes('llm') || low.includes('gpt') || low.includes('claude')) cat = 'llm';
+      else if (low.includes('security') || low.includes('blocked') || low.includes('denied')) cat = 'security';
+      return { timestamp: j.timestamp || null, category: cat, summary: summary };
+    } catch(e) {
+      return { timestamp: null, category: 'system', summary: raw };
+    }
+  });
+}
+
+function _auditInitPanel() {
+  if (_auditInitialized) return;
+  _auditInitialized = true;
+
+  // Render pills
+  var pillsEl = document.getElementById('auditPills');
+  if (pillsEl) {
+    pillsEl.innerHTML = _auditAllCategories.map(function(c) {
+      return '<span class="audit-pill active" data-cat="' + c + '">' + c.toUpperCase() + '</span>';
+    }).join('');
+    pillsEl.addEventListener('click', function(e) {
+      var pill = e.target.closest('.audit-pill');
+      if (!pill) return;
+      var cat = pill.getAttribute('data-cat');
+      if (_auditActiveCategories.has(cat)) {
+        _auditActiveCategories.delete(cat);
+        pill.classList.remove('active');
+      } else {
+        _auditActiveCategories.add(cat);
+        pill.classList.add('active');
+      }
+      _auditFetchEvents();
+    });
+  }
+
+  // Time buttons removed — always 24h
+
+  // Search input (debounced)
+  var searchEl = document.getElementById('auditSearchInput');
+  if (searchEl) {
+    var _searchTimer;
+    searchEl.addEventListener('input', function() {
+      clearTimeout(_searchTimer);
+      _searchTimer = setTimeout(function() {
+        _auditSearchQuery = searchEl.value.trim();
+        _auditFetchEvents();
+      }, 300);
+    });
+  }
+
+  // Live button
+  var liveBtn = document.getElementById('auditLiveBtn');
+  if (liveBtn) {
+    liveBtn.addEventListener('click', function() {
+      _auditLiveMode = !_auditLiveMode;
+      liveBtn.classList.toggle('active', _auditLiveMode);
+      if (_auditLiveMode) {
+        _auditLiveTimer = setInterval(_auditFetchLive, 2000);
+      } else {
+        if (_auditLiveTimer) { clearInterval(_auditLiveTimer); _auditLiveTimer = null; }
+      }
+    });
+  }
+}
+
+async function _auditFetchStats() {
+  try {
+    var res = await fetch('/api/audit/stats');
+    if (!res.ok) return;
+    var data = await res.json();
+    var el;
+    el = document.getElementById('auditStatTotal'); if (el) el.textContent = data.total_24h != null ? data.total_24h : '--';
+    el = document.getElementById('auditStatErrors'); if (el) el.textContent = data.errors_24h != null ? data.errors_24h : '--';
+    var bc = data.by_category || {};
+    el = document.getElementById('auditStatCommands'); if (el) el.textContent = bc.command != null ? bc.command : '--';
+    el = document.getElementById('auditStatSkills'); if (el) el.textContent = bc.skill != null ? bc.skill : '--';
+    el = document.getElementById('auditStatLLM'); if (el) el.textContent = bc.llm != null ? bc.llm : '--';
+  } catch(e) { /* silent */ }
+}
+
+async function _auditFetchEvents() {
+  var el = document.getElementById('auditTimeline');
+  if (!el) return;
+
+  var cats = Array.from(_auditActiveCategories).join(',');
+  var since = _auditSinceFromRange('24h');
+  var url = '/api/audit/stream?categories=' + encodeURIComponent(cats) + '&since=' + encodeURIComponent(since) + '&limit=200';
+  if (_auditSearchQuery) url += '&search=' + encodeURIComponent(_auditSearchQuery);
+
+  try {
+    var r = await fetch(url);
+    if (r.ok) {
+      var data = await r.json();
+      _auditEvents = data.events || [];
+      if (_auditEvents.length) {
+        _auditLastTimestamp = _auditEvents[0].ts || _auditEvents[0].timestamp || null;
+        _renderAuditEvents(el, _auditEvents);
+        return;
+      }
+    }
+  } catch(e) { /* fall through to legacy */ }
+
+  // Fallback: try old /api/audit endpoint
+  try {
+    var r2 = await fetch('/api/audit?limit=200');
+    if (r2.ok) {
+      var legacyData = await r2.json();
+      if (legacyData.length) {
+        _auditEvents = _parseLegacyAudit(legacyData);
+        // Client-side filter for legacy data
+        var filtered = _auditEvents.filter(function(ev) {
+          var cat = (ev.category || 'system').toLowerCase();
+          if (!_auditActiveCategories.has(cat)) return false;
+          if (_auditSearchQuery) {
+            var s = (ev.summary || '').toLowerCase();
+            if (s.indexOf(_auditSearchQuery.toLowerCase()) === -1) return false;
+          }
+          return true;
+        });
+        _auditLastTimestamp = filtered.length ? (filtered[0].timestamp || null) : null;
+        _renderAuditEvents(el, filtered);
+        return;
+      }
+    }
+  } catch(e2) { /* ignore */ }
+
+  // Nothing
+  _auditEvents = [];
+  _renderAuditEvents(el, []);
+}
+
+async function _auditFetchLive() {
+  if (!_auditLiveMode || !_auditLastTimestamp) return;
+  var el = document.getElementById('auditTimeline');
+  if (!el) return;
+  var cats = Array.from(_auditActiveCategories).join(',');
+  var url = '/api/audit/stream?categories=' + encodeURIComponent(cats) + '&since=' + encodeURIComponent(_auditLastTimestamp) + '&limit=50';
+  if (_auditSearchQuery) url += '&search=' + encodeURIComponent(_auditSearchQuery);
+  try {
+    var r = await fetch(url);
+    if (!r.ok) return;
+    var data = await r.json();
+    var newEvents = data.events || [];
+    if (newEvents.length) {
+      _auditLastTimestamp = newEvents[0].ts || newEvents[0].timestamp;
+      _auditEvents = newEvents.concat(_auditEvents);
+      _renderAuditEvents(el, _auditEvents);
+    }
+  } catch(e) { /* silent */ }
+}
+
+async function loadAudit() {
+  // Initialize filter UI (once)
+  _auditInitPanel();
+
+  // Clear any previous timers
+  if (_auditRefreshTimer) { clearInterval(_auditRefreshTimer); _auditRefreshTimer = null; }
+  if (_auditStatsTimer) { clearInterval(_auditStatsTimer); _auditStatsTimer = null; }
+
+  // Show loading in timeline
+  var el = document.getElementById('auditTimeline');
+  if (el) el.innerHTML = '<div class="refreshing">Loading audit events...</div>';
+
+  // Fetch stats and events in parallel
+  await Promise.all([_auditFetchStats(), _auditFetchEvents()]);
+
+  // Start periodic stats refresh
+  _auditStatsTimer = setInterval(function() {
+    if (currentTab === 'audit') _auditFetchStats();
+  }, 10000);
+
+  // Start periodic event refresh (unless live mode handles it)
+  _auditRefreshTimer = setInterval(function() {
+    if (currentTab === 'audit' && !_auditLiveMode) _auditFetchEvents();
+  }, 5000);
+}
+
+// ── Settings ──
+var _configData = null;
+
+async function loadSettings() {
+  try {
+    var [statusR, skillsR, configR] = await Promise.all([fetch('/api/status'), fetch('/api/skills'), fetch('/api/config')]);
+    var status = await statusR.json();
+    var skills = await skillsR.json();
+    _configData = await configR.json();
+
+    var dot = document.getElementById('statusDot');
+    dot.classList.toggle('on', status.alive);
+
+    document.getElementById('statGrid').innerHTML =
+      '<div class="stat-card"><div class="stat-val" style="color:' + (status.alive ? 'var(--success)' : 'var(--danger)') + '">' + (status.alive ? 'Online' : 'Offline') + '</div><div class="stat-label">CODEC</div></div>' +
+      '<div class="stat-card"><div class="stat-val">' + skills.length + '</div><div class="stat-label">Skills</div></div>' +
+      '<div class="stat-card"><div class="stat-val">' + (status.config.llm_provider || '?').toUpperCase() + '</div><div class="stat-label">LLM</div></div>' +
+      '<div class="stat-card"><div class="stat-val">' + (status.config.tts_engine || '?').toUpperCase() + '</div><div class="stat-label">TTS</div></div>';
+
+    renderSettings(_configData);
+
+    // Load full trigger data for editable skills section
+    loadTriggerGuide();
+    // Load 2FA status
+    loadTotpStatus();
+  } catch(e) { console.error(e); }
+}
+
+async function loadTotpStatus() {
+  try {
+    var r = await fetch('/api/auth/status');
+    var data = await r.json();
+    var statusEl = document.getElementById('totpStatus');
+    var actionsEl = document.getElementById('totpActions');
+    if (data.totp_enabled) {
+      statusEl.textContent = 'Enabled';
+      statusEl.style.color = 'var(--success)';
+      actionsEl.innerHTML = '<button class="save-config-btn" style="margin:0;background:var(--danger)" onclick="disableTotp()">Disable 2FA</button>';
+    } else if (data.totp_secret_exists) {
+      statusEl.textContent = 'Disabled (secret retained)';
+      statusEl.style.color = 'var(--warning, orange)';
+      actionsEl.innerHTML = '<div style="font-size:12px;color:var(--text-dim);margin-bottom:8px;">Your authenticator entry is still valid. Re-enable uses the same code — no new QR scan needed.</div><button class="save-config-btn" style="margin:0" onclick="enableTotp()">Re-enable 2FA</button>';
+    } else {
+      statusEl.textContent = 'Not configured';
+      statusEl.style.color = 'var(--text-dim)';
+      actionsEl.innerHTML = '<button class="save-config-btn" style="margin:0" onclick="setupTotpInline()">Setup 2FA</button>';
+    }
+  } catch(e) {
+    var statusEl = document.getElementById('totpStatus');
+    if (statusEl) statusEl.textContent = 'Error loading status';
+  }
+}
+
+async function disableTotp() {
+  var code = prompt('Enter your 6-digit authenticator code to disable 2FA:');
+  if (!code || code.length < 6) { showToast('Enter a valid 6-digit code'); return; }
+  try {
+    var r = await fetch('/api/auth/totp/disable', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ code: code }) });
+    var data = await r.json();
+    if (data.disabled) {
+      showToast('2FA disabled. Your authenticator entry is kept — you can re-enable anytime with the same code.');
+      loadTotpStatus();
+    } else {
+      showToast(data.error || 'Failed to disable 2FA');
+    }
+  } catch(e) {
+    showToast('Network error disabling 2FA');
+  }
+}
+
+async function enableTotp() {
+  var code = prompt('Enter your 6-digit authenticator code to re-enable 2FA:');
+  if (!code || code.length < 6) { showToast('Enter a valid 6-digit code'); return; }
+  try {
+    var r = await fetch('/api/auth/totp/enable', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ code: code }) });
+    var data = await r.json();
+    if (data.enabled) {
+      showToast('2FA re-enabled successfully!');
+      loadTotpStatus();
+    } else {
+      showToast(data.error || 'Failed to enable 2FA');
+    }
+  } catch(e) {
+    showToast('Network error enabling 2FA');
+  }
+}
+
+async function setupTotpInline() {
+  var actionsEl = document.getElementById('totpActions');
+  actionsEl.innerHTML = '<span style="color:var(--text-dim)">Loading QR code...</span>';
+  try {
+    var r = await fetch('/api/auth/totp/setup', { method: 'POST' });
+    var data = await r.json();
+    if (data.error) { showToast(data.error); loadTotpStatus(); return; }
+    actionsEl.innerHTML =
+      '<div style="text-align:center">' +
+      '<p style="color:var(--text-dim);font-size:12px;margin-bottom:10px">Scan with your authenticator app:</p>' +
+      '<img src="data:image/png;base64,' + data.qr_code + '" style="width:180px;height:180px;border-radius:8px;background:#fff;padding:8px" />' +
+      '<p style="color:var(--text-dim);font-size:11px;margin:10px 0 6px">Then enter the 6-digit code:</p>' +
+      '<input type="text" id="totpSetupCode" maxlength="6" pattern="[0-9]*" inputmode="numeric" ' +
+      'style="width:120px;text-align:center;padding:8px;font-size:18px;letter-spacing:6px;border:1px solid var(--border);border-radius:8px;background:var(--surface-2);color:var(--text);font-family:var(--mono)" />' +
+      '<br/><button class="save-config-btn" style="margin-top:10px" onclick="confirmTotpSetup(\'' + data.secret + '\')">Verify & Enable</button>' +
+      '<button class="save-config-btn" style="margin-top:6px;background:var(--surface-2);color:var(--text-dim)" onclick="loadTotpStatus()">Cancel</button>' +
+      '</div>';
+  } catch(e) {
+    showToast('Error setting up 2FA');
+    loadTotpStatus();
+  }
+}
+
+async function confirmTotpSetup(secret) {
+  var code = document.getElementById('totpSetupCode').value;
+  if (!code || code.length < 6) { showToast('Enter the 6-digit code'); return; }
+  try {
+    var r = await fetch('/api/auth/totp/confirm', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ secret: secret, code: code }) });
+    var data = await r.json();
+    if (data.enabled) {
+      showToast('2FA enabled successfully!');
+      loadTotpStatus();
+    } else {
+      showToast(data.error || 'Invalid code — try again');
+    }
+  } catch(e) { showToast('Verification failed'); }
+}
+
+function renderSettings(cfg) {
+  var sections = {
+    'Identity': { keys: cfg.identity, icon: 'user' },
+    'LLM': { keys: cfg.llm, icon: 'cpu' },
+    'Vision': { keys: cfg.vision, icon: 'eye' },
+    'Text-to-Speech': { keys: cfg.tts, icon: 'volume' },
+    'Speech-to-Text': { keys: cfg.stt, icon: 'mic' },
+    'Hotkeys': { keys: cfg.keys, icon: 'command' },
+    'Wake Word': { keys: cfg.wake, icon: 'zap' },
+    'Authentication': { keys: cfg.auth, icon: 'lock' },
+  };
+
+  var html = '';
+  for (var title in sections) {
+    var sec = sections[title];
+    if (!sec.keys) continue;
+    html += '<div class="settings-section"><div class="settings-title">' + escHtml(title) + '</div><div class="settings-card">';
+    for (var key in sec.keys) {
+      var val = sec.keys[key];
+      var inputHtml;
+      if (typeof val === 'boolean') {
+        // wake_word_enabled applies INSTANTLY on flip (no Save Changes needed) —
+        // users expect a toggle to just work; requiring a separate save button
+        // meant flipping "always-on off" silently did nothing (2026-07-08).
+        var _click = (key === 'wake_word_enabled') ? 'toggleWakeInstant(this)' : 'toggleSetting(this)';
+        inputHtml = '<button class="setting-toggle ' + (val ? 'on' : '') + '" data-key="' + key + '" data-section="' + title + '" onclick="' + _click + '"></button>';
+      } else if (Array.isArray(val)) {
+        inputHtml = '<input class="setting-input" data-key="' + key + '" data-section="' + title + '" data-type="array" value="' + escAttr(val.join(', ')) + '" style="width:60%">';
+      } else {
+        var inputType = (key.includes('key') && key !== 'llm_api_key') ? 'text' : (key.includes('password') || key.includes('token') || key.includes('api_key') || key.includes('pin_hash')) ? 'password' : 'text';
+        var displayVal = (val === null || val === undefined || val === '') ? '' : String(val);
+        var placeholder = (key.includes('api_key') || key.includes('token')) && !displayVal ? 'Not configured — using local LLM' : '';
+        inputHtml = '<input class="setting-input" data-key="' + key + '" data-section="' + title + '" type="' + inputType + '" value="' + escAttr(displayVal) + '"' + (placeholder ? ' placeholder="' + placeholder + '"' : '') + '>';
+      }
+      var _labels = {
+        'wake_word_enabled': "Always-on mode — wake on “Hey CODEC”",
+        'wake_phrases': 'Wake phrases',
+        'wake_energy': 'Mic sensitivity threshold',
+      };
+      var _label = _labels[key] || key;
+      html += '<div class="setting-row"><span class="setting-label">' + escHtml(_label) + '</span>' + inputHtml + '</div>';
+    }
+    html += '</div></div>';
+  }
+  document.getElementById('settingsContent').innerHTML = html;
+}
+
+function toggleSetting(btn) {
+  btn.classList.toggle('on');
+}
+
+// Instant-apply toggle for the always-on wake word — saves immediately on
+// flip (no "Save Changes" step). codec.py re-reads wake_word_enabled live
+// (~2s), so flipping it off here silences "Hey CODEC" within a couple seconds.
+async function toggleWakeInstant(btn) {
+  btn.classList.toggle('on');
+  var on = btn.classList.contains('on');
+  btn.style.opacity = '0.5';
+  try {
+    var r = await fetch('/api/config', { method: 'PUT', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ 'Wake Word': { wake_word_enabled: on } }) });
+    var d = await r.json();
+    if (d && d.saved) {
+      showToast(on ? '🎙️ Always-on wake word: ON' : '🔇 Always-on OFF — CODEC won’t wake on its name (use F13)');
+    } else {
+      btn.classList.toggle('on');  // revert on failure
+      showToast('Could not save: ' + ((d && d.error) || 'unknown error'));
+    }
+  } catch (e) {
+    btn.classList.toggle('on');    // revert on network error
+    showToast('Could not save wake setting (network).');
+  } finally {
+    btn.style.opacity = '';
+  }
+}
+
+async function saveConfig() {
+  var btn = document.getElementById('saveConfigBtn');
+  btn.textContent = 'Saving...';
+  btn.disabled = true;
+
+  // Collect values from inputs
+  var payload = {};
+  document.querySelectorAll('.setting-input').forEach(function(input) {
+    var key = input.dataset.key;
+    var section = input.dataset.section;
+    if (!payload[section]) payload[section] = {};
+    var val = input.value;
+    if (input.dataset.type === 'array') {
+      val = val.split(',').map(function(s) { return s.trim(); }).filter(function(s) { return s; });
+    } else if (val === 'true') val = true;
+    else if (val === 'false') val = false;
+    else if (!isNaN(val) && val !== '' && !key.includes('url') && !key.includes('model') && !key.includes('key') && !key.includes('name') && !key.includes('voice') && !key.includes('engine') && !key.includes('provider') && !key.includes('token') && !key.includes('hash') && !key.includes('phrase')) {
+      val = Number(val);
+    }
+    payload[section][key] = val;
+  });
+
+  // Collect toggles
+  document.querySelectorAll('.setting-toggle').forEach(function(toggle) {
+    var key = toggle.dataset.key;
+    var section = toggle.dataset.section;
+    if (!payload[section]) payload[section] = {};
+    payload[section][key] = toggle.classList.contains('on');
+  });
+
+  try {
+    var r = await fetch('/api/config', { method: 'PUT', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload) });
+    var data = await r.json();
+    if (data.saved) {
+      btn.textContent = 'Saved!';
+      btn.classList.add('saved');
+      var msg = data.message || 'Configuration saved';
+      showToast(msg);
+      setTimeout(function() { btn.textContent = 'Save Changes'; btn.classList.remove('saved'); btn.disabled = false; }, 2000);
+      // Reload settings to reflect any masking changes
+      loadSettings();
+    } else if (data.details && Array.isArray(data.details)) {
+      btn.textContent = 'Validation Error';
+      btn.disabled = false;
+      showToast('Validation failed: ' + data.details.join('; '));
+    } else {
+      btn.textContent = 'Error';
+      btn.disabled = false;
+      showToast('Error: ' + (data.error || 'Unknown'));
+    }
+  } catch(e) {
+    btn.textContent = 'Error saving';
+    btn.disabled = false;
+    showToast('Network error saving configuration');
+  }
+}
+
+// ── Page Customization (UI toggles) ──
+var _uiFeatures = {
+  'Global': [
+    { id: 'screenshot_btn', label: 'Screenshot button', sel: '#screenBtn', default: true },
+    { id: 'photo_btn', label: 'Webcam photo button', sel: '#photoBtn', default: true },
+    { id: 'webcam_pip_btn', label: 'Live webcam PIP button', sel: '#camBtn', default: true },
+    { id: 'voice_btn', label: 'Voice replies button', sel: '#voiceBtn', default: true },
+    { id: 'notif_bell', label: 'Notification bell', sel: '#notifBellBtn', default: true },
+    { id: 'mic_btn', label: 'Mic input button', sel: '#micBtn', default: true },
+  ],
+  'Dashboard': [
+    { id: 'dash_status_grid', label: 'Status grid (stats cards)', sel: '#statGrid', default: true },
+    { id: 'dash_history_tab', label: 'History tab', sel: '#tab-history', default: true },
+    { id: 'dash_audit_tab', label: 'Audit tab', sel: '#tab-audit', default: true },
+    { id: 'dash_phone_btn', label: 'Voice call button', sel: '.ibtn.phone', default: true },
+  ],
+  'Chat': [
+    { id: 'chat_sidebar', label: 'Conversation sidebar', sel: '#sidebar,#sidebarOverlay,.sidebar-toggle', default: true },
+    { id: 'chat_agents', label: 'Agent crews / Research mode', sel: '#modeResearchBtn', default: true },
+    { id: 'chat_agent_builder', label: 'Custom agent builder', sel: '#agentBuilder', default: true },
+  ],
+  'Voice': [
+    { id: 'voice_transcript', label: 'Live transcript', sel: '.transcript-wrap', default: true },
+    { id: 'voice_actions', label: 'Your Turn / Nudge buttons', sel: '#actionRow', default: true },
+  ],
+  'Tasks': [
+    { id: 'tasks_heartbeat', label: 'Heartbeat tab', sel: '#tab-heartbeat', default: true },
+    { id: 'tasks_reports', label: 'Reports tab', sel: '#tab-reports', default: true },
+  ]
+};
+
+function _getUIPrefs() {
+  try { return JSON.parse(localStorage.getItem('codec-ui-prefs') || '{}'); } catch(e) { return {}; }
+}
+function _saveUIPrefs(prefs) {
+  localStorage.setItem('codec-ui-prefs', JSON.stringify(prefs));
+  // Also save to server for cross-device sync
+  fetch('/api/config', { method: 'PUT', headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({ ui_prefs: prefs }) }).catch(function(){});
+}
+function applyUIPrefs() {
+  var prefs = _getUIPrefs();
+  Object.values(_uiFeatures).forEach(function(group) {
+    group.forEach(function(f) {
+      var visible = prefs[f.id] !== undefined ? prefs[f.id] : f.default;
+      f.sel.split(',').forEach(function(s) {
+        document.querySelectorAll(s.trim()).forEach(function(el) {
+          el.style.display = visible ? '' : 'none';
+        });
+      });
+    });
+  });
+}
+// ── System Prompts Editor ──
+var _promptsData = {};
+async function loadPrompts() {
+  var container = document.getElementById('promptsContainer');
+  if (!container) return;
+  try {
+    var r = await fetch('/api/prompts');
+    if (!r.ok) throw new Error('API returned ' + r.status);
+    var data = await r.json();
+    if (data.error) throw new Error(data.error);
+    // Filter out non-prompt keys (like "error")
+    _promptsData = {};
+    Object.keys(data).forEach(function(k) {
+      if (data[k] && typeof data[k] === 'object' && data[k].label) {
+        _promptsData[k] = data[k];
+      }
+    });
+    if (Object.keys(_promptsData).length === 0) throw new Error('No prompts found');
+    renderPrompts();
+  } catch(e) {
+    container.innerHTML = '<div style="color:var(--text-dim);font-size:12px;padding:8px">Failed to load prompts: ' + _escHtml(e.message) + '. Try restarting the dashboard.</div>';
+  }
+}
+function renderPrompts() {
+  var container = document.getElementById('promptsContainer');
+  if (!container || !_promptsData) return;
+  var html = '';
+  var keys = Object.keys(_promptsData);
+  keys.forEach(function(key) {
+    var p = _promptsData[key];
+    var modClass = p.modified ? ' modified' : '';
+    var modBadge = p.modified ? '<span class="prompt-modified-badge">edited</span>' : '';
+    var charCount = (p.value || '').length;
+    // A4 / XSS hardening: prompt metadata (label/description/file) is sourced
+    // from ~/.codec/prompt_overrides.json. If an attacker ever lands a write to
+    // that file (via a /api/save_file bypass — see A1 — or a future plugin
+    // misstep), unescaped metadata becomes stored XSS on this settings panel.
+    // Escape every interpolated field; the textarea content already routes
+    // through _escHtml.
+    html += '<div class="prompt-card' + modClass + '" id="prompt-' + _escHtml(key) + '">' +
+      '<div class="prompt-header" onclick="togglePrompt(\'' + _escHtml(key) + '\')">' +
+        '<div style="flex:1;min-width:0">' +
+          '<div class="prompt-label">' + _escHtml(p.label || '') + ' ' + modBadge + '</div>' +
+          '<div class="prompt-desc">' + _escHtml(p.description || '') + '</div>' +
+          '<div class="prompt-file">' + _escHtml(p.file || '') + ' — ' + charCount + ' chars</div>' +
+        '</div>' +
+        '<svg class="prompt-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>' +
+      '</div>' +
+      '<div class="prompt-body">' +
+        '<textarea class="prompt-textarea" id="prompt-text-' + key + '" spellcheck="false">' + _escHtml(p.value || p.default || '') + '</textarea>' +
+        '<div class="prompt-actions">' +
+          (p.modified ? '<button class="prompt-btn reset" onclick="resetPrompt(\'' + key + '\')">Reset to Default</button>' : '') +
+          '<button class="prompt-btn save" onclick="savePrompt(\'' + key + '\')">Save</button>' +
+        '</div>' +
+      '</div>' +
+    '</div>';
+  });
+  container.innerHTML = html;
+}
+function _escHtml(s) { var d=document.createElement('div');d.textContent=s;return d.innerHTML; }
+function togglePrompt(key) {
+  var card = document.getElementById('prompt-' + key);
+  if (card) card.classList.toggle('open');
+}
+async function savePrompt(key) {
+  var textarea = document.getElementById('prompt-text-' + key);
+  if (!textarea) return;
+  var body = {}; body[key] = textarea.value;
+  try {
+    var r = await fetch('/api/prompts', {method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)});
+    var d = await r.json();
+    if (d.ok) {
+      _promptsData[key].value = textarea.value;
+      _promptsData[key].modified = textarea.value.trim() !== (_promptsData[key].default || '').trim();
+      renderPrompts();
+      // Flash the card green briefly
+      var card = document.getElementById('prompt-' + key);
+      if (card) { card.style.borderColor='var(--success)'; setTimeout(function(){card.style.borderColor='';},1500); }
+    }
+  } catch(e) { console.error('Save prompt failed:', e); }
+}
+async function resetPrompt(key) {
+  if (!confirm('Reset "' + (_promptsData[key]||{}).label + '" to default?')) return;
+  try {
+    await fetch('/api/prompts/reset', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({key:key})});
+    _promptsData[key].value = _promptsData[key].default;
+    _promptsData[key].modified = false;
+    renderPrompts();
+  } catch(e) { console.error('Reset prompt failed:', e); }
+}
+
+function renderUIToggles() {
+  var container = document.getElementById('uiToggles');
+  if (!container) return;
+  var prefs = _getUIPrefs();
+  var html = '';
+  Object.keys(_uiFeatures).forEach(function(group) {
+    html += '<div class="ui-toggle-group"><div class="ui-toggle-group-title">' + group + '</div>';
+    _uiFeatures[group].forEach(function(f) {
+      var on = prefs[f.id] !== undefined ? prefs[f.id] : f.default;
+      html += '<div class="ui-toggle-row"><span class="ui-toggle-label">' + f.label + '</span>'
+        + '<label class="ui-switch"><input type="checkbox" data-uid="' + f.id + '" ' + (on ? 'checked' : '') + ' onchange="toggleUIFeature(this)"><span class="slider"></span></label></div>';
+    });
+    html += '</div>';
+  });
+  container.innerHTML = html;
+}
+function toggleUIFeature(el) {
+  var prefs = _getUIPrefs();
+  prefs[el.dataset.uid] = el.checked;
+  _saveUIPrefs(prefs);
+  applyUIPrefs();
+  showToast(el.checked ? 'Enabled' : 'Hidden');
+}
+// Apply on page load
+applyUIPrefs();
+
+// ── Helpers ──
+function escHtml(s) { var d = document.createElement('div'); d.textContent = s || ''; return d.innerHTML; }
+function escAttr(s) { return (s || '').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/'/g,'&#39;').replace(/</g,'&lt;'); }
+function fmtTime(ts) {
+  if (!ts) return '';
+  try {
+    var d = new Date(ts);
+    var now = new Date();
+    var today = now.toDateString() === d.toDateString();
+    var time = d.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+    return today ? time : d.toLocaleDateString([], {month:'short', day:'numeric'}) + ' ' + time;
+  } catch(e) { return ts; }
+}
+
+// ── Voice Replies ──
+var voiceEnabled = localStorage.getItem('codec-voice') === 'true';
+function toggleVoice() {
+  voiceEnabled = !voiceEnabled;
+  localStorage.setItem('codec-voice', voiceEnabled);
+  updateVoiceIcon();
+  if (!voiceEnabled) stopPlayback();
+}
+function updateVoiceIcon() {
+  var x1 = document.getElementById('muteX1');
+  var x2 = document.getElementById('muteX2');
+  var st = document.getElementById('voiceState');
+  if (voiceEnabled) {
+    if (x1) x1.style.display = 'none';
+    if (x2) x2.style.display = 'none';
+    if (st) { st.textContent = 'ON'; st.style.color = '#0a0a0a'; st.style.background = '#E8711A'; }
+  } else {
+    if (x1) x1.style.display = '';
+    if (x2) x2.style.display = '';
+    if (st) { st.textContent = 'OFF'; st.style.color = '#888'; st.style.background = '#2a2a2a'; }
+  }
+}
+
+// ── Always-on Wake Word — instant toggle, visible on every page ──
+// Bulletproof replacement for the buried Settings toggle that kept not
+// persisting (users flip it and walk away; it never saved). This reads the
+// LIVE server value each time the menu opens and writes instantly on click.
+var _wakeEnabled = null;
+function _setWakeBadge(on) {
+  var st = document.getElementById('wakeState');
+  if (!st) return;
+  if (on) { st.textContent = 'ON'; st.style.color = '#0a0a0a'; st.style.background = '#E8711A'; }
+  else    { st.textContent = 'OFF'; st.style.color = '#888'; st.style.background = '#2a2a2a'; }
+}
+async function refreshWakeState() {
+  try {
+    var r = await fetch('/api/config');
+    var d = await r.json();
+    _wakeEnabled = !!(d && d.wake && d.wake.wake_word_enabled);
+    _setWakeBadge(_wakeEnabled);
+  } catch (e) { /* leave badge as-is */ }
+}
+async function toggleWakeWord() {
+  var target = !_wakeEnabled;
+  _setWakeBadge(target);  // optimistic
+  var btn = document.getElementById('wakeBtn');
+  if (btn) btn.style.opacity = '0.5';
+  try {
+    var r = await fetch('/api/config', { method: 'PUT', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ 'Wake Word': { wake_word_enabled: target } }) });
+    var d = await r.json();
+    if (d && d.saved) {
+      _wakeEnabled = target;
+      showToast(target ? '🎙️ Wake word ON — say “Hey CODEC”' : '🔇 Wake word OFF — CODEC won’t wake on its name (use F13)');
+    } else {
+      _setWakeBadge(_wakeEnabled);  // revert
+      showToast('Could not save: ' + ((d && d.error) || 'unknown'));
+    }
+  } catch (e) {
+    _setWakeBadge(_wakeEnabled);    // revert
+    showToast('Could not save wake setting (network).');
+  } finally {
+    if (btn) btn.style.opacity = '';
+  }
+}
+updateVoiceIcon();
+
+var _currentAudio = null;
+var _lastPlayedText = null;
+async function playResponse(text) {
+  if (!voiceEnabled || !text) return;
+  if (text === _lastPlayedText) return;
+  _lastPlayedText = text;
+  try {
+    if (_currentAudio) { _currentAudio.pause(); _currentAudio = null; }
+    _currentAudio = new Audio('/api/tts?text=' + encodeURIComponent(text.substring(0, 300)));
+    _currentAudio.onended = function() { _currentAudio = null; _lastPlayedText = null; };
+    _currentAudio.play();
+  } catch(e) {}
+}
+function stopPlayback() {
+  if (_currentAudio) { _currentAudio.pause(); _currentAudio = null; }
+}
+
+// ── Server Photo (Mac webcam) ──
+function takeServerPhoto() {
+  var btn = document.getElementById('photoBtn');
+  btn.style.borderColor = 'var(--accent)';
+  showToast('Capturing from Mac webcam...');
+  fetch('/api/webcam/snapshot?_t=' + Date.now() + _getAuthParam()).then(function(r) { return r.json(); }).then(function(d) {
+    btn.style.borderColor = '';
+    if (d.error) { showToast('Error: ' + d.error); return; }
+    showToast('Photo saved: ' + d.filename);
+    // Show in the screenshot modal for preview
+    var img = document.getElementById('screenImg');
+    img.src = 'data:image/jpeg;base64,' + d.image;
+    document.getElementById('screenModal').classList.add('show');
+    // Auto-analyze
+    fetch('/api/webcam', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ image: d.image, analyze: true, prompt: 'Describe what you see in this photo. Be concise.' })
+    }).then(function(r2) { return r2.json(); }).then(function(d2) {
+      if (d2.analysis) showToast(d2.analysis);
+    });
+  }).catch(function(e) { btn.style.borderColor = ''; showToast('Camera error: ' + e.message); });
+}
+
+// ── Live Webcam PIP (Mac MJPEG stream) ──
+// Helper: get session token for img/stream URLs (mobile browsers may not send cookies with img.src)
+function _getAuthParam(first) {
+  var m = document.cookie.match(/codec_session=([^;]+)/);
+  return m ? (first ? '?s=' : '&s=') + m[1] : '';
+}
+var _pipDrag = { active: false, x: 0, y: 0 };
+function toggleWebcamPip() {
+  var pip = document.getElementById('webcamPip');
+  if (pip.style.display === 'block') { closeWebcamPip(); return; }
+  var img = document.getElementById('pipVideo');
+  img.src = '/api/webcam/stream?_t=' + Date.now() + _getAuthParam();
+  pip.style.display = 'block';
+  document.getElementById('camBtn').style.borderColor = 'var(--accent)';
+}
+function closeWebcamPip() {
+  var img = document.getElementById('pipVideo');
+  img.src = '';
+  document.getElementById('webcamPip').style.display = 'none';
+  document.getElementById('webcamPip').classList.remove('expanded');
+  var btn = document.getElementById('camBtn'); if (btn) btn.style.borderColor = '';
+}
+function expandPip() {
+  document.getElementById('webcamPip').classList.toggle('expanded');
+}
+function snapFromPip() {
+  showToast('Snapshot from Mac webcam...');
+  fetch('/api/webcam/snapshot?_t=' + Date.now() + _getAuthParam()).then(function(r) { return r.json(); }).then(function(d) {
+    if (d.error) { showToast('Error: ' + d.error); return; }
+    showToast('Photo saved: ' + d.filename);
+    fetch('/api/webcam', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ image: d.image, analyze: true, prompt: 'Describe what you see in this photo. Be concise.' })
+    }).then(function(r2) { return r2.json(); }).then(function(d2) {
+      if (d2.analysis) showToast(d2.analysis);
+    });
+  }).catch(function(e) { showToast('Snap error: ' + e.message); });
+}
+function savePipFrame() {
+  fetch('/api/webcam/snapshot?_t=' + Date.now() + _getAuthParam()).then(function(r) { return r.json(); }).then(function(d) {
+    if (d.filename) showToast('Saved: ' + d.filename);
+    else showToast('Error saving');
+  }).catch(function(e) { showToast('Save error: ' + e.message); });
+}
+(function() {
+  var pip = document.getElementById('webcamPip'); if (!pip) return;
+  pip.addEventListener('mousedown', function(e) {
+    if (e.target.closest('.pip-btn')) return;
+    _pipDrag = { active: true, x: e.clientX - pip.offsetLeft, y: e.clientY - pip.offsetTop };
+  });
+  document.addEventListener('mousemove', function(e) {
+    if (!_pipDrag.active) return;
+    pip.style.left = (e.clientX - _pipDrag.x) + 'px';
+    pip.style.top = (e.clientY - _pipDrag.y) + 'px';
+    pip.style.right = 'auto'; pip.style.bottom = 'auto';
+  });
+  document.addEventListener('mouseup', function() { _pipDrag.active = false; });
+})();
+
+// ── Screenshot ──
+async function takeScreenshot() {
+  try {
+    var img = document.getElementById('screenImg');
+    img.src = '/api/screenshot?' + Date.now();
+    document.getElementById('screenModal').classList.add('show');
+  } catch(e) { showToast('Screenshot failed'); }
+}
+function closeScreenshot() { document.getElementById('screenModal').classList.remove('show'); }
+document.addEventListener('keydown', function(e) { if (e.key === 'Escape') closeScreenshot(); });
+
+// ── Live Chat (Voice) ──
+function startLiveChat() { window.open('/voice?auto=1', '_self'); }
+
+// ── File Upload ──
+function uploadFile() { document.getElementById('fileInput').click(); }
+async function handleFile(e) {
+  var file = e.target.files[0];
+  if (!file) return;
+  var result = document.getElementById('cmdResult');
+  var text = document.getElementById('cmdResultText');
+  result.style.display = 'block';
+
+  if (file.type.startsWith('image/')) {
+    text.innerHTML = '<span style="color:var(--accent)">Image ready — type a question or hit Send</span>';
+    var reader = new FileReader();
+    reader.onload = function() {
+      var img = new Image();
+      img.onload = function() {
+        // Vision-quality canvas: max 1024px, jpeg @ 0.8
+        var canvas = document.createElement('canvas');
+        var maxDim = 1024;
+        var w = img.width, h = img.height;
+        if (w > maxDim || h > maxDim) {
+          if (w > h) { h = Math.round(h * maxDim / w); w = maxDim; }
+          else { w = Math.round(w * maxDim / h); h = maxDim; }
+        }
+        canvas.width = w; canvas.height = h;
+        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+        var base64 = canvas.toDataURL('image/jpeg', 0.8).split(',')[1];
+
+        // Storage thumbnail: max 256px, jpeg @ 0.4 — kept small so it can be
+        // embedded in conversations.content without bloating the DB.
+        var thumbCanvas = document.createElement('canvas');
+        var thumbMax = 256;
+        var tw = img.width, th = img.height;
+        if (tw > thumbMax || th > thumbMax) {
+          if (tw > th) { th = Math.round(th * thumbMax / tw); tw = thumbMax; }
+          else { tw = Math.round(tw * thumbMax / th); th = thumbMax; }
+        }
+        thumbCanvas.width = tw; thumbCanvas.height = th;
+        thumbCanvas.getContext('2d').drawImage(img, 0, 0, tw, th);
+        var thumbDataUrl = thumbCanvas.toDataURL('image/jpeg', 0.4);
+        var thumbB64 = thumbDataUrl.split(',')[1];
+
+        _pendingImage = {
+          base64: base64,
+          name: file.name || ('paste-' + Date.now() + '.jpg'),
+          thumb: thumbDataUrl,    // for inline render in result panel
+          thumb_b64: thumbB64     // for server-side storage in conversations
+        };
+        // Show chip above input
+        var existing = document.getElementById('flashImageChip');
+        if (existing) existing.remove();
+        var chip = document.createElement('div');
+        chip.id = 'flashImageChip';
+        chip.style.cssText = 'display:flex;align-items:center;gap:6px;padding:6px 10px;margin-bottom:4px;background:var(--surface-2,#1e1e22);border:1px solid var(--border);border-radius:8px;font-size:12px;color:var(--text-muted,#999)';
+        chip.innerHTML = '<img src="' + thumbDataUrl + '" style="width:32px;height:32px;border-radius:4px;object-fit:cover">' +
+          '<span style="flex:1">' + escHtml(_pendingImage.name) + '</span>' +
+          '<button onclick="_pendingImage=null;this.parentElement.remove()" style="background:none;border:none;color:var(--text-dim);cursor:pointer;font-size:16px">&times;</button>';
+        var inputArea = document.getElementById('cmdInput').parentElement;
+        inputArea.parentElement.insertBefore(chip, inputArea);
+      };
+      img.src = reader.result;
+    };
+    reader.readAsDataURL(file);
+  } else {
+    text.innerHTML = '<span style="color:var(--accent)">Extracting...</span>';
+    var reader = new FileReader();
+    reader.onload = async function() {
+      var base64 = reader.result.split(',')[1];
+      try {
+        var r = await fetch('/api/upload', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({filename: file.name, data: base64}) });
+        var data = await r.json();
+        if (data.text) {
+          document.getElementById('cmdInput').value = 'Analyze: ' + data.text.substring(0, 400);
+          text.innerHTML = '<span style="color:var(--success)">' + escHtml(file.name) + ' ready</span>';
+        } else { text.innerHTML = '<span style="color:var(--danger)">Could not extract text</span>'; }
+      } catch(err) { text.innerHTML = '<span style="color:var(--danger)">Error: ' + escHtml(err.message) + '</span>'; }
+    };
+    reader.readAsDataURL(file);
+  }
+  e.target.value = '';
+}
+
+// ── Paste Clipboard ──
+async function pasteClipboard() {
+  try { var text = await navigator.clipboard.readText(); if (text) { document.getElementById('cmdInput').value = text; return; } } catch(e) {}
+  try { var r = await fetch('/api/clipboard'); var data = await r.json(); if (data.content) document.getElementById('cmdInput').value = data.content.substring(0, 500); } catch(e) {}
+}
+
+// ── Trigger Guide & Skills Editor ──
+var _triggerData = null;
+async function loadTriggerGuide() {
+  try {
+    var r = await fetch('/api/triggers');
+    _triggerData = await r.json();
+    // Hotkeys
+    var hkEl = document.getElementById('hotkeysList');
+    if (hkEl && _triggerData.hotkeys) {
+      hkEl.innerHTML = _triggerData.hotkeys.map(function(h) {
+        return '<div class="hotkey-card"><span class="hotkey-key">' + escHtml(h.key) + '</span><span class="hotkey-action">' + escHtml(h.action) + '</span></div>';
+      }).join('');
+    }
+    // Skills
+    renderSkillCards(_triggerData.skills);
+    var cnt = document.getElementById('skillCount');
+    if (cnt) cnt.textContent = '(' + _triggerData.skills.length + ' skills)';
+  } catch(e) { console.warn('Trigger guide error:', e); }
+}
+
+function renderSkillCards(skills, filter) {
+  var el = document.getElementById('skillsList');
+  if (!el) return;
+  var f = (filter || '').toLowerCase();
+  var html = skills.filter(function(s) {
+    if (!f) return true;
+    return s.name.toLowerCase().indexOf(f) >= 0 || s.description.toLowerCase().indexOf(f) >= 0 || s.triggers.join(' ').toLowerCase().indexOf(f) >= 0;
+  }).map(function(s) {
+    var trigs = s.triggers.map(function(t) { return '<span class="trig">' + escHtml(t) + '</span>'; }).join(' ');
+    var cls = s.customized ? ' customized' : '';
+    return '<div class="skill-card' + cls + '" data-skill="' + escHtml(s.name) + '">' +
+      '<div class="skill-header"><div><div class="skill-name">' + escHtml(s.name) + (s.customized ? ' <span style="color:var(--accent);font-size:10px">CUSTOM</span>' : '') + '</div>' +
+      '<div class="skill-desc">' + escHtml(s.description) + '</div></div>' +
+      '<button class="skill-edit-btn" onclick="toggleSkillEdit(\'' + escHtml(s.name) + '\')">Edit</button></div>' +
+      '<div class="skill-triggers">' + trigs + '</div>' +
+      '<div class="skill-edit-area" id="edit-' + escHtml(s.name) + '" style="display:none">' +
+      '<textarea id="ta-' + escHtml(s.name) + '">' + s.triggers.join('\n') + '</textarea>' +
+      '<div class="skill-edit-actions">' +
+      '<button class="skill-save-btn" onclick="saveSkillTriggers(\'' + escHtml(s.name) + '\')">Save</button>' +
+      '<button class="skill-reset-btn" onclick="resetSkillTriggers(\'' + escHtml(s.name) + '\')">Reset to Default</button>' +
+      '</div></div></div>';
+  }).join('');
+  el.innerHTML = html || '<div class="empty"><div class="empty-text">No skills match filter</div></div>';
+}
+
+function filterSkills(val) {
+  if (_triggerData) renderSkillCards(_triggerData.skills, val);
+}
+
+function toggleSkillEdit(name) {
+  var el = document.getElementById('edit-' + name);
+  if (el) el.style.display = el.style.display === 'none' ? 'block' : 'none';
+}
+
+async function saveSkillTriggers(name) {
+  var ta = document.getElementById('ta-' + name);
+  if (!ta) return;
+  var triggers = ta.value.split('\n').map(function(t) { return t.trim(); }).filter(Boolean);
+  if (!triggers.length) { alert('Add at least one trigger'); return; }
+  try {
+    var body = {}; body[name] = { triggers: triggers };
+    var r = await fetch('/api/triggers', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(body) });
+    var d = await r.json();
+    if (d.status === 'saved') {
+      loadTriggerGuide();
+      alert('Triggers saved! Restart CODEC (F13 off/on) to apply.');
+    }
+  } catch(e) { alert('Save failed: ' + e.message); }
+}
+
+async function resetSkillTriggers(name) {
+  if (!confirm('Reset "' + name + '" triggers to defaults?')) return;
+  try {
+    var body = {}; body[name] = { triggers: null };
+    await fetch('/api/triggers', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(body) });
+    loadTriggerGuide();
+    alert('Reset to defaults! Restart CODEC (F13 off/on) to apply.');
+  } catch(e) { alert('Reset failed: ' + e.message); }
+}
+
+// ── Init ──
+loadChat();
+setInterval(async function() {
+  try { var r = await fetch('/api/status'); var s = await r.json(); document.getElementById('statusDot').classList.toggle('on', s.alive); } catch(e) {}
+}, 10000);
+
+var deferredPrompt;
+window.addEventListener('beforeinstallprompt', function(e) { deferredPrompt = e; });
+(function(){
+  var _notifCount = 0;
+  function pollNotifCount(){
+    fetch('/api/notifications/count').then(function(r){return r.json()}).then(function(d){
+      _notifCount = d.unread||d.count||0;
+      var b=document.getElementById('notifBadge');
+      if(b){b.textContent=_notifCount;b.classList.toggle('hidden',_notifCount===0)}
+      // Update house icon dot
+      var dot=document.getElementById('menuNotifDot');
+      if(dot) dot.classList.toggle('active',_notifCount>0);
+      // Highlight notification item in side panel
+      var bell=document.getElementById('notifBellBtn');
+      if(bell) bell.classList.toggle('notif-highlight',_notifCount>0);
+    }).catch(function(){})
+  }
+  pollNotifCount();setInterval(pollNotifCount,30000);
+  // Skill-review pending count → tab badge (same cadence as notifications)
+  if(typeof refreshSkillsBadge==='function'){refreshSkillsBadge();setInterval(refreshSkillsBadge,30000);}
+  var bell=document.getElementById('notifBellBtn');
+  if(bell)bell.addEventListener('click',function(){
+    fetch('/api/notifications/read-all',{method:'POST'}).catch(function(){});
+    var b=document.getElementById('notifBadge');if(b){b.textContent='0';b.classList.add('hidden')}
+    var dot=document.getElementById('menuNotifDot');if(dot)dot.classList.remove('active');
+    bell.classList.remove('notif-highlight');
+    _notifCount=0;
+  });
+})();
+
+/* ── Phase 1 Step 3: AskUserQuestion inline answer panel ──────────────────
+   Polls /api/agents/pending_questions every 8s. When a pending question
+   appears, surfaces an inline panel at the top of the chat with the
+   question, deadline countdown, optional quick-action option buttons,
+   and a free-text textarea + Send. Strict-consent panels also show a
+   warning banner ("Type the word '<verb>' or click the matching option").
+   Per docs/PHASE1-STEP3-DESIGN.md §5.1 + §1.7. */
+(function(){
+  var POLL_MS = 8000;
+  var _seenQids = new Set();   // panels already rendered for this session
+  var _activePanels = {};      // qid → DOM element
+
+  function _fmtRemaining(deadline){
+    try{
+      var ms = new Date(deadline).getTime() - Date.now();
+      if(ms <= 0) return 'expired';
+      var mins = Math.floor(ms/60000);
+      var secs = Math.floor((ms%60000)/1000);
+      if(mins > 0) return mins+'m '+secs+'s';
+      return secs+'s';
+    }catch(e){return ''}
+  }
+
+  function _esc(s){var d=document.createElement('div');d.textContent=s||'';return d.innerHTML}
+
+  function _renderPanel(q){
+    if(_activePanels[q.id]) return;   // already rendered, just leave it
+    var host = document.getElementById('chatList') || document.body;
+    var panel = document.createElement('div');
+    panel.id = 'askuser-panel-'+q.id;
+    panel.className = 'askuser-panel'+(q.consent_strict?' askuser-strict':'');
+    panel.style.cssText = 'background:var(--surface-2,#1e1e22);border:2px solid '+(q.consent_strict?'#dc6c44':'var(--accent)')+';border-radius:10px;padding:14px 16px;margin:8px 0 16px 0;font-size:13px';
+
+    var who = q.agent ? _esc(q.agent)+' is asking' : 'CODEC is asking';
+    var strictBadge = q.consent_strict
+      ? '<span style="background:#dc6c44;color:#fff;padding:2px 6px;border-radius:4px;font-size:10px;font-weight:700;margin-left:8px">DESTRUCTIVE</span>'
+      : '';
+    var deadlineHtml = q.deadline
+      ? '<span class="askuser-countdown" data-deadline="'+_esc(q.deadline)+'" style="color:var(--text-dim);font-size:11px;float:right"></span>'
+      : '';
+
+    var optionsHtml = '';
+    if(Array.isArray(q.options) && q.options.length){
+      optionsHtml = '<div class="askuser-options" style="margin:8px 0;display:flex;flex-wrap:wrap;gap:6px">';
+      for(var i=0;i<q.options.length;i++){
+        var opt = q.options[i];
+        optionsHtml += '<button class="askuser-opt-btn" data-qid="'+_esc(q.id)+'" data-opt="'+_esc(opt)+'" '+
+          'style="padding:6px 12px;background:var(--accent);color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:12px">'+
+          _esc(opt)+'</button>';
+      }
+      optionsHtml += '</div>';
+    }
+
+    var verbHint = q.consent_strict
+      ? '<div style="background:#3a1f1a;border:1px solid #dc6c44;color:#dc6c44;padding:6px 10px;border-radius:6px;margin:6px 0;font-size:11px;font-weight:600">⚠ Destructive action — generic "yes" not accepted. Click an option button OR type a phrase containing the action verb.</div>'
+      : '';
+
+    panel.innerHTML =
+      '<div style="display:flex;justify-content:space-between;align-items:start;gap:8px"><div style="flex:1"><strong>'+who+'</strong>'+strictBadge+'<div style="margin:6px 0 8px 0;color:var(--text)">'+_esc(q.question)+'</div></div>'+deadlineHtml+'</div>'+
+      verbHint +
+      optionsHtml +
+      '<div style="display:flex;gap:6px;margin-top:6px"><textarea class="askuser-textarea" data-qid="'+_esc(q.id)+'" placeholder="Type your answer..." style="flex:1;min-height:36px;max-height:120px;padding:6px 8px;background:var(--surface,#0c0c0e);border:1px solid var(--border,#2a2a30);border-radius:6px;color:var(--text);font-size:13px;font-family:inherit;resize:vertical"></textarea>'+
+      '<button class="askuser-send" data-qid="'+_esc(q.id)+'" style="padding:6px 14px;background:var(--accent);color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:12px">Send</button></div>'+
+      '<div class="askuser-status" id="askuser-status-'+_esc(q.id)+'" style="margin-top:6px;font-size:11px;color:var(--text-dim);min-height:1em"></div>';
+
+    host.insertBefore(panel, host.firstChild);
+    _activePanels[q.id] = panel;
+    _seenQids.add(q.id);
+
+    // Wire up handlers.
+    panel.querySelectorAll('.askuser-opt-btn').forEach(function(btn){
+      btn.addEventListener('click', function(){_submitAnswer(btn.dataset.qid, btn.dataset.opt)});
+    });
+    panel.querySelector('.askuser-send').addEventListener('click', function(){
+      var ta = panel.querySelector('.askuser-textarea');
+      _submitAnswer(ta.dataset.qid, ta.value.trim());
+    });
+    panel.querySelector('.askuser-textarea').addEventListener('keydown', function(e){
+      if((e.metaKey||e.ctrlKey) && e.key==='Enter'){
+        e.preventDefault();
+        var ta=this; _submitAnswer(ta.dataset.qid, ta.value.trim());
+      }
+    });
+  }
+
+  function _submitAnswer(qid, answer){
+    if(!answer) return;
+    var status = document.getElementById('askuser-status-'+qid);
+    if(status) status.textContent = 'Sending...';
+    fetch('/api/agents/answer/'+encodeURIComponent(qid),{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({answer: answer, answered_via: 'pwa'}),
+    }).then(function(r){return r.json().then(function(d){return {status:r.status,body:d}})})
+      .then(function(res){
+        if(res.body && res.body.ok){
+          if(status) status.textContent = '✓ Answered. Agent unblocked.';
+          // Remove the panel after a short delay so the user sees confirmation.
+          setTimeout(function(){_removePanel(qid)}, 1200);
+        } else if(res.body && res.body.rejected){
+          if(status) status.innerHTML = '<span style="color:#dc6c44">⚠ Rejected — '+
+            _esc(res.body.reason||'try again')+'. '+
+            (res.body.remaining_attempts!=null ? res.body.remaining_attempts+' attempt(s) left.' : '')+'</span>';
+        } else {
+          if(status) status.innerHTML = '<span style="color:#dc6c44">Error: '+_esc((res.body&&res.body.error)||res.status)+'</span>';
+        }
+      }).catch(function(e){
+        if(status) status.innerHTML = '<span style="color:#dc6c44">Network error: '+_esc(e.message)+'</span>';
+      });
+  }
+
+  function _removePanel(qid){
+    var p = _activePanels[qid];
+    if(p && p.parentNode) p.parentNode.removeChild(p);
+    delete _activePanels[qid];
+  }
+
+  function _updateCountdowns(){
+    document.querySelectorAll('.askuser-countdown').forEach(function(el){
+      el.textContent = _fmtRemaining(el.dataset.deadline);
+    });
+  }
+  setInterval(_updateCountdowns, 1000);
+
+  function _pollPending(){
+    fetch('/api/agents/pending_questions').then(function(r){return r.json()})
+      .then(function(d){
+        var pending = (d && d.pending_questions) || [];
+        var seen = new Set();
+        pending.forEach(function(q){
+          seen.add(q.id);
+          _renderPanel(q);
+        });
+        // Drop panels for questions that vanished (answered/timed out elsewhere).
+        Object.keys(_activePanels).forEach(function(qid){
+          if(!seen.has(qid)) _removePanel(qid);
+        });
+      }).catch(function(){});
+  }
+  // Kick off polling after 1s so the dashboard finishes its initial paints.
+  setTimeout(function(){
+    _pollPending();
+    setInterval(_pollPending, POLL_MS);
+  }, 1000);
+})();
+
+/* ── Drag & Drop files/images into Flash ── */
+(function(){
+  var body = document.body;
+  var dragCount = 0;
+  ['dragenter','dragover'].forEach(function(ev){
+    body.addEventListener(ev, function(e){ e.preventDefault(); dragCount++; body.classList.add('dragover'); });
+  });
+  body.addEventListener('dragleave', function(e){ e.preventDefault(); dragCount--; if(dragCount<=0){dragCount=0; body.classList.remove('dragover');} });
+  body.addEventListener('drop', function(e){
+    e.preventDefault(); dragCount=0; body.classList.remove('dragover');
+    if(e.dataTransfer.files.length){
+      var dt = new DataTransfer();
+      for(var i=0;i<e.dataTransfer.files.length;i++) dt.items.add(e.dataTransfer.files[i]);
+      var fi = document.getElementById('fileInput');
+      fi.files = dt.files;
+      handleFile({target: fi});
+    }
+  });
+})();
+
+/* ── Remote Command Approval (poll + render) ── */
+(function(){
+  var banner = document.getElementById('approvalBanner');
+  var list = document.getElementById('approvalList');
+  var lastCount = 0;
+
+  function renderApprovals(approvals) {
+    if (!approvals.length) {
+      banner.style.display = 'none';
+      document.body.style.paddingTop = '';
+      return;
+    }
+    banner.style.display = 'block';
+    var html = '';
+    approvals.forEach(function(a) {
+      var cls = a.is_dangerous ? 'approval-card danger' : 'approval-card';
+      var prefix = a.is_dangerous ? '&#9888; DANGEROUS' : '&#9889; Approval';
+      html += '<div class="' + cls + '">'
+        + '<div style="flex:1"><span class="label">' + prefix + '</span>'
+        + '<div class="cmd">' + (a.command||'').replace(/</g,'&lt;').substring(0,120) + '</div>'
+        + '<div class="explain">This will: ' + (a.explanation||'').replace(/</g,'&lt;').substring(0,120) + '</div></div>'
+        + '<button class="approval-btn allow" onclick="approvalAction(\'' + a.id + '\',\'allow\')">&#10003; Allow</button>'
+        + '<button class="approval-btn deny" onclick="approvalAction(\'' + a.id + '\',\'deny\')">&#10007; Deny</button>'
+        + '</div>';
+    });
+    list.innerHTML = html;
+    // Adjust body padding so content isn't hidden
+    requestAnimationFrame(function(){ document.body.style.paddingTop = banner.offsetHeight + 'px'; });
+  }
+
+  window.approvalAction = function(id, action) {
+    fetch('/api/approvals/' + id + '/' + action, { method: 'POST' })
+      .then(function(r){ return r.json(); })
+      .then(function(){ pollApprovals(); })
+      .catch(function(e){ console.error('Approval action failed:', e); });
+  };
+
+  function pollApprovals() {
+    fetch('/api/approvals').then(function(r){ return r.json(); })
+      .then(function(d) {
+        var approvals = d.approvals || [];
+        renderApprovals(approvals);
+        // Play sound on new approval
+        if (approvals.length > lastCount && lastCount >= 0) {
+          try { new Audio('data:audio/wav;base64,UklGRl9vT19teleGlhVEVYdFNvZnR3YXJlAGRhdGE=').play().catch(function(){}); } catch(e){}
+          if (Notification && Notification.permission === 'granted') {
+            var a = approvals[0];
+            new Notification('CODEC — ' + (a.is_dangerous ? 'DANGEROUS' : 'Approval needed'), {
+              body: a.command.substring(0, 80) + '\n' + a.explanation.substring(0, 60),
+              icon: '/static/icon-192.png',
+              tag: 'codec-approval-' + a.id,
+              requireInteraction: true
+            });
+          }
+        }
+        lastCount = approvals.length;
+      }).catch(function(){});
+  }
+
+  // Request notification permission
+  if (Notification && Notification.permission === 'default') {
+    Notification.requestPermission();
+  }
+
+  pollApprovals();
+  setInterval(pollApprovals, 3000);  // Poll every 3 seconds
+})();
+
+// ── Sparkle-compatible update banner ──────────────────────────────────────────
+var _updateInfo = null;
+async function checkForUpdate(){
+  if (sessionStorage.getItem('codec-update-dismissed') === '1') return;
+  try{
+    var r = await fetch('/api/update/check');
+    if(!r.ok) return;
+    var d = await r.json();
+    if(d && d.update_available){
+      _updateInfo = d;
+      var b = document.getElementById('updateBanner');
+      var t = document.getElementById('updateBannerText');
+      if(t) t.innerHTML = 'CODEC <strong>'+escapeHtml(d.latest)+'</strong> is available '
+        + '<span style="opacity:.6">(you have '+escapeHtml(d.current||'?')+')</span>';
+      if(b) b.style.display = 'flex';
+    }
+  }catch(e){/* best-effort */}
+}
+async function downloadUpdate(){
+  var btn = document.getElementById('updateBannerBtn');
+  if(btn){ btn.disabled = true; btn.textContent = 'Downloading…'; }
+  try{
+    var r = await fetch('/api/update/download', {method:'POST'});
+    var d = await r.json();
+    if(d && d.ok){
+      if(typeof showToast === 'function') showToast('Update downloaded + verified — opening in Finder');
+      if(btn){ btn.textContent = 'Downloaded ✓'; }
+    }else{
+      if(typeof showToast === 'function') showToast('Update failed: ' + (d.error||'unknown'));
+      if(btn){ btn.disabled = false; btn.textContent = 'Retry'; }
+    }
+  }catch(e){
+    if(typeof showToast === 'function') showToast('Update error: ' + e);
+    if(btn){ btn.disabled = false; btn.textContent = 'Retry'; }
+  }
+}
+function dismissUpdate(e){
+  if(e) e.preventDefault();
+  try{ sessionStorage.setItem('codec-update-dismissed','1'); }catch(_){}
+  var b = document.getElementById('updateBanner'); if(b) b.style.display='none';
+}
+function escapeHtml(s){ return String(s==null?'':s).replace(/[&<>"']/g, function(c){
+  return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
+setTimeout(checkForUpdate, 1500);            // on load
+setInterval(checkForUpdate, 6*60*60*1000);   // re-check every 6h
+</script>
+<div class="webcam-pip" id="webcamPip">
+  <img id="pipVideo" alt="Mac Webcam" onclick="expandPip()" style="cursor:pointer" />
+  <div class="pip-bar">
+    <button class="pip-btn snap-btn" onclick="snapFromPip()" title="Snapshot + Analyze"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="4"/></svg></button>
+    <button class="pip-btn" onclick="savePipFrame()" title="Save photo"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/></svg></button>
+    <button class="pip-btn" onclick="expandPip()" title="Expand / Shrink"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg></button>
+    <button class="pip-btn" onclick="closeWebcamPip()" title="Close"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+  </div>
+</div>
+</body>
+</html>

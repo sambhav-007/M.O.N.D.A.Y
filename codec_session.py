@@ -1,0 +1,1001 @@
+"""CODEC Session Runner — executes agent tasks in isolated subprocess.
+
+Replaces the L.append string-building pattern with a real importable module.
+All session functionality (agent loop, TTS, screenshot, corrections, queue,
+streaming, command preview) is preserved.
+"""
+import os
+import sys
+import json
+import time
+import re
+import sqlite3
+import tempfile
+import subprocess
+import threading
+import base64
+import resource
+import atexit
+import select
+import logging
+from datetime import datetime
+
+# Audit emits route through the unified envelope (schema:1) per
+# docs/PHASE1-STEP1-DESIGN.md. log_event is now a real adapter, not a no-op.
+from codec_audit import log_event, _cmd_hash, _truncate, _PREVIEW_MAX
+
+log = logging.getLogger("codec_session")
+
+
+# ── Named Constants ─────────────────────────────────────────────────────────
+MAX_AGENT_STEPS = 8           # Maximum steps per agent loop
+COMPACTION_THRESHOLD = 22     # History length that triggers compaction
+MAX_RECENT_CONTEXT = 5        # Recent messages kept raw during compaction
+SELECT_TIMEOUT_SEC = 0.3      # stdin select() polling interval
+MEMORY_LIMIT_MB = 512         # RLIMIT_AS cap (Linux only)
+CPU_LIMIT_SEC = 120           # RLIMIT_CPU hard cap
+
+
+# ── Resource Limits ──────────────────────────────────────────────────────────
+
+def _apply_resource_limits():
+    try:
+        # RLIMIT_AS not available on macOS — only set CPU limit
+        if hasattr(resource, "RLIMIT_AS"):
+            _mem = MEMORY_LIMIT_MB * 1024 * 1024
+            resource.setrlimit(resource.RLIMIT_AS, (_mem, _mem))
+        resource.setrlimit(resource.RLIMIT_CPU, (CPU_LIMIT_SEC, CPU_LIMIT_SEC))
+    except Exception as e:
+        log.warning(f"Resource limit setup failed: {e}")
+
+
+# ── Screen Keywords ──────────────────────────────────────────────────────────
+
+SCREEN_KW = [
+    "look at my screen", "look at the screen", "what's on my screen",
+    "whats on my screen", "read my screen", "see my screen", "screen",
+    "what am i looking at", "what do you see", "look at this",
+]
+
+CORRECTION_WORDS = [
+    "no i meant", "not that", "wrong", "i meant", "actually i want",
+    "thats not right", "no no", "no open", "i said", "please use",
+]
+
+
+def needs_screen(t):
+    return any(k in t.lower() for k in SCREEN_KW)
+
+
+# ── Helpers ──────────────────────────────────────────────────────────────────
+
+def strip_think(t):
+    return re.sub(r"<think>.*?</think>", "", t, flags=re.DOTALL).strip()
+
+
+# A-12 (PR-3E): local `extract_content` removed — its only caller was `qwen_call`,
+# now migrated to codec_llm.call (which owns the canonical content→reasoning
+# extraction). `strip_think` above is kept; qwen_stream still uses it.
+
+
+def clean_resp(text):
+    t = text.strip()
+    for p in ["Done.", "Done:", "Done,", "Done "]:
+        if t.startswith(p):
+            t = t[len(p) :].strip()
+    if t.startswith("[") and t.endswith("]"):
+        t = t[1:-1].strip()
+    return t or text
+
+
+# ── Session Class ────────────────────────────────────────────────────────────
+
+class Session:
+    """A single interactive CODEC agent session."""
+
+    def __init__(
+        self,
+        sys_msg: str,
+        session_id: str,
+        qwen_base_url: str,
+        qwen_model: str,
+        qwen_vision_url: str,
+        qwen_vision_model: str,
+        tts_voice: str,
+        llm_api_key: str,
+        llm_kwargs: dict,
+        llm_provider: str,
+        tts_engine: str,
+        kokoro_url: str,
+        kokoro_model: str,
+        db_path: str,
+        task_queue: str,
+        session_alive: str,
+        streaming: bool,
+        agent_name: str,
+        key_voice: str = "f18",
+        key_text: str = "f16",
+    ):
+        self.sys_msg = sys_msg
+        self.session_id = session_id
+        self.qwen_base_url = qwen_base_url
+        self.qwen_model = qwen_model
+        self.qwen_vision_url = qwen_vision_url
+        self.qwen_vision_model = qwen_vision_model
+        self.tts_voice = tts_voice
+        self.llm_api_key = llm_api_key
+        self.llm_kwargs = llm_kwargs
+        self.llm_provider = llm_provider
+        self.tts_engine = tts_engine
+        self.kokoro_url = kokoro_url
+        self.kokoro_model = kokoro_model
+        self.db_path = db_path
+        self.task_queue = task_queue
+        self.session_alive = session_alive
+        self.streaming = streaming
+        self.agent_name = agent_name
+        self.key_voice = key_voice
+        self.key_text = key_text
+        self.h = []  # conversation history
+
+        self.AGENT_SYS = f"""You are {agent_name}, an AI agent with FULL access to a Mac Studio M1 Ultra.
+You can execute bash commands and AppleScript to accomplish any task.
+You can also SEE the screen (via screencapture + vision) and CONTROL the mouse cursor (via pyautogui).
+To click something on screen, run bash: python3.13 -c "import sys; sys.path.insert(0,'{os.path.dirname(os.path.abspath(__file__))}/skills'); from mouse_control import run; print(run('click the <element>'))"
+RESPOND IN THIS EXACT JSON FORMAT:
+{{ "thought": "brief plan", "action": "bash" or "applescript" or "done", "code": "command to execute", "summary": "what you did (only when action is done)" }}
+RULES:
+1. For URLs: bash open command. For apps: applescript.
+2. Max 8 steps. Execute each fully. Dont say done until ALL complete.
+3. For screen/mouse requests: use the mouse_control skill via python3.13 as shown above.
+ALWAYS respond with valid JSON only.
+
+SAFETY RULES:
+- Dangerous commands (rm, sudo, etc.) will trigger a confirmation dialog on screen.
+  The user must click Allow/Deny. Just execute the command — the safety system handles confirmation.
+- If a command returns "Command blocked by user" or "BLOCKED", tell the user it was blocked.
+- NEVER hallucinate success. If a command fails or is blocked, report the EXACT error honestly.
+- NEVER claim you performed an action you did not actually execute.
+- NEVER say "done" for a task unless you actually ran the command AND got a successful result.
+- When the user confirms a previous request (e.g. "yes delete it"), recall the context and execute."""
+
+        # Dangerous command patterns — single source of truth in codec_config
+        _repo_dir = os.path.dirname(os.path.abspath(__file__))
+        if _repo_dir not in sys.path:
+            sys.path.insert(0, _repo_dir)
+        from codec_config import DANGEROUS_PATTERNS, is_dangerous
+        self.DANGEROUS = [p.lower() for p in DANGEROUS_PATTERNS]
+        self._is_dangerous = is_dangerous
+
+        self.SAFE_CMDS = [
+            "sqlite3", "echo ", "cat ", "ls ", "pwd", "date", "uptime",
+            "whoami", "sw_vers", "which ", "head ", "tail ", "wc ",
+            "grep ", "screencapture", "defaults read", "open -a",
+            "open http", "osascript -e 'set volume", "osascript -e 'get volume",
+            "afplay ", "python3 -c \"import", "pmset", "brightness",
+            "osascript -e 'tell application",
+        ]
+
+        self.ACTION_WORDS = [
+            "create", "open", "delete", "move", "copy", "search", "find",
+            "run", "install", "download", "check", "list", "show", "make",
+            "build", "fix", "update", "write", "read", "send", "get",
+            "set", "start", "stop",
+        ]
+
+    # ── Cleanup ──────────────────────────────────────────────────────────
+
+    def cleanup(self):
+        try:
+            os.unlink(self.session_alive)
+        except Exception as e:
+            log.warning(f"Session alive file cleanup failed: {e}")
+        # Regression fix: persist conversation history to DB so the
+        # Session.run() next-start path that loads the last 10 rows
+        # (line 881-893) actually has fresh data to load. Mirrors the
+        # legacy codec_core.build_session_script pattern that the
+        # codec_session refactor accidentally dropped. System messages
+        # are filtered (callers don't want the sys prompt rehydrated),
+        # and content is truncated to 500 chars to match the legacy
+        # schema constraint.
+        # B2 / SR-20: `with sqlite3.connect()` context manager so the
+        # connection commits or rolls back automatically and closes even
+        # on exception. Was: raw `connect()` + manual `close()` in the
+        # try body — if execute() raised between connect and close, the
+        # connection leaked. Same fix applied at the 3 other connect
+        # sites in this file.
+        try:
+            with sqlite3.connect(self.db_path, timeout=5.0) as c:
+                c.execute("PRAGMA busy_timeout=5000")
+                for msg in self.h:
+                    if msg.get("role") == "system":
+                        continue
+                    c.execute(
+                        "INSERT INTO conversations "
+                        "(session_id, timestamp, role, content) VALUES (?,?,?,?)",
+                        (
+                            self.session_id,
+                            datetime.now().isoformat(),
+                            msg["role"],
+                            msg["content"][:500],
+                        ),
+                    )
+                # `with sqlite3.connect(...)` auto-commits on clean exit and
+                # auto-rolls-back on exception. No explicit close() needed.
+        except Exception as e:
+            log.warning(f"Session conversation persist failed: {e}")
+        print("[C] Session closed.")
+
+    # ── Screenshot ───────────────────────────────────────────────────────
+
+    def screenshot_ctx(self):
+        # H-7-class (PR-4H): unlink in finally so a screencapture timeout / vision
+        # error doesn't leak the PNG (the old success-path-only unlink skipped
+        # cleanup on every failure).
+        tmp_png = None
+        try:
+            tmp = tempfile.NamedTemporaryFile(suffix=".png", delete=False)
+            tmp_png = tmp.name
+            tmp.close()
+            subprocess.run(["screencapture", "-x", tmp_png], timeout=5)
+            if not os.path.exists(tmp_png) or os.path.getsize(tmp_png) < 1000:
+                return ""
+            with open(tmp_png, "rb") as f:
+                ib = base64.b64encode(f.read()).decode()
+            print("[C] Reading screen...")
+            # A-11 (PR-3E): canonical vision helper. Was local-Qwen-VL only here;
+            # now gains the Gemini-Flash fallback for free (config-gated).
+            import codec_vision
+            return codec_vision.describe_sync(
+                ib, "Read all visible text. Include app name and content. Raw text only.",
+                mime="image/png", max_tokens=800)[:2000]
+        except Exception as e:
+            log.warning(f"Screenshot capture or vision analysis failed: {e}")
+        finally:
+            if tmp_png:
+                try:
+                    os.unlink(tmp_png)
+                except OSError:
+                    pass
+        return ""
+
+    # ── TTS ──────────────────────────────────────────────────────────────
+
+    def speak(self, text):
+        print("[TTS] Speaking: " + text[:60])
+        try:
+            clean = re.sub(r"[*#`]", "", text[:300]).replace('"', "").replace("'", "").strip()
+            if not clean:
+                return
+            if self.tts_engine == "disabled":
+                return
+            if self.tts_engine == "macos_say":
+                subprocess.Popen(["say", "-v", self.tts_voice, clean])
+                return
+            import requests
+            r = requests.post(
+                self.kokoro_url,
+                json={"model": self.kokoro_model, "input": clean, "voice": self.tts_voice},
+                stream=True,
+                timeout=20,
+            )
+            if r.status_code == 200:
+                tmp = tempfile.NamedTemporaryFile(suffix=".mp3", delete=False)
+                for chunk in r.iter_content(4096):
+                    tmp.write(chunk)
+                tmp.close()
+                # H-9: afplay is fire-and-forget; without this each TTS utterance
+                # leaked one mp3 to /tmp. Spawn a one-shot daemon thread that waits
+                # for playback to finish, then unlinks the file.
+                proc = subprocess.Popen(["afplay", tmp.name])
+
+                def _cleanup_after_play(p=proc, path=tmp.name):
+                    try:
+                        p.wait()
+                    except Exception:
+                        pass
+                    try:
+                        os.unlink(path)
+                    except OSError:
+                        pass
+                threading.Thread(target=_cleanup_after_play, daemon=True).start()
+        except Exception as e:
+            log.warning(f"TTS playback failed: {e}")
+
+    # ── LLM Calls ────────────────────────────────────────────────────────
+
+    def qwen_call(self, messages):
+        # A-12 (PR-3E): canonical codec_llm.call (3 retries + backoff, content→
+        # reasoning extraction, <think> strip) — was an inline chat/completions POST.
+        import codec_llm
+        return codec_llm.call(
+            messages, base_url=self.qwen_base_url, model=self.qwen_model,
+            api_key=self.llm_api_key, max_tokens=500, temperature=0.5,
+            timeout=90, retries=3, extra_kwargs=self.llm_kwargs,
+        )
+
+    def qwen_stream(self, messages):
+        # A-12 (PR-3E-2): canonical codec_llm.stream replaces the inline SSE
+        # POST + iter_lines + delta parse. stream() yields RAW deltas (it never
+        # raises), so we keep the live stdout write here and strip_think() the
+        # accumulated result — exact parity. An empty stream (non-200, conn
+        # error, or no content) falls back to the migrated non-streaming
+        # qwen_call (slightly broader than the old non-200-only fallback).
+        import codec_llm
+        try:
+            full = ""
+            got = False
+            for delta in codec_llm.stream(
+                messages, base_url=self.qwen_base_url, model=self.qwen_model,
+                api_key=self.llm_api_key, max_tokens=500, temperature=0.5,
+                timeout=90, extra_kwargs=self.llm_kwargs,
+            ):
+                got = True
+                sys.stdout.write(delta)
+                sys.stdout.flush()
+                full += delta
+            print()
+            if got:
+                return strip_think(full).strip()
+            return self.qwen_call(messages)
+        except Exception as e:
+            log.warning(f"Streaming LLM call failed, falling back to non-streaming: {e}")
+            return self.qwen_call(messages)
+
+    # ── Command Explanation ──────────────────────────────────────────────
+
+    _CMD_EXPLANATIONS = {
+        "ls": "List files and directories",
+        "rm": "Delete files or folders",
+        "mv": "Move or rename files",
+        "cp": "Copy files or folders",
+        "cat": "Display file contents",
+        "grep": "Search text inside files",
+        "find": "Search for files by name or attributes",
+        "mkdir": "Create a new directory",
+        "rmdir": "Remove an empty directory",
+        "chmod": "Change file permissions",
+        "chown": "Change file ownership",
+        "curl": "Download or send data to a URL",
+        "wget": "Download a file from the web",
+        "pip": "Install or manage Python packages",
+        "pip3": "Install or manage Python packages",
+        "brew": "Install or manage macOS packages (Homebrew)",
+        "npm": "Install or manage Node.js packages",
+        "npx": "Run a Node.js package binary",
+        "git": "Run a Git version-control command",
+        "python": "Execute a Python script",
+        "python3": "Execute a Python script",
+        "open": "Open a file or application on macOS",
+        "kill": "Terminate a running process",
+        "killall": "Terminate all processes with a given name",
+        "ps": "Show running processes",
+        "df": "Show disk space usage",
+        "du": "Show directory size",
+        "top": "Show real-time process activity",
+        "htop": "Show real-time process activity",
+        "ssh": "Connect to a remote server",
+        "scp": "Copy files to/from a remote server",
+        "rsync": "Sync files locally or to a remote server",
+        "tar": "Create or extract archive files",
+        "zip": "Compress files into a zip archive",
+        "unzip": "Extract a zip archive",
+        "sudo": "Run a command with admin privileges",
+        "cd": "Change working directory",
+        "echo": "Print text to the terminal",
+        "touch": "Create an empty file or update timestamp",
+        "head": "Show the first lines of a file",
+        "tail": "Show the last lines of a file",
+        "sed": "Find and replace text in files",
+        "awk": "Process and transform text data",
+        "sort": "Sort lines of text",
+        "wc": "Count lines, words, or characters",
+        "osascript": "Run an AppleScript command on macOS",
+        "defaults": "Read or write macOS system preferences",
+        "launchctl": "Manage macOS background services",
+        "pm2": "Manage Node.js process manager",
+        "docker": "Manage Docker containers",
+        "systemctl": "Manage system services (Linux)",
+        "crontab": "Edit scheduled tasks",
+        "xattr": "Manage extended file attributes on macOS",
+        "diskutil": "Manage disks and volumes on macOS",
+        "networksetup": "Configure macOS network settings",
+        "say": "Speak text aloud on macOS",
+        "pbcopy": "Copy text to the clipboard",
+        "pbpaste": "Paste text from the clipboard",
+        "caffeinate": "Prevent the Mac from sleeping",
+        "softwareupdate": "Check for macOS software updates",
+    }
+
+    def _explain_command(self, code):
+        """Return a plain-English explanation of what a shell command does."""
+        code_stripped = code.strip()
+        # Handle pipes/chains — explain the first command
+        first_cmd = re.split(r'[|;&]', code_stripped)[0].strip()
+        parts = first_cmd.split()
+        if not parts:
+            return "Run an empty command"
+
+        base = os.path.basename(parts[0])
+        # Strip leading sudo
+        if base == "sudo" and len(parts) > 1:
+            base = os.path.basename(parts[1])
+            parts = parts[1:]
+
+        explanation = self._CMD_EXPLANATIONS.get(base, f"Run '{base}'")
+
+        # Add specifics based on arguments
+        args_str = " ".join(parts[1:])
+        if args_str:
+            # Detect common dangerous flags
+            danger_flags = []
+            if "-rf" in args_str or "-fr" in args_str:
+                danger_flags.append("recursively and forcefully")
+            if "--force" in args_str:
+                danger_flags.append("forcefully")
+            if "--no-preserve-root" in args_str:
+                danger_flags.append("WITHOUT root protection")
+
+            target = parts[-1] if len(parts) > 1 else ""
+            flag_note = f" ({', '.join(danger_flags)})" if danger_flags else ""
+
+            if base in ("rm", "mv", "cp", "chmod", "chown", "cat", "head", "tail"):
+                return f"{explanation}{flag_note} targeting: {target}"
+            elif base in ("curl", "wget"):
+                urls = [p for p in parts[1:] if p.startswith("http")]
+                if urls:
+                    return f"{explanation}: {urls[0][:80]}"
+            elif base in ("pip", "pip3", "npm", "brew"):
+                if len(parts) > 1:
+                    return f"{explanation} — {parts[1]} {' '.join(parts[2:3])}"
+            elif base == "git":
+                if len(parts) > 1:
+                    return f"{explanation} — git {parts[1]}"
+            elif base in ("kill", "killall"):
+                return f"{explanation}: {args_str}"
+            elif base == "open":
+                return f"{explanation}: {target}"
+
+            if flag_note:
+                return f"{explanation}{flag_note} on: {args_str[:60]}"
+
+        has_pipe = "|" in code_stripped
+        has_chain = "&&" in code_stripped or ";" in code_stripped
+        suffix = ""
+        if has_pipe:
+            suffix = " (piped to other commands)"
+        elif has_chain:
+            suffix = " (chained with other commands)"
+
+        return explanation + suffix
+
+    def _register_remote_approval(self, action, code, is_danger=False):
+        """Register approval in shared state + push notification. Returns approval_id."""
+        import uuid as _uuid
+        approval_id = _uuid.uuid4().hex[:12]
+        explanation = self._explain_command(code)
+        try:
+            from routes._shared import _pending_approvals, _approval_lock, _save_notification
+            with _approval_lock:
+                _pending_approvals[approval_id] = {
+                    "command": code[:300],
+                    "action": action,
+                    "is_dangerous": is_danger,
+                    "explanation": explanation,
+                    "timestamp": time.time(),
+                    "status": "pending",
+                }
+            prefix = "DANGEROUS" if is_danger else "Approval needed"
+            title = f"CODEC — {prefix}"
+            body = f"Command: {code[:120]}\nThis will: {explanation}"
+            _save_notification(title, body, status="warning")
+            log.info("Remote approval registered: %s", approval_id)
+        except Exception as e:
+            log.debug("Could not register remote approval: %s", e)
+        return approval_id
+
+    def _check_remote_approval(self, approval_id):
+        """Check if remote approval was granted. Returns 'pending', 'allowed', or 'denied'."""
+        try:
+            from routes._shared import _pending_approvals, _approval_lock
+            with _approval_lock:
+                a = _pending_approvals.get(approval_id)
+                if a:
+                    return a["status"]
+        except Exception:
+            pass
+        return "pending"
+
+    def _cleanup_approval(self, approval_id):
+        """Remove approval from pending list."""
+        try:
+            from routes._shared import _pending_approvals, _approval_lock
+            with _approval_lock:
+                _pending_approvals.pop(approval_id, None)
+        except Exception:
+            pass
+
+    # ── Command Execution ────────────────────────────────────────────────
+
+    def _cmd_preview(self, action, code):
+        try:
+            import tkinter as tk
+        except ImportError:
+            return True  # auto-approve if no tkinter available
+        approval_id = self._register_remote_approval(action, code, is_danger=False)
+        explanation = self._explain_command(code)
+        result = {"allow": False, "decided": False}
+        root = tk.Tk()
+        root.title("CODEC")
+        root.overrideredirect(True)
+        root.attributes("-topmost", True)
+        root.configure(bg="#0a0a0a")
+        sw = root.winfo_screenwidth()
+        sh = root.winfo_screenheight()
+        w, h = 500, 250
+        root.geometry(f"{w}x{h}+{(sw - w) // 2}+{(sh - h) // 2}")
+        root.focus_force()
+
+        # Top section: header + command + explanation on canvas
+        cv = tk.Canvas(root, bg="#0a0a0a", highlightthickness=0, width=w, height=175)
+        cv.pack(side="top", fill="x")
+        cv.create_rectangle(1, 1, w - 1, 173, outline="#E8711A", width=1)
+        cv.create_text(w // 2, 20, text="C O D E C  —  Command Preview", fill="#E8711A", font=("Helvetica", 13, "bold"))
+        cv.create_line(10, 38, w - 10, 38, fill="#333")
+        lbl = action.upper() + ": " + code[:120]
+        cv.create_text(w // 2, 70, text=lbl, fill="#e0e0e0", font=("SF Mono", 11), width=w - 40)
+        cv.create_line(10, 105, w - 10, 105, fill="#333")
+        cv.create_text(w // 2, 115, text="This will:", fill="#E8711A", font=("Helvetica", 11, "bold"), anchor="n")
+        cv.create_text(w // 2, 138, text=explanation[:120], fill="#aaddff", font=("Helvetica", 12), width=w - 50, anchor="n")
+
+        def _close(allowed):
+            if result["decided"]:
+                return
+            result["decided"] = True
+            result["allow"] = allowed
+            try:
+                root.quit()
+            except Exception:
+                pass
+
+        # Poll for remote approval every 2 seconds
+        def _poll_remote():
+            if result["decided"]:
+                return
+            status = self._check_remote_approval(approval_id)
+            if status == "allowed":
+                _close(True)
+            elif status == "denied":
+                _close(False)
+            else:
+                root.after(2000, _poll_remote)
+
+        # Bottom section: buttons in a frame
+        btn_frame = tk.Frame(root, bg="#0a0a0a")
+        btn_frame.pack(side="top", pady=15)
+        abtn = tk.Button(btn_frame, text="\u2713 Allow", bg="#00cc55", fg="#000", font=("Helvetica", 13, "bold"), border=0, padx=20, pady=6, command=lambda: _close(True))
+        abtn.pack(side="left", padx=10)
+        dbtn = tk.Button(btn_frame, text="\u2717 Deny", bg="#888", fg="#000", font=("Helvetica", 13, "bold"), border=0, padx=20, pady=6, command=lambda: _close(False))
+        dbtn.pack(side="left", padx=10)
+        root.protocol("WM_DELETE_WINDOW", lambda: _close(False))
+        root.after(60000, lambda: _close(False))  # 60s timeout
+        root.after(1000, _poll_remote)  # start polling for remote approval
+        try:
+            root.mainloop()
+        except Exception as e:
+            log.debug("Security dialog mainloop exited: %s", e)
+        # Destroy window AFTER mainloop exits (root.after won't fire after quit)
+        try:
+            root.destroy()
+        except Exception:
+            pass
+        self._cleanup_approval(approval_id)
+        return result["allow"]
+
+    def _danger_preview(self, action, code):
+        """Show a RED warning preview for dangerous commands. Returns True if user approves."""
+        try:
+            import tkinter as tk
+        except ImportError:
+            return False  # deny dangerous commands if no tkinter for safety
+        approval_id = self._register_remote_approval(action, code, is_danger=True)
+        explanation = self._explain_command(code)
+        result = {"allow": False, "decided": False}
+        root = tk.Tk()
+        root.title("CODEC — DANGER")
+        root.overrideredirect(True)
+        root.attributes("-topmost", True)
+        root.configure(bg="#0a0a0a")
+        sw = root.winfo_screenwidth()
+        sh = root.winfo_screenheight()
+        w, h = 540, 280
+        root.geometry(f"{w}x{h}+{(sw - w) // 2}+{(sh - h) // 2}")
+        root.focus_force()
+
+        cv = tk.Canvas(root, bg="#0a0a0a", highlightthickness=0, width=w, height=195)
+        cv.pack(side="top", fill="x")
+        cv.create_rectangle(1, 1, w - 1, 193, outline="#ff3333", width=2)
+        cv.create_text(w // 2, 22, text="\u26a0  DANGEROUS COMMAND", fill="#ff3333", font=("Helvetica", 14, "bold"))
+        cv.create_line(10, 42, w - 10, 42, fill="#553333")
+        lbl = action.upper() + ": " + code[:140]
+        cv.create_text(w // 2, 72, text=lbl, fill="#e0e0e0", font=("SF Mono", 11), width=w - 40)
+        cv.create_line(10, 108, w - 10, 108, fill="#553333")
+        cv.create_text(w // 2, 120, text="This will:", fill="#ff6666", font=("Helvetica", 11, "bold"), anchor="n")
+        cv.create_text(w // 2, 143, text=explanation[:140], fill="#ffaaaa", font=("Helvetica", 12), width=w - 50, anchor="n")
+        cv.create_text(w // 2, 178, text="This command can delete data. Are you sure?", fill="#ff9999", font=("Helvetica", 11))
+
+        def _close(allowed):
+            if result["decided"]:
+                return
+            result["decided"] = True
+            result["allow"] = allowed
+            try:
+                root.quit()
+            except Exception:
+                pass
+
+        # Poll for remote approval every 2 seconds
+        def _poll_remote():
+            if result["decided"]:
+                return
+            status = self._check_remote_approval(approval_id)
+            if status == "allowed":
+                _close(True)
+            elif status == "denied":
+                _close(False)
+            else:
+                root.after(2000, _poll_remote)
+
+        btn_frame = tk.Frame(root, bg="#0a0a0a")
+        btn_frame.pack(side="top", pady=15)
+        abtn = tk.Button(btn_frame, text="\u2713 Allow", bg="#ff3333", fg="#fff",
+                         font=("Helvetica", 13, "bold"), border=0, padx=20, pady=6, command=lambda: _close(True))
+        abtn.pack(side="left", padx=10)
+        dbtn = tk.Button(btn_frame, text="\u2717 Deny", bg="#444", fg="#fff",
+                         font=("Helvetica", 13, "bold"), border=0, padx=20, pady=6, command=lambda: _close(False))
+        dbtn.pack(side="left", padx=10)
+        root.protocol("WM_DELETE_WINDOW", lambda: _close(False))
+        root.after(60000, lambda: _close(False))  # 60s timeout
+        root.after(1000, _poll_remote)  # start polling for remote approval
+        try:
+            root.mainloop()
+        except Exception as e:
+            log.debug("Danger preview dialog mainloop exited: %s", e)
+        try:
+            root.destroy()
+        except Exception:
+            pass
+        self._cleanup_approval(approval_id)
+        return result["allow"]
+
+    def run_code(self, action, code):
+        try:
+            # ── Dangerous command check (uses word-boundary regex from codec_config) ──
+            if self._is_dangerous(code):
+                log.warning("Dangerous command flagged: %s", code.lower()[:100])
+                print(f"\n[SAFETY] \u26a0\ufe0f  FLAGGED: {code[:80]}")
+                with open(os.path.expanduser("~/.codec/audit.log"), "a") as _af:
+                    _af.write(f'[{time.strftime("%Y-%m-%dT%H:%M:%S")}] shell_flagged: {code[:200]}\n')
+                ch = _cmd_hash(code)
+                log_event("command_flagged", "codec-session",
+                          f"Command flagged: {code[:80]}",
+                          extra={"cmd_hash": ch,
+                                 "cmd_preview": _truncate(code, _PREVIEW_MAX)},
+                          outcome="denied", level="warning")
+
+                # Show danger preview dialog (works in PM2 — uses tkinter, not stdin)
+                if self._danger_preview(action, code):
+                    print("[SAFETY] User APPROVED dangerous command via dialog.")
+                    with open(os.path.expanduser("~/.codec/audit.log"), "a") as _af:
+                        _af.write(f'[{time.strftime("%Y-%m-%dT%H:%M:%S")}] APPROVED: {code[:200]}\n')
+                    log_event("command_approved", "codec-session",
+                              "Command approved",
+                              extra={"cmd_hash": ch})
+                    # Fall through to execute below
+                else:
+                    print("[SAFETY] User DENIED dangerous command via dialog.")
+                    with open(os.path.expanduser("~/.codec/audit.log"), "a") as _af:
+                        _af.write(f'[{time.strftime("%Y-%m-%dT%H:%M:%S")}] DENIED: {code[:200]}\n')
+                    log_event("command_denied", "codec-session",
+                              "Command denied",
+                              extra={"cmd_hash": ch},
+                              outcome="denied", level="warning")
+                    return "Command blocked by user. Dangerous command was denied."
+
+            # Safe commands skip preview — UNLESS shell metacharacters are
+            # present (LS-4 / SR-3). A "safe" prefix like `cat`/`echo`/`ls`
+            # followed by `;`/`&&`/`||`/`|`/redirection/cmd-sub means the
+            # actual side effect may not match the prefix at all.
+            is_safe = any(code.strip().lower().startswith(s) for s in self.SAFE_CMDS)
+            if is_safe and any(c in code for c in ";&|<>$`"):
+                is_safe = False
+            if not is_safe and not self._cmd_preview(action, code):
+                print("[PREVIEW] Command denied by user.")
+                with open(os.path.expanduser("~/.codec/audit.log"), "a") as _af:
+                    _af.write(f'[{time.strftime("%Y-%m-%dT%H:%M:%S")}] PREVIEW_DENIED: {code[:200]}\n')
+                return "Command denied by user via preview."
+
+            if action == "applescript":
+                r = subprocess.run(["osascript", "-e", code], capture_output=True, text=True, timeout=30)
+            else:
+                r = subprocess.run(["bash", "-c", code], capture_output=True, text=True, timeout=30)
+            out = r.stdout.strip()
+            err = r.stderr.strip()
+            return (out or err or "OK (no output)")[:500]
+        except subprocess.TimeoutExpired:
+            return "ERROR: Timeout"
+        except Exception as e:
+            return "ERROR: " + str(e)
+
+    # ── Agent Loop ───────────────────────────────────────────────────────
+
+    def run_agent(self, task):
+        print("\n[CODEC-Agent] Task: " + task[:100])
+        am = [
+            {"role": "system", "content": self.AGENT_SYS},
+            {"role": "user", "content": "Task: " + task},
+        ]
+        for step in range(MAX_AGENT_STEPS):
+            resp = self.qwen_call(am)
+            if not resp:
+                return "Qwen did not respond."
+            try:
+                c = resp
+                if "```json" in c:
+                    c = c.split("```json")[1].split("```")[0]
+                elif "```" in c:
+                    c = c.split("```")[1].split("```")[0]
+                data = json.loads(c.strip())
+            except Exception as e:
+                log.warning(f"Agent JSON parse failed: {e}")
+                print("CODEC: " + resp)
+                self.h.append({"role": "user", "content": task})
+                self.h.append({"role": "assistant", "content": resp})
+                return resp
+
+            act = data.get("action", "done")
+            thought = data.get("thought", "")
+            code = data.get("code", "")
+            summary = data.get("summary", "")
+
+            if thought:
+                print("  [Think] " + thought)
+            if act == "done":
+                result = summary or "Task completed."
+                print("  [Done] " + result)
+                self.h.append({"role": "user", "content": task})
+                self.h.append({"role": "assistant", "content": result})
+                return result
+            if code:
+                print("  [" + act + "] " + code[:80])
+                output = self.run_code(act, code)
+                print("  [Result] " + output[:200])
+                am.append({"role": "assistant", "content": resp})
+                am.append({"role": "user", "content": "Output: " + output + "\nContinue or done?"})
+            else:
+                am.append({"role": "assistant", "content": resp})
+                am.append({"role": "user", "content": "No code. Try again or done."})
+        return "Task completed (max steps)."
+
+    # ── Corrections ──────────────────────────────────────────────────────
+
+    def detect_correction(self, u):
+        low = u.lower()
+        if any(c in low for c in CORRECTION_WORDS) and len(self.h) >= 2:
+            lu = la = ""
+            for msg in reversed(self.h):
+                if msg["role"] == "assistant" and not la:
+                    la = msg["content"]
+                elif msg["role"] == "user" and not lu:
+                    lu = msg["content"]
+                if lu and la:
+                    break
+            if lu:
+                try:
+                    with sqlite3.connect(self.db_path, timeout=5.0) as c:
+                        c.execute("PRAGMA busy_timeout=5000")
+                        c.execute(
+                            "CREATE TABLE IF NOT EXISTS corrections "
+                            "(id INTEGER PRIMARY KEY AUTOINCREMENT, timestamp TEXT, original TEXT, corrected TEXT, context TEXT)"
+                        )
+                        c.execute(
+                            "INSERT INTO corrections (timestamp,original,corrected,context) VALUES (?,?,?,?)",
+                            (datetime.now().isoformat(), lu[:200], u[:200], la[:200]),
+                        )
+                    print("[C] Correction saved.")
+                except Exception as e:
+                    log.warning(f"Correction save to database failed: {e}")
+
+    def get_corrections(self):
+        try:
+            with sqlite3.connect(self.db_path, timeout=5.0) as c:
+                c.execute("PRAGMA busy_timeout=5000")
+                c.execute(
+                    "CREATE TABLE IF NOT EXISTS corrections "
+                    "(id INTEGER PRIMARY KEY AUTOINCREMENT, timestamp TEXT, original TEXT, corrected TEXT, context TEXT)"
+                )
+                rows = c.execute("SELECT original,corrected FROM corrections ORDER BY id DESC LIMIT 5").fetchall()
+            if rows:
+                return "\n".join(
+                    ["USER CORRECTIONS:"] + [f"M said: {o[:60]} -> corrected: {co[:60]}" for o, co in rows]
+                )
+        except Exception as e:
+            log.warning(f"Corrections retrieval from database failed: {e}")
+        return ""
+
+    # ── Ask / Process ────────────────────────────────────────────────────
+
+    def ask_q(self, u):
+        now = datetime.now().strftime("%Y-%m-%d %H:%M")
+        if needs_screen(u):
+            print("[C] Taking screenshot...")
+            ctx = self.screenshot_ctx()
+            if ctx:
+                u = u + "\n\nSCREEN CONTENT:\n" + ctx
+        self.h.append({"role": "user", "content": f"[{now}] {u}"})
+        if self.streaming:
+            sys.stdout.write("\nCODEC: ")
+            sys.stdout.flush()
+            resp = self.qwen_stream(self.h)
+        else:
+            resp = self.qwen_call(self.h)
+        if resp:
+            self.h.append({"role": "assistant", "content": resp})
+            if len(self.h) > COMPACTION_THRESHOLD:
+                try:
+                    _repo_dir2 = os.path.dirname(os.path.abspath(__file__))
+                    if _repo_dir2 not in sys.path:
+                        sys.path.insert(0, _repo_dir2)
+                    from codec_compaction import compact_context
+                    compacted = compact_context(self.h[1:], max_recent=MAX_RECENT_CONTEXT)
+                    self.h[:] = [self.h[0], {"role": "system", "content": compacted}] + self.h[-10:]
+                except Exception as e:
+                    log.warning(f"Context compaction failed, trimming history: {e}")
+                    self.h[:] = self.h[:1] + self.h[-20:]
+            return resp
+        return "Qwen busy."
+
+    def process_input(self, u):
+        print("\nM: " + u)
+        self.detect_correction(u)
+        corr = self.get_corrections()
+        if corr and self.h and self.h[0]["role"] == "system" and "CORRECTIONS" not in self.h[0]["content"]:
+            self.h[0]["content"] = self.h[0]["content"] + "\n\n" + corr
+
+        # ── Skill routing (before agent/LLM) ──
+        if len(u) < 500:
+            try:
+                from codec_dispatch import check_skill, run_skill
+                skill = check_skill(u)
+                if skill:
+                    result = run_skill(skill, u, "")
+                    if result is not None:
+                        print(f"\nCODEC: {result}")
+                        self.speak(str(result))
+                        self.h.append({"role": "user", "content": u})
+                        self.h.append({"role": "assistant", "content": str(result)})
+                        return
+            except Exception as e:
+                log.warning(f"Skill check failed: {e}")
+
+        if any(w in u.lower().split() for w in self.ACTION_WORDS):
+            done = clean_resp(self.run_agent(u))
+            print("\nCODEC: " + done)
+            self.speak(done)
+        else:
+            resp = clean_resp(self.ask_q(u))
+            if not self.streaming:
+                print("\nCODEC: " + resp)
+            self.speak(resp)
+
+    # ── Queue Check ──────────────────────────────────────────────────────
+
+    def check_queue(self):
+        if os.path.exists(self.task_queue):
+            try:
+                with open(self.task_queue) as f:
+                    data = json.load(f)
+                os.unlink(self.task_queue)
+                return data
+            except Exception as e:
+                log.warning(f"Task queue read failed: {e}")
+        return None
+
+    # ── Main Loop ────────────────────────────────────────────────────────
+
+    def run(self):
+        _apply_resource_limits()
+
+        # Write PID file
+        with open(self.session_alive, "w") as pf:
+            pf.write(str(os.getpid()))
+
+        atexit.register(self.cleanup)
+
+        # Load persistent memory
+        try:
+            with sqlite3.connect(self.db_path, timeout=5.0) as c:
+                c.execute("PRAGMA busy_timeout=5000")
+                c.execute(
+                    "CREATE TABLE IF NOT EXISTS conversations "
+                    "(id INTEGER PRIMARY KEY AUTOINCREMENT, session_id TEXT, timestamp TEXT, role TEXT, content TEXT)"
+                )
+                rows = c.execute("SELECT role,content FROM conversations ORDER BY id DESC LIMIT 10").fetchall()
+            if rows:
+                rows.reverse()
+                # Only replay real conversation turns. The `conversations` table
+                # also holds role="fact" rows (from fact_extract / memory_save);
+                # sending those to the LLM as messages is a hard 422 —
+                # "role 'fact' invalid" — which then reads as "Qwen busy". Facts
+                # stay in the DB for the memory system; they just aren't chat turns.
+                prev = [{"role": r, "content": ct} for r, ct in rows
+                        if r in ("user", "assistant", "system")]
+                print(f"[C] Loaded {len(prev)} messages from previous sessions.")
+            else:
+                prev = []
+        except Exception as e:
+            log.warning(f"Persistent memory load from database failed: {e}")
+            prev = []
+
+        self.h = [{"role": "system", "content": self.sys_msg}] + prev
+
+        # Banner
+        ss = "ON" if self.streaming else "OFF"
+        O = "\033[38;2;232;113;26m"
+        D = "\033[38;2;80;80;80m"
+        W = "\033[38;2;200;200;200m"
+        R = "\033[0m"
+        bar = '═' * 43
+        print(
+            f"{O}    ╔{bar}╗\n"
+            f"{O}    ║                                           ║\n"
+            f"{O}    ║  ██████  ██████  ██████  ███████  ██████  ║\n"
+            f"{O}    ║ ██      ██    ██ ██   ██ ██      ██       ║\n"
+            f"{O}    ║ ██      ██    ██ ██   ██ █████   ██       ║\n"
+            f"{O}    ║ ██      ██    ██ ██   ██ ██      ██       ║\n"
+            f"{O}    ║  ██████  ██████  ██████  ███████  ██████  ║\n"
+            f"{O}    ║                                   v2.1.0  ║\n"
+            f"{O}    ╠{bar}╣\n"
+            f"{O}    ║{W}  {self.key_voice.upper()} voice  {self.key_text.upper()} text  ** screen  ++ doc   {O}║\n"
+            f"{O}    ║{W}  Hey C = wake word  type exit to close    {O}║\n"
+            f"{O}    ╠{bar}╣\n"
+            f"{O}    ║{D}  Stream={ss}  Memory=ON  Skills=ON          {O}║\n"
+            f"{O}    ╚{bar}╝{R}"
+        )
+
+        # Process any queued task
+        queued = self.check_queue()
+        if queued:
+            self.process_input(queued["task"])
+
+        # Main interactive loop
+        while True:
+            queued = self.check_queue()
+            if queued:
+                self.process_input(queued["task"])
+                continue
+            sys.stdout.write("\nM: ")
+            sys.stdout.flush()
+            while True:
+                queued = self.check_queue()
+                if queued:
+                    sys.stdout.write("\r" + " " * 60 + "\r")
+                    self.process_input(queued["task"])
+                    break
+                try:
+                    ready, _, _ = select.select([sys.stdin], [], [], SELECT_TIMEOUT_SEC)
+                    if ready:
+                        u = sys.stdin.readline().strip()
+                        u = re.sub(r"\x1b\[[0-9;]*[a-zA-Z~]", "", u).strip()
+                        if not u:
+                            break
+                        if u.lower() in ["exit", "quit", "bye"]:
+                            self.cleanup()
+                            print("\n[CODEC Session ended]")
+                            sys.exit(0)
+                        self.process_input(u)
+                        break
+                except (KeyboardInterrupt, EOFError):
+                    self.cleanup()
+                    print("\n[CODEC Session ended]")
+                    sys.exit(0)

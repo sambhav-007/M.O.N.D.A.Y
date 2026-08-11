@@ -1,6 +1,5 @@
 # ─────────────────────────────────────────────────────────────────────────────
-#  Project M.O.N.D.A.Y. — Full Multi-Agent Execution Engine Requirements
-#  Course: Artificial Intelligence and Machine Learning (24CSE0316)
+#  Project M.O.N.D.A.Y. — Full Multi-Agent & CODEC Execution Engine Requirements
 # ─────────────────────────────────────────────────────────────────────────────
 
 # ── Core ML / Data Science ───────────────────────────────────────────────────
@@ -22,6 +21,11 @@ rich>=13.7.0          # Pretty console output for demo runs & interactive CLI
 # ── Real Desktop & OS Automation ────────────────────────────────────────────
 pillow>=10.2.0        # Screenshots & vision element processing
 psutil>=5.9.0         # OS process & hardware health monitoring
+pyautogui>=0.9.54     # Cross-platform mouse & keyboard automation
+pynput>=1.7.6         # Cross-platform global keyboard & mouse hooks
+pyttsx3>=2.90         # Native text-to-speech engine
+screen-brightness-control>=0.22.0 # Cross-platform screen brightness
+keyring>=24.0.0       # Secure credential storage
 
 # ── Real Document Intelligence & RAG ─────────────────────────────────────────
 pypdf>=4.0.0          # PDF text extraction
@@ -30,8 +34,14 @@ pypdf>=4.0.0          # PDF text extraction
 requests>=2.31.0      # Web HTTP client
 beautifulsoup4>=4.12.0 # Web HTML parsing & text extraction
 httpx>=0.27.0         # Async HTTP client
+websockets>=12.0      # WebSocket client/server for real-time voice & CDP
 
-# ── FastAPI Demo Server & API ────────────────────────────────────────────────
+# ── Google Workspace API Integrations ───────────────────────────────────────
+google-api-python-client>=2.100.0
+google-auth-httplib2>=0.2.0
+google-auth-oauthlib>=1.2.0
+
+# ── FastAPI Server & API ────────────────────────────────────────────────────
 fastapi>=0.111.0
 uvicorn[standard]>=0.29.0
 pydantic>=2.7.0

@@ -1,60 +1,5840 @@
 [
   {
-    "timestamp": "2026-07-29T11:01:39.073893",
+    "timestamp": "2026-08-11T11:21:40.640815",
     "action": "proactive_autonomy_scan",
     "target": "Downloads",
     "tier": 1,
     "status": "success",
     "agent": "AutonomyDaemon",
     "details": {
-      "timestamp": "2026-07-29 11:01:39",
+      "timestamp": "2026-08-11 11:21:40",
       "processed": 0,
       "total_spent": 0.0,
       "message": "I filed your recent invoices into Accounting. Processed 0 files."
     }
   },
   {
-    "timestamp": "2026-07-29T11:01:39.406292",
-    "action": "recall_memory",
-    "target": "summarize my research notes",
+    "timestamp": "2026-08-11T11:21:40.912790",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
     "tier": 1,
     "status": "success",
-    "agent": "MemoryAgent",
+    "agent": "AutonomyDaemon",
     "details": {
-      "match_count": 3
+      "timestamp": "2026-08-11 11:21:40",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
     }
   },
   {
-    "timestamp": "2026-07-29T11:01:39.422151",
-    "action": "summarize_document",
-    "target": "text snippet",
+    "timestamp": "2026-08-11T11:21:41.399162",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
     "tier": 1,
     "status": "success",
-    "agent": "DocumentAgent",
+    "agent": "AutonomyDaemon",
     "details": {
-      "word_count": 1,
-      "summary_sentences": 5
+      "timestamp": "2026-08-11 11:21:41",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
     }
   },
   {
-    "timestamp": "2026-07-29T11:01:39.442225",
-    "action": "store_memory",
-    "target": "turn_20260729_110139",
+    "timestamp": "2026-08-11T11:21:41.879691",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
     "tier": 1,
     "status": "success",
-    "agent": "MemoryAgent",
+    "agent": "AutonomyDaemon",
     "details": {
-      "id": 234,
-      "topic": "conversation_history"
+      "timestamp": "2026-08-11 11:21:41",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
     }
   },
   {
-    "timestamp": "2026-07-29T11:01:39.454295",
-    "action": "voice_speak",
-    "target": "\u2713 Summarised text snippet (1 words):\n\u2022 my",
+    "timestamp": "2026-08-11T11:21:41.993676",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
     "tier": 1,
     "status": "success",
-    "agent": "VoiceAgent",
-    "details": {}
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:21:41",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:21:42.299244",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:21:42",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:21:42.464697",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:21:42",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:21:42.694708",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:21:42",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:21:44.020072",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:21:44",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:21:44.307821",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:21:44",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:21:45.009291",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:21:45",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:21:45.251433",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:21:45",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:21:45.380465",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:21:45",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:21:45.808570",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:21:45",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:21:46.242617",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:21:46",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:21:46.470971",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:21:46",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:21:48.485740",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:21:48",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:21:49.449395",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:21:49",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:21:51.774095",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:21:51",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:21:51.992067",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:21:51",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:21:52.397832",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:21:52",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:21:52.802513",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:21:52",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:21:53.062871",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:21:53",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:21:53.465980",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:21:53",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:21:53.933300",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:21:53",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:21:54.354126",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:21:54",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:21:54.743422",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:21:54",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:21:55.195792",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:21:55",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:21:55.554797",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:21:55",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:21:55.946634",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:21:55",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:21:56.343569",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:21:56",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:21:59.421852",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:21:59",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:22:00.406276",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:22:00",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:22:00.768456",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:22:00",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:22:01.776323",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:22:01",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:22:03.173834",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:22:03",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:22:03.419898",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:22:03",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:22:03.761448",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:22:03",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:22:04.209946",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:22:04",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:22:04.437906",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:22:04",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:22:04.605830",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:22:04",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:22:04.874123",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:22:04",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:22:08.610360",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:22:08",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:22:08.821937",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:22:08",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:22:09.029808",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:22:09",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:22:09.420310",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:22:09",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:22:09.481028",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:22:09",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:22:09.795348",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:22:09",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:22:09.881811",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:22:09",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:22:10.693030",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:22:10",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:22:10.936744",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:22:10",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:22:11.418175",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:22:11",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:22:11.913432",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:22:11",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:22:12.030528",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:22:12",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:22:12.326754",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:22:12",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:22:12.497333",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:22:12",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:22:12.725310",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:22:12",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:22:14.047028",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:22:14",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:22:14.334111",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:22:14",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:22:14.334607",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:22:14",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:22:15.034385",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:22:15",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:22:15.276869",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:22:15",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:22:15.409854",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:22:15",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:22:15.830649",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:22:15",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:22:16.266377",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:22:16",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:22:16.511962",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:22:16",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:22:18.518298",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:22:18",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:22:19.488647",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:22:19",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:22:21.799114",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:22:21",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:22:22.023529",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:22:22",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:22:22.426442",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:22:22",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:22:22.829437",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:22:22",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:22:23.098203",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:22:23",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:22:23.495744",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:22:23",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:22:23.962511",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:22:23",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:22:24.386952",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:22:24",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:22:24.778195",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:22:24",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:22:25.229086",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:22:25",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:22:25.589503",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:22:25",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:22:25.975459",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:22:25",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:22:26.372136",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:22:26",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:22:29.455604",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:22:29",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:22:30.443210",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:22:30",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:22:30.813382",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:22:30",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:22:31.822619",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:22:31",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:22:33.208768",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:22:33",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:22:33.457356",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:22:33",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:22:33.800817",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:22:33",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:22:34.254474",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:22:34",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:22:34.473996",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:22:34",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:22:34.646044",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:22:34",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:22:34.905107",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:22:34",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:22:38.642727",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:22:38",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:22:38.847105",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:22:38",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:22:39.073978",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:22:39",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:22:39.455268",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:22:39",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:22:39.514119",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:22:39",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:22:39.823462",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:22:39",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:22:39.917773",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:22:39",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:22:40.747580",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:22:40",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:22:40.967887",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:22:40",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:22:41.456538",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:22:41",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:22:41.943584",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:22:41",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:22:42.063587",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:22:42",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:22:42.354455",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:22:42",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:22:42.523689",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:22:42",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:22:42.750665",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:22:42",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:22:44.072490",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:22:44",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:22:44.403161",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:22:44",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:22:45.065498",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:22:45",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:22:45.317082",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:22:45",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:22:45.437864",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:22:45",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:22:45.864260",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:22:45",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:22:46.316399",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:22:46",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:22:46.539975",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:22:46",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:22:48.559105",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:22:48",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:22:49.532751",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:22:49",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:22:51.838521",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:22:51",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:22:52.058987",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:22:52",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:22:52.456582",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:22:52",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:22:52.870388",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:22:52",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:22:53.124412",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:22:53",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:22:53.529050",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:22:53",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:22:54.013334",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:22:54",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:22:54.421310",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:22:54",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:22:54.825607",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:22:54",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:22:55.255457",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:22:55",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:22:55.622201",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:22:55",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:22:56.025894",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:22:56",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:22:56.429847",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:22:56",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:22:59.496531",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:22:59",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:23:00.488918",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:23:00",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:23:00.870849",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:23:00",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:23:01.889795",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:23:01",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:23:03.244708",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:23:03",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:23:03.499188",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:23:03",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:23:03.835185",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:23:03",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:23:04.295453",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:23:04",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:23:04.509611",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:23:04",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:23:04.703297",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:23:04",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:23:04.952281",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:23:04",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:23:08.693905",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:23:08",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:23:08.881007",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:23:08",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:23:09.100066",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:23:09",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:23:09.500858",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:23:09",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:23:09.548440",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:23:09",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:23:09.858540",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:23:09",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:23:09.961158",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:23:09",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:23:10.782805",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:23:10",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:23:11.000673",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:23:10",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:23:11.484520",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:23:11",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:23:11.988311",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:23:11",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:23:12.088962",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:23:12",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:23:12.390882",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:23:12",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:23:12.570862",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:23:12",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:23:12.783547",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:23:12",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:23:14.087327",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:23:14",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:23:14.424237",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:23:14",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:23:15.098533",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:23:15",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:23:15.346314",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:23:15",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:23:15.473541",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:23:15",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:23:15.895516",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:23:15",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:23:16.376023",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:23:16",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:23:16.570000",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:23:16",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:23:18.590719",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:23:18",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:23:19.590222",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:23:19",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:23:21.865094",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:23:21",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:23:22.106050",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:23:22",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:23:22.495444",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:23:22",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:23:22.910064",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:23:22",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:23:23.172735",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:23:23",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:23:23.569268",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:23:23",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:23:24.047439",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:23:24",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:23:24.450550",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:23:24",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:23:24.858521",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:23:24",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:23:25.305701",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:23:25",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:23:25.667843",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:23:25",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:23:26.072504",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:23:26",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:23:26.456373",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:23:26",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:23:29.536111",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:23:29",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:23:30.513325",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:23:30",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:23:30.907961",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:23:30",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:23:31.947121",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:23:31",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:23:33.276561",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:23:33",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:23:33.541087",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:23:33",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:23:33.866238",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:23:33",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:23:34.330408",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:23:34",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:23:34.568460",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:23:34",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:23:34.754119",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:23:34",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:23:35.001563",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:23:35",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:23:38.730348",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:23:38",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:23:38.917841",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:23:38",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:23:39.150907",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:23:39",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:23:39.540230",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:23:39",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:23:39.900034",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:23:39",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:23:40.004662",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:23:40",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:23:40.821694",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:23:40",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:23:41.029911",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:23:41",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:23:41.534190",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:23:41",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:23:42.022476",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:23:42",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:23:42.138667",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:23:42",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:23:42.439244",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:23:42",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:23:42.611973",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:23:42",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:23:42.829678",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:23:42",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:23:44.128111",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:23:44",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:23:44.494989",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:23:44",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:23:45.173987",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:23:45",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:23:45.383594",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:23:45",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:23:45.536388",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:23:45",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:23:45.937615",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:23:45",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:23:46.416234",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:23:46",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:23:46.624980",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:23:46",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:23:48.646844",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:23:48",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:23:49.638401",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:23:49",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:23:51.917108",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:23:51",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:23:52.139688",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:23:52",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:23:52.526958",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:23:52",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:23:52.953205",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:23:52",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:23:53.213510",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:23:53",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:23:53.602332",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:23:53",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:23:54.089744",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:23:54",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:23:54.502595",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:23:54",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:23:54.901726",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:23:54",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:23:55.343395",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:23:55",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:23:55.724336",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:23:55",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:23:56.134548",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:23:56",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:23:56.493485",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:23:56",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:23:59.595192",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:23:59",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:24:00.545701",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:24:00",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:24:00.984963",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:24:00",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:24:02.006345",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:24:02",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:24:03.313216",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:24:03",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:24:03.596381",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:24:03",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:24:03.917595",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:24:03",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:24:04.382438",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:24:04",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:24:04.601626",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:24:04",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:24:04.806010",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:24:04",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:24:05.051495",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:24:05",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:24:08.789302",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:24:08",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:24:08.949132",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:24:08",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:24:09.185567",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:24:09",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:24:09.592140",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:24:09",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:24:09.940210",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:24:09",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:24:10.041365",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:24:10",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:24:10.873558",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:24:10",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:24:11.065428",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:24:11",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:24:11.573771",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:24:11",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:24:12.069624",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:24:12",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:24:12.184970",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:24:12",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:24:12.486045",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:24:12",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:24:12.662499",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:24:12",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:24:12.882502",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:24:12",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:24:14.172659",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:24:14",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:24:14.543472",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:24:14",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:24:15.226620",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:24:15",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:24:15.428001",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:24:15",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:24:15.585861",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:24:15",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:24:15.978692",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:24:15",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:24:16.456722",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:24:16",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:24:16.674856",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:24:16",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:24:18.705771",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:24:18",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:24:19.702806",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:24:19",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:24:21.973848",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:24:21",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:24:22.188304",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:24:22",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:24:22.575739",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:24:22",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:24:23.013331",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:24:23",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:24:23.264022",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:24:23",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:24:23.644822",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:24:23",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:24:24.130729",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:24:24",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:24:24.549845",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:24:24",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:24:24.951986",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:24:24",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:24:25.393529",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:24:25",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:24:25.772019",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:24:25",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:24:26.165730",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:24:26",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:24:26.544543",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:24:26",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:24:29.636939",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:24:29",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:24:30.583276",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:24:30",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:24:31.019776",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:24:31",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:24:32.045571",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:24:32",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:24:33.366997",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:24:33",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:24:33.646540",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:24:33",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:24:33.955736",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:24:33",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:24:34.433623",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:24:34",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:24:34.656677",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:24:34",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:24:34.862078",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:24:34",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:24:35.085192",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:24:35",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:24:38.858778",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:24:38",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:24:38.985298",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:24:38",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:24:39.218457",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:24:39",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:24:39.637075",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:24:39",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:24:40.002119",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:24:40",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:24:40.091489",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:24:40",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:24:40.944152",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:24:40",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:24:41.102780",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:24:41",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:24:41.623186",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:24:41",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:24:42.105278",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:24:42",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:24:42.229121",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:24:42",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:24:42.543213",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:24:42",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:24:42.710044",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:24:42",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:24:42.922994",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:24:42",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:24:44.240625",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:24:44",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:24:44.587377",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:24:44",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:24:45.285045",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:24:45",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:24:45.483687",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:24:45",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:24:45.627476",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:24:45",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:24:46.018383",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:24:46",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:24:46.514080",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:24:46",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:24:46.726089",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:24:46",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:24:48.746480",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:24:48",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:24:49.763367",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:24:49",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:24:52.010752",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:24:52",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:24:52.225550",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:24:52",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:24:52.626526",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:24:52",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:24:53.073302",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:24:53",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:24:53.315498",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:24:53",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:24:53.695971",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:24:53",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:24:54.183405",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:24:54",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:24:54.608733",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:24:54",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:24:54.986736",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:24:54",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:24:55.441735",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:24:55",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:24:55.818786",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:24:55",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:24:56.222802",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:24:56",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:24:56.582218",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:24:56",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:24:59.695166",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:24:59",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:25:00.654825",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:25:00",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:25:01.088963",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:25:01",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:25:02.088604",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:25:02",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:25:03.410162",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:25:03",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:25:03.693422",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:25:03",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:25:03.990303",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:25:03",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:25:04.477499",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:25:04",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:25:04.699759",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:25:04",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:25:04.921466",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:25:04",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:25:05.146313",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:25:05",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:25:08.915944",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:25:08",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:25:09.037154",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:25:09",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:25:09.270727",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:25:09",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:25:09.700108",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:25:09",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:25:10.060658",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:25:10",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:25:10.133734",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:25:10",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:25:11.006604",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:25:11",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:25:11.142758",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:25:11",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:25:11.667657",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:25:11",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:25:12.143255",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:25:12",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:25:12.282197",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:25:12",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:25:12.582168",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:25:12",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:25:12.754879",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:25:12",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:25:12.978393",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:25:12",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:25:14.297194",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:25:14",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:25:14.640487",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:25:14",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:25:15.341903",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:25:15",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:25:15.518428",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:25:15",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:25:15.687219",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:25:15",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:25:16.074564",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:25:16",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:25:16.557801",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:25:16",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:25:16.775060",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:25:16",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:25:18.785127",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:25:18",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:25:19.818401",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:25:19",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:25:22.048150",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:25:22",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:25:22.283748",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:25:22",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:25:22.682572",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:25:22",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:25:23.129195",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:25:23",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:25:23.368970",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:25:23",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:25:23.736892",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:25:23",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:25:24.235904",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:25:24",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:25:24.662476",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:25:24",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:25:25.045362",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:25:25",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:25:25.501297",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:25:25",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:25:25.865970",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:25:25",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:25:26.262092",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:25:26",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:25:26.624529",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:25:26",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:25:29.750537",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:25:29",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:25:30.721395",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:25:30",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:25:31.134475",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:25:31",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:25:32.136058",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:25:32",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:25:33.456082",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:25:33",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:25:33.745196",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:25:33",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:25:34.041286",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:25:34",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:25:34.543198",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:25:34",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:25:34.748786",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:25:34",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:25:34.983692",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:25:34",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:25:35.199364",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:25:35",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:25:38.967344",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:25:38",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:25:39.074232",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:25:39",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:25:39.325075",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:25:39",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:25:39.757555",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:25:39",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:25:40.102716",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:25:40",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:25:40.184872",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:25:40",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:25:41.069281",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:25:41",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:25:41.184323",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:25:41",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:25:41.729802",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:25:41",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:25:42.202089",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:25:42",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:25:42.342585",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:25:42",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:25:42.633677",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:25:42",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:25:42.815110",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:25:42",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:25:43.017697",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:25:43",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:25:44.341405",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:25:44",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:25:44.706515",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:25:44",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:25:45.402243",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:25:45",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:25:45.564115",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:25:45",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:25:45.740589",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:25:45",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:25:46.125909",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:25:46",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:25:46.596417",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:25:46",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:25:46.818925",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:25:46",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:25:48.813195",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:25:48",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:25:49.867425",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:25:49",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:25:52.121768",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:25:52",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:25:52.337267",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:25:52",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:25:52.756789",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:25:52",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:25:53.184432",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:25:53",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:25:53.430769",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:25:53",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:25:53.800879",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:25:53",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:25:54.286285",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:25:54",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:25:54.714511",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:25:54",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:25:55.114656",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:25:55",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:25:55.540699",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:25:55",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
+  },
+  {
+    "timestamp": "2026-08-11T11:25:55.927032",
+    "action": "proactive_autonomy_scan",
+    "target": "Downloads",
+    "tier": 1,
+    "status": "success",
+    "agent": "AutonomyDaemon",
+    "details": {
+      "timestamp": "2026-08-11 11:25:55",
+      "processed": 0,
+      "total_spent": 0.0,
+      "message": "I filed your recent invoices into Accounting. Processed 0 files."
+    }
   }
 ]

@@ -1,0 +1,652 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>CODEC — Authenticate</title>
+    <link rel="icon" href="/favicon.png">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #121215; --surface: #1a1a1d; --surface-2: #212125; --border: #303035; --border-hover: #424248;
+            --text: #ececec; --text-muted: #9a9aa0; --text-dim: #6a6a70;
+            --accent: #E8711A; --accent-hover: #f07d2a;
+            --danger: #ef4444; --success: #22c55e;
+            --font: 'Inter', -apple-system, sans-serif;
+            --mono: 'JetBrains Mono', monospace;
+            --radius-sm: 6px; --radius: 10px;
+        }
+        [data-theme="light"] {
+            --bg: #f7f5f2; --surface: #fff; --surface-2: #f0ece6; --border: #d5d0ca; --border-hover: #bbb;
+            --text: #1a1a1a; --text-muted: #555; --text-dim: #777;
+        }
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body {
+            font-family: var(--font);
+            background: var(--bg); color: var(--text);
+            height: 100vh; display: flex; align-items: center; justify-content: center;
+            transition: background 0.2s, color 0.2s;
+        }
+        .auth-container {
+            text-align: center; max-width: 360px; width: 100%; padding: 32px;
+        }
+        .logo { width: 68px; height: 68px; margin: 0 auto 16px; filter: drop-shadow(0 0 18px rgba(232,113,26,0.35)); }
+        .title { font-family: var(--mono); font-size: 24px; font-weight: 700; color: var(--text); letter-spacing: 2px; margin-bottom: 6px; }
+        .subtitle { font-size: 13px; color: var(--text-dim); margin-bottom: 32px; }
+
+        .fingerprint-ring {
+            width: 120px; height: 120px; border-radius: 50%; margin: 0 auto 24px;
+            display: flex; align-items: center; justify-content: center;
+            background: var(--surface); border: 2px solid var(--border);
+            transition: all 0.3s;
+            cursor: pointer;
+        }
+        .fingerprint-ring:hover { border-color: var(--accent); }
+        .fingerprint-ring.waiting { border-color: var(--accent); animation: pulse 1.5s ease-in-out infinite; }
+        .fingerprint-ring.success { border-color: var(--success); background: #0a1a0f; }
+        .fingerprint-ring.error { border-color: var(--danger); background: #1a0a0a; }
+        [data-theme="light"] .fingerprint-ring.success { background: #eaf7ee; }
+        [data-theme="light"] .fingerprint-ring.error { background: #fdeaea; }
+        [data-theme="light"] .fingerprint-ring.waiting { background: var(--surface); }
+        .fingerprint-icon { font-size: 40px; }
+
+        @keyframes pulse {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(232,113,26,0.3); }
+            50% { box-shadow: 0 0 0 16px rgba(232,113,26,0); }
+        }
+
+        .auth-btn {
+            padding: 14px 36px; font-size: 14px; font-weight: 600;
+            background: var(--accent); color: #fff; border: none; border-radius: var(--radius);
+            cursor: pointer; width: 100%; margin-bottom: 12px;
+            transition: all 0.15s; font-family: var(--font);
+        }
+        .auth-btn:hover { background: var(--accent-hover); }
+        .auth-btn:active { transform: scale(0.98); }
+        .auth-btn:disabled { background: var(--border); color: var(--text-dim); cursor: not-allowed; }
+
+        .divider {
+            display: flex; align-items: center; margin: 20px 0; gap: 12px;
+        }
+        .divider::before, .divider::after {
+            content: ''; flex: 1; height: 1px; background: var(--border);
+        }
+        .divider span { font-size: 11px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 1px; font-weight: 500; }
+
+        .pin-section { display: none; }
+        .pin-input-row {
+            display: flex; gap: 8px; justify-content: center; margin-bottom: 16px;
+        }
+        .pin-digit {
+            width: 50px; height: 56px; text-align: center; font-size: 22px;
+            font-weight: 600; letter-spacing: 2px;
+            background: var(--surface); color: var(--accent); border: 1px solid var(--border);
+            border-radius: 8px; outline: none;
+            transition: border-color 0.15s; font-family: var(--mono);
+        }
+        .pin-digit:focus { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(232,113,26,0.1); }
+        .pin-digit.filled { border-color: var(--accent); }
+
+        .status { font-size: 13px; color: var(--text-dim); min-height: 20px; margin-top: 16px; }
+        .status.error { color: var(--danger); }
+        .status.success { color: var(--success); }
+
+        .remote-note {
+            background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+            padding: 12px; margin-top: 24px; font-size: 12px; color: var(--text-dim);
+            line-height: 1.5;
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-8px); }
+            75% { transform: translateX(8px); }
+        }
+
+        /* ── Mobile Responsive ── */
+        @media (max-width: 480px) {
+          .auth-container { padding: 24px 16px; }
+          .pin-input-row { gap: 6px; }
+          .pin-digit { width: 44px; height: 50px; font-size: 20px; }
+          .fingerprint-ring { width: 100px; height: 100px; }
+          .fingerprint-icon { font-size: 34px; }
+        }
+    </style>
+</head>
+<body>
+    <button id="themeBtn" onclick="toggleTheme()" style="position:fixed;top:16px;right:16px;background:none;border:1px solid var(--border);color:var(--text-muted);width:32px;height:32px;border-radius:8px;cursor:pointer;display:flex;align-items:center;justify-content:center">
+        <svg id="themeIco" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+    </button>
+
+    <div class="auth-container">
+        <img class="logo" src="https://i.imgur.com/jD1X5W8.png" alt="CODEC">
+        <div class="title">CODEC</div>
+        <div class="subtitle">Authentication required</div>
+
+        <!-- Touch ID section -->
+        <div id="touchidSection">
+            <div class="fingerprint-ring" id="fpRing" onclick="authenticate()">
+                <span class="fingerprint-icon" id="fpIcon">&#128274;</span>
+            </div>
+            <button class="auth-btn" id="authBtn" onclick="authenticate()">Authenticate with Touch ID</button>
+        </div>
+
+        <!-- Divider (shown when both methods available) -->
+        <div class="divider" id="divider" style="display:none">
+            <span>or</span>
+        </div>
+
+        <!-- PIN section -->
+        <div class="pin-section" id="pinSection">
+            <div class="pin-input-row">
+                <input type="password" class="pin-digit" id="pin1" maxlength="1" inputmode="numeric" pattern="[0-9]" autocomplete="off">
+                <input type="password" class="pin-digit" id="pin2" maxlength="1" inputmode="numeric" pattern="[0-9]" autocomplete="off">
+                <input type="password" class="pin-digit" id="pin3" maxlength="1" inputmode="numeric" pattern="[0-9]" autocomplete="off">
+                <input type="password" class="pin-digit" id="pin4" maxlength="1" inputmode="numeric" pattern="[0-9]" autocomplete="off">
+                <input type="password" class="pin-digit" id="pin5" maxlength="1" inputmode="numeric" pattern="[0-9]" autocomplete="off">
+                <input type="password" class="pin-digit" id="pin6" maxlength="1" inputmode="numeric" pattern="[0-9]" autocomplete="off">
+            </div>
+            <button class="auth-btn" id="pinBtn" onclick="verifyPin()" style="background:var(--border-hover)">Unlock with PIN</button>
+        </div>
+
+        <!-- TOTP 2FA section (hidden until Touch ID/PIN succeeds) -->
+        <div id="totpSection" style="display:none">
+            <div class="divider"><span>2FA Verification</span></div>
+            <div style="font-size:13px;color:var(--text-muted);margin-bottom:16px">Enter the 6-digit code from your authenticator app</div>
+            <div class="pin-input-row">
+                <input type="text" class="pin-digit" id="totp1" maxlength="1" inputmode="numeric" pattern="[0-9]" autocomplete="off">
+                <input type="text" class="pin-digit" id="totp2" maxlength="1" inputmode="numeric" pattern="[0-9]" autocomplete="off">
+                <input type="text" class="pin-digit" id="totp3" maxlength="1" inputmode="numeric" pattern="[0-9]" autocomplete="off">
+                <input type="text" class="pin-digit" id="totp4" maxlength="1" inputmode="numeric" pattern="[0-9]" autocomplete="off">
+                <input type="text" class="pin-digit" id="totp5" maxlength="1" inputmode="numeric" pattern="[0-9]" autocomplete="off">
+                <input type="text" class="pin-digit" id="totp6" maxlength="1" inputmode="numeric" pattern="[0-9]" autocomplete="off">
+            </div>
+            <button class="auth-btn" id="totpBtn" onclick="verifyTotp()">Verify Code</button>
+        </div>
+
+        <!-- TOTP Setup section (shown only during first-time setup) -->
+        <div id="totpSetupSection" style="display:none">
+            <div class="divider"><span>Setup 2FA</span></div>
+            <div style="font-size:13px;color:var(--text-muted);margin-bottom:12px">Scan this QR code with Google Authenticator or Authy</div>
+            <img id="totpQR" style="width:200px;height:200px;margin:0 auto 12px;display:block;border-radius:8px;background:#fff;padding:8px" />
+            <div style="font-size:11px;color:var(--text-dim);margin-bottom:16px;word-break:break-all" id="totpManualKey"></div>
+            <div class="pin-input-row">
+                <input type="text" class="pin-digit" id="setup1" maxlength="1" inputmode="numeric" pattern="[0-9]" autocomplete="off">
+                <input type="text" class="pin-digit" id="setup2" maxlength="1" inputmode="numeric" pattern="[0-9]" autocomplete="off">
+                <input type="text" class="pin-digit" id="setup3" maxlength="1" inputmode="numeric" pattern="[0-9]" autocomplete="off">
+                <input type="text" class="pin-digit" id="setup4" maxlength="1" inputmode="numeric" pattern="[0-9]" autocomplete="off">
+                <input type="text" class="pin-digit" id="setup5" maxlength="1" inputmode="numeric" pattern="[0-9]" autocomplete="off">
+                <input type="text" class="pin-digit" id="setup6" maxlength="1" inputmode="numeric" pattern="[0-9]" autocomplete="off">
+            </div>
+            <button class="auth-btn" id="setupBtn" onclick="confirmTotpSetup()">Confirm &amp; Enable 2FA</button>
+        </div>
+
+        <div class="status" id="status"></div>
+
+        <!-- Setup 2FA link (shown when TOTP not yet configured) -->
+        <div id="setup2faLink" style="display:none;margin-top:12px">
+            <a href="#" onclick="startTotpSetup();return false" style="font-size:12px;color:var(--accent);text-decoration:none;opacity:0.7">&#128272; Setup 2FA (Authenticator App)</a>
+        </div>
+
+        <div class="remote-note" id="remoteNote" style="display:none;">
+            &#128241; Remote access detected. Touch ID will prompt on your Mac.
+            Keep the Mac awake and nearby.
+        </div>
+    </div>
+
+    <script>
+function toggleTheme(){var t=document.documentElement.getAttribute('data-theme')==='light'?'dark':'light';document.documentElement.setAttribute('data-theme',t);localStorage.setItem('codec-theme',t);updateThemeIcon(t)}
+function updateThemeIcon(t){document.getElementById('themeIco').innerHTML=t==='light'?'<path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/>':'<circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>'}
+(function(){var s=localStorage.getItem('codec-theme');if(s==='light'){document.documentElement.setAttribute('data-theme','light');updateThemeIcon('light')}})();
+
+var isRemote = location.hostname !== 'localhost' && location.hostname !== '127.0.0.1';
+if (isRemote) {
+    document.getElementById('remoteNote').style.display = 'block';
+    document.getElementById('authBtn').textContent = 'Request Touch ID on Mac';
+}
+
+// Auto-redirect if already authenticated
+async function checkAuth() {
+    try {
+        var r = await fetch('/api/auth/status');
+        var data = await r.json();
+        if (data.authenticated) window.location.href = '/';
+    } catch(e) {}
+}
+checkAuth();
+
+// Check which auth methods are available
+async function checkAvailability() {
+    try {
+        var r = await fetch('/api/auth/check');
+        var data = await r.json();
+        var hasTouchID = data.touchid_available;
+        var hasPIN = data.pin_available;
+
+        if (hasTouchID) {
+            document.getElementById('status').textContent = data.method === 'touchID' ? 'Touch ID ready' : (data.method || 'Biometric') + ' ready';
+        } else {
+            document.getElementById('touchidSection').style.display = 'none';
+        }
+
+        if (hasPIN) {
+            document.getElementById('pinSection').style.display = 'block';
+            setupPinInputs();
+        }
+
+        if (hasTouchID && hasPIN) {
+            document.getElementById('divider').style.display = 'flex';
+        }
+
+        if (!hasTouchID && !hasPIN) {
+            document.getElementById('status').textContent = 'No auth method configured';
+            document.getElementById('status').className = 'status error';
+        }
+
+        // If only PIN, focus first digit
+        if (!hasTouchID && hasPIN) {
+            document.getElementById('pin1').focus();
+        }
+
+        // Check if TOTP is already configured — if not, show setup link
+        try {
+            var sr = await fetch('/api/auth/status');
+            var sd = await sr.json();
+            if (!sd.totp_enabled && (hasTouchID || hasPIN)) {
+                document.getElementById('setup2faLink').style.display = 'block';
+            }
+        } catch(e2) {}
+    } catch(e) {
+        document.getElementById('status').textContent = 'Could not check auth availability';
+        document.getElementById('status').className = 'status error';
+    }
+}
+checkAvailability();
+
+// ── PIN input handling ──
+function setupPinInputs() {
+    var digits = document.querySelectorAll('.pin-digit');
+    digits.forEach(function(input, i) {
+        input.addEventListener('input', function() {
+            if (this.value.length === 1) {
+                this.classList.add('filled');
+                if (i < digits.length - 1) digits[i+1].focus();
+                // Auto-submit when all 6 digits entered
+                var pin = getPin();
+                if (pin.length === 6) verifyPin();
+            }
+        });
+        input.addEventListener('keydown', function(e) {
+            if (e.key === 'Backspace' && !this.value && i > 0) {
+                digits[i-1].focus();
+                digits[i-1].value = '';
+                digits[i-1].classList.remove('filled');
+            }
+            if (e.key === 'Enter') verifyPin();
+        });
+        // Only allow digits
+        input.addEventListener('beforeinput', function(e) {
+            if (e.data && !/^\d$/.test(e.data)) e.preventDefault();
+        });
+    });
+}
+
+function getPin() {
+    var pin = '';
+    for (var i = 1; i <= 6; i++) {
+        pin += document.getElementById('pin' + i).value;
+    }
+    return pin;
+}
+
+function clearPin() {
+    for (var i = 1; i <= 6; i++) {
+        var el = document.getElementById('pin' + i);
+        el.value = '';
+        el.classList.remove('filled');
+    }
+    document.getElementById('pin1').focus();
+}
+
+// ── Touch ID auth ──
+async function authenticate() {
+    var ring = document.getElementById('fpRing');
+    var icon = document.getElementById('fpIcon');
+    var btn = document.getElementById('authBtn');
+    var status = document.getElementById('status');
+
+    ring.className = 'fingerprint-ring waiting';
+    icon.innerHTML = '&#128070;';
+    btn.disabled = true;
+    btn.textContent = isRemote ? 'Waiting for Touch ID on Mac...' : 'Touch the sensor...';
+    status.textContent = 'Authenticating...';
+    status.className = 'status';
+
+    try {
+        var r = await fetch('/api/auth/verify', {method: 'POST'});
+        var data = await r.json();
+        if (data.authenticated) {
+            onSuccess(data);
+            ring.className = 'fingerprint-ring success';
+            icon.innerHTML = '&#9989;';
+        } else {
+            ring.className = 'fingerprint-ring error';
+            icon.innerHTML = '&#128274;';
+            status.textContent = data.error || 'Authentication failed';
+            status.className = 'status error';
+            btn.disabled = false;
+            btn.textContent = 'Try Again';
+        }
+    } catch(e) {
+        ring.className = 'fingerprint-ring error';
+        icon.innerHTML = '&#128274;';
+        status.textContent = 'Connection error: ' + e.message;
+        status.className = 'status error';
+        btn.disabled = false;
+        btn.textContent = 'Try Again';
+    }
+}
+
+// ── PIN auth ──
+async function verifyPin() {
+    var pin = getPin();
+    if (pin.length < 4) return;
+
+    var status = document.getElementById('status');
+    var btn = document.getElementById('pinBtn');
+    btn.disabled = true;
+    btn.textContent = 'Verifying...';
+    status.textContent = '';
+    status.className = 'status';
+
+    try {
+        var r = await fetch('/api/auth/pin', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({pin: pin})
+        });
+        var data = await r.json();
+        if (data.authenticated) {
+            onSuccess(data);
+        } else {
+            status.textContent = data.error || 'Incorrect PIN';
+            status.className = 'status error';
+            btn.disabled = false;
+            btn.textContent = 'Unlock with PIN';
+            clearPin();
+            // Shake animation
+            var row = document.querySelector('.pin-input-row');
+            row.style.animation = 'shake 0.3s';
+            setTimeout(function() { row.style.animation = ''; }, 300);
+        }
+    } catch(e) {
+        status.textContent = 'Connection error';
+        status.className = 'status error';
+        btn.disabled = false;
+        btn.textContent = 'Unlock with PIN';
+    }
+}
+
+// ── Pending TOTP state ──
+var _pendingToken = null;
+var _pendingExpHours = null;
+var _pendingMethod = null;
+var _setupSecret = null;
+
+// ── Shared success handler ──
+function onSuccess(data) {
+    var status = document.getElementById('status');
+    status.textContent = 'Authenticated via ' + (data.method || 'biometrics');
+    status.className = 'status success';
+
+    // Check if TOTP 2FA is required
+    _pendingToken = data.token;
+    _pendingExpHours = data.expires_hours;
+    _pendingMethod = data.method;
+
+    // Check auth status to see if TOTP is enabled
+    fetch('/api/auth/status').then(function(r){ return r.json(); }).then(function(s) {
+        if (s.totp_enabled) {
+            // TOTP is configured — show verification step
+            showTotpVerify();
+        } else {
+            // No TOTP — complete login directly
+            completeLogin();
+        }
+    }).catch(function() {
+        // If status check fails, just complete login
+        completeLogin();
+    });
+}
+
+function completeLogin() {
+    var _exp = _pendingExpHours * 3600;
+    var _ck = 'codec_session=' + _pendingToken + '; path=/; max-age=' + _exp + '; SameSite=Lax';
+    if (location.protocol === 'https:') _ck += '; Secure';
+    document.cookie = _ck;
+    // Also store in sessionStorage as fallback (Android Chrome may not persist cookies)
+    try { sessionStorage.setItem('codec_session', _pendingToken); } catch(e) {}
+    // CSRF double-submit token (readable by JS, paired with x-csrf-token header)
+    var _csrf = _pendingToken.substring(0, 16);
+    document.cookie = 'codec_csrf=' + _csrf + '; path=/; max-age=' + _exp + '; SameSite=Lax';
+    var status = document.getElementById('status');
+    status.textContent = 'Welcome back';
+    status.className = 'status success';
+    // E2E key exchange — negotiate encryption keys before redirect
+    _e2eNegotiateAuth().finally(function() {
+        var redir = new URLSearchParams(window.location.search).get('redirect') || '/';
+        // Safety: only allow relative redirects (prevent open redirect)
+        if(redir.indexOf('//')>=0 || redir.indexOf(':')>=0) redir = '/';
+        setTimeout(function() { window.location.href = redir; }, 600);
+    });
+}
+// E2E: ECDH key exchange after auth (sets sessionStorage flag for other pages)
+function _e2eNegotiateAuth() {
+    function _b64(buf){return btoa(String.fromCharCode.apply(null,new Uint8Array(buf)))}
+    function _unb64(s){var b=atob(s),a=new Uint8Array(b.length);for(var i=0;i<b.length;i++)a[i]=b.charCodeAt(i);return a}
+    return crypto.subtle.generateKey({name:'ECDH',namedCurve:'P-256'},true,['deriveBits']).then(function(kp){
+        return crypto.subtle.exportKey('raw',kp.publicKey).then(function(pub){
+            return fetch('/api/auth/keyexchange',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({pub:_b64(pub)})}).then(function(r){return r.json()}).then(function(d){
+                if(d.pub){sessionStorage.setItem('_e2eReady','1')}
+            });
+        });
+    }).catch(function(e){console.warn('E2E key exchange skipped:',e)});
+}
+
+// ── Show TOTP verification step ──
+function showTotpVerify() {
+    // Hide primary auth sections
+    document.getElementById('touchidSection').style.display = 'none';
+    document.getElementById('divider').style.display = 'none';
+    document.getElementById('pinSection').style.display = 'none';
+    document.getElementById('setup2faLink').style.display = 'none';
+    // Show TOTP input
+    document.getElementById('totpSection').style.display = 'block';
+    var status = document.getElementById('status');
+    status.textContent = 'Enter your authenticator code';
+    status.className = 'status';
+    setupDigitInputs('totp', 6, verifyTotp);
+    document.getElementById('totp1').focus();
+}
+
+// ── Verify TOTP code ──
+async function verifyTotp() {
+    var code = getDigits('totp', 6);
+    if (code.length < 6) return;
+
+    var btn = document.getElementById('totpBtn');
+    var status = document.getElementById('status');
+    btn.disabled = true;
+    btn.textContent = 'Verifying...';
+    status.textContent = '';
+    status.className = 'status';
+
+    try {
+        var r = await fetch('/api/auth/totp/verify', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ code: code, token: _pendingToken })
+        });
+        var data = await r.json();
+        if (data.verified) {
+            status.textContent = '2FA verified';
+            status.className = 'status success';
+            completeLogin();
+        } else {
+            status.textContent = data.error || 'Invalid code';
+            status.className = 'status error';
+            btn.disabled = false;
+            btn.textContent = 'Verify Code';
+            clearDigits('totp', 6);
+            // Shake
+            var row = document.querySelector('#totpSection .pin-input-row');
+            row.style.animation = 'shake 0.3s';
+            setTimeout(function() { row.style.animation = ''; }, 300);
+        }
+    } catch(e) {
+        status.textContent = 'Connection error';
+        status.className = 'status error';
+        btn.disabled = false;
+        btn.textContent = 'Verify Code';
+    }
+}
+
+// ── TOTP Setup flow ──
+async function startTotpSetup() {
+    var status = document.getElementById('status');
+    status.textContent = 'Setting up 2FA...';
+    status.className = 'status';
+
+    try {
+        var r = await fetch('/api/auth/totp/setup', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({})
+        });
+        var data = await r.json();
+        if (data.error) {
+            status.textContent = data.error;
+            status.className = 'status error';
+            return;
+        }
+        _setupSecret = data.secret;
+        document.getElementById('setup2faLink').style.display = 'none';
+        // Show QR code
+        document.getElementById('totpQR').src = 'data:image/png;base64,' + data.qr_code;
+        document.getElementById('totpManualKey').textContent = 'Manual key: ' + data.secret;
+        // Show setup section
+        document.getElementById('totpSetupSection').style.display = 'block';
+        setupDigitInputs('setup', 6, confirmTotpSetup);
+        document.getElementById('setup1').focus();
+        status.textContent = 'Scan the QR code, then enter the 6-digit code to confirm';
+        status.className = 'status';
+    } catch(e) {
+        status.textContent = 'Failed to start 2FA setup';
+        status.className = 'status error';
+    }
+}
+
+async function confirmTotpSetup() {
+    var code = getDigits('setup', 6);
+    if (code.length < 6) return;
+
+    var btn = document.getElementById('setupBtn');
+    var status = document.getElementById('status');
+    btn.disabled = true;
+    btn.textContent = 'Confirming...';
+
+    try {
+        var r = await fetch('/api/auth/totp/confirm', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ code: code, secret: _setupSecret })
+        });
+        var data = await r.json();
+        if (data.verified) {
+            status.textContent = '2FA enabled successfully!';
+            status.className = 'status success';
+            document.getElementById('totpSetupSection').style.display = 'none';
+            // If we have a pending token, complete login
+            if (_pendingToken) {
+                setTimeout(function() { completeLogin(); }, 800);
+            }
+        } else {
+            status.textContent = data.error || 'Invalid code. Try again.';
+            status.className = 'status error';
+            btn.disabled = false;
+            btn.textContent = 'Confirm & Enable 2FA';
+            clearDigits('setup', 6);
+            var row = document.querySelector('#totpSetupSection .pin-input-row');
+            row.style.animation = 'shake 0.3s';
+            setTimeout(function() { row.style.animation = ''; }, 300);
+        }
+    } catch(e) {
+        status.textContent = 'Connection error';
+        status.className = 'status error';
+        btn.disabled = false;
+        btn.textContent = 'Confirm & Enable 2FA';
+    }
+}
+
+// ── Generic digit input helpers ──
+function setupDigitInputs(prefix, count, submitFn) {
+    for (var i = 1; i <= count; i++) {
+        (function(idx) {
+            var el = document.getElementById(prefix + idx);
+            // Remove old listeners by cloning
+            var clone = el.cloneNode(true);
+            el.parentNode.replaceChild(clone, el);
+            clone.addEventListener('input', function() {
+                if (this.value.length === 1) {
+                    this.classList.add('filled');
+                    if (idx < count) document.getElementById(prefix + (idx + 1)).focus();
+                    if (getDigits(prefix, count).length === count) submitFn();
+                }
+            });
+            clone.addEventListener('keydown', function(e) {
+                if (e.key === 'Backspace' && !this.value && idx > 1) {
+                    var prev = document.getElementById(prefix + (idx - 1));
+                    prev.focus();
+                    prev.value = '';
+                    prev.classList.remove('filled');
+                }
+                if (e.key === 'Enter') submitFn();
+            });
+            clone.addEventListener('beforeinput', function(e) {
+                if (e.data && !/^\d$/.test(e.data)) e.preventDefault();
+            });
+            // Handle paste on first input
+            if (idx === 1) {
+                clone.addEventListener('paste', function(e) {
+                    e.preventDefault();
+                    var pasted = (e.clipboardData || window.clipboardData).getData('text').replace(/\D/g, '').substring(0, count);
+                    for (var j = 0; j < pasted.length; j++) {
+                        var target = document.getElementById(prefix + (j + 1));
+                        target.value = pasted[j];
+                        target.classList.add('filled');
+                    }
+                    if (pasted.length === count) submitFn();
+                    else if (pasted.length > 0) document.getElementById(prefix + Math.min(pasted.length + 1, count)).focus();
+                });
+            }
+        })(i);
+    }
+}
+
+function getDigits(prefix, count) {
+    var val = '';
+    for (var i = 1; i <= count; i++) val += document.getElementById(prefix + i).value;
+    return val;
+}
+
+function clearDigits(prefix, count) {
+    for (var i = 1; i <= count; i++) {
+        var el = document.getElementById(prefix + i);
+        el.value = '';
+        el.classList.remove('filled');
+    }
+    document.getElementById(prefix + '1').focus();
+}
+    </script>
+</body>
+</html>

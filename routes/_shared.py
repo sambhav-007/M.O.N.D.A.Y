@@ -1,0 +1,443 @@
+"""Shared state and utilities used by route modules.
+
+Extracted from codec_dashboard.py to avoid circular imports.
+Both codec_dashboard.py and routes/*.py import from here.
+"""
+import os
+import json
+import threading
+import logging
+import uuid
+import sqlite3
+import time
+from datetime import datetime, timedelta
+
+log = logging.getLogger("codec_dashboard")
+
+DASHBOARD_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+CONFIG_PATH = os.path.expanduser("~/.codec/config.json")
+TASK_QUEUE = os.path.expanduser("~/.codec/task_queue.txt")
+try:
+    from codec_config import DB_PATH as _db_path
+    DB_PATH = _db_path
+except ImportError:
+    DB_PATH = os.path.expanduser("~/.codec/memory.db")
+AUDIT_LOG = os.path.expanduser("~/.codec/audit.log")
+NOTIFICATIONS_PATH = os.path.expanduser("~/.codec/notifications.json")
+SCHEDULE_RUNS_LOG = os.path.expanduser("~/.codec/schedule_runs.log")
+
+_NO_CACHE = {"Cache-Control": "no-store, no-cache, must-revalidate", "Pragma": "no-cache"}
+
+
+def _get_skills_dir():
+    """Single source of truth for skills directory -- loads from codec_config."""
+    try:
+        from codec_config import SKILLS_DIR
+        return SKILLS_DIR
+    except ImportError:
+        return os.path.join(DASHBOARD_DIR, "skills")
+
+
+def _audit_write(line: str):
+    """Append to audit log with restricted permissions."""
+    os.makedirs(os.path.dirname(AUDIT_LOG), exist_ok=True)
+    with open(AUDIT_LOG, "a") as f:
+        f.write(line)
+    try:
+        os.chmod(AUDIT_LOG, 0o600)
+    except OSError:
+        pass
+
+
+# ── Notification helpers ──
+
+_notif_lock = threading.Lock()
+
+
+def _load_notifications():
+    """Load notifications from disk, seeding sample data on first access."""
+    try:
+        with open(NOTIFICATIONS_PATH) as f:
+            return json.load(f)
+    except (FileNotFoundError, json.JSONDecodeError):
+        samples = [
+            {
+                "id": f"notif_{uuid.uuid4().hex[:10]}",
+                "type": "task_report",
+                "title": "Daily Morning Briefing",
+                "body": "Completed successfully. 5 action items identified, market overview compiled, calendar conflicts flagged.",
+                "status": "success",
+                "created": "2026-03-29T08:00:00",
+                "read": True,
+                "schedule_id": "daily_briefing"
+            },
+            {
+                "id": f"notif_{uuid.uuid4().hex[:10]}",
+                "type": "task_report",
+                "title": "Security Scan",
+                "body": "No vulnerabilities found. All 142 dependencies are up to date, no CVEs detected.",
+                "status": "success",
+                "created": "2026-03-29T12:00:00",
+                "read": True,
+                "schedule_id": "security_scan"
+            },
+            {
+                "id": f"notif_{uuid.uuid4().hex[:10]}",
+                "type": "task_report",
+                "title": "AI News Digest",
+                "body": "33 stories collected from 5 sources. Top story: new open-weight model benchmarks released.",
+                "status": "success",
+                "created": "2026-03-29T18:30:00",
+                "read": False,
+                "schedule_id": "ai_news_digest"
+            },
+            {
+                "id": f"notif_{uuid.uuid4().hex[:10]}",
+                "type": "task_report",
+                "title": "Weekly Code Review Summary",
+                "body": "Analyzed 12 PRs across 3 repos. 2 require attention: stale dependency warnings in codec-core and missing tests in dashboard module.",
+                "status": "success",
+                "created": "2026-03-28T09:00:00",
+                "read": True,
+                "schedule_id": "weekly_code_review"
+            }
+        ]
+        _write_notifications(samples)
+        return samples
+
+
+_NOTIF_CAP = 500   # M-1: keep the most recent N (list is newest-first)
+
+
+def _write_notifications(notifications):
+    """Persist notifications list to disk. C-3: atomic write (no half-written file
+    for a concurrent reader → no fake-sample reseed). M-1: cap to the most-recent
+    _NOTIF_CAP entries so the file can't grow unbounded."""
+    import codec_jsonstore
+    codec_jsonstore.atomic_write_json(NOTIFICATIONS_PATH, notifications[:_NOTIF_CAP])
+
+
+def _save_notification(title, body, status="success", schedule_id=None):
+    """Create and persist a new notification, returning its id."""
+    notif = {
+        "id": f"notif_{uuid.uuid4().hex[:10]}",
+        "type": "task_report",
+        "title": title,
+        "body": body,
+        "status": status,
+        "created": datetime.now().strftime("%Y-%m-%dT%H:%M:%S"),
+        "read": False,
+        "schedule_id": schedule_id
+    }
+    # Fix #9: the notification writers run in separate PM2 daemons (dashboard,
+    # scheduler, heartbeat, autopilot) that don't share _notif_lock. Hold the
+    # cross-process file_lock across the load->insert->write so they can't
+    # clobber each other (matches the codec_ask_user notification pairing).
+    import codec_jsonstore
+    with _notif_lock, codec_jsonstore.file_lock(NOTIFICATIONS_PATH):
+        notifications = _load_notifications()
+        notifications.insert(0, notif)
+        _write_notifications(notifications)
+    return notif["id"]
+
+
+def _append_schedule_run_log(schedule_id, title, status, body_preview=""):
+    """Append a run record to the schedule runs log."""
+    os.makedirs(os.path.dirname(SCHEDULE_RUNS_LOG), exist_ok=True)
+    entry = {
+        "timestamp": datetime.now().strftime("%Y-%m-%dT%H:%M:%S"),
+        "schedule_id": schedule_id,
+        "title": title,
+        "status": status,
+        "body_preview": body_preview[:200]
+    }
+    with open(SCHEDULE_RUNS_LOG, "a") as f:
+        f.write(json.dumps(entry) + "\n")
+
+
+# ── Biometric (Touch ID) Auth ──
+
+def _load_cfg():
+    try:
+        with open(CONFIG_PATH) as f:
+            return json.load(f)
+    except Exception:
+        return {}
+
+_bio_cfg = _load_cfg()
+AUTH_ENABLED = _bio_cfg.get("auth_enabled", False)
+AUTH_SESSION_HOURS = _bio_cfg.get("auth_session_hours", 24)
+AUTH_BINARY = os.path.join(DASHBOARD_DIR, "codec_auth", "codec_auth")
+AUTH_PIN_HASH = _bio_cfg.get("auth_pin_hash", "")
+AUTH_COOKIE_NAME = "codec_session"
+
+# Persistent session store
+_SESSION_FILE = os.path.expanduser("~/.codec/.auth_sessions.json")
+_auth_sessions = {}
+_auth_lock = threading.Lock()
+_e2e_keys = {}
+_E2E_KEYS_FILE = os.path.expanduser("~/.codec/.e2e_keys.json")
+
+
+def _load_e2e_keys():
+    """Load E2E keys from disk so they survive PM2 restarts."""
+    global _e2e_keys
+    try:
+        import base64
+        if os.path.isfile(_E2E_KEYS_FILE):
+            with open(_E2E_KEYS_FILE) as f:
+                raw = json.load(f)
+            for tok, key_b64 in raw.items():
+                _e2e_keys[tok] = base64.b64decode(key_b64)
+            log.info("Restored %d E2E key(s) from disk", len(_e2e_keys))
+    except Exception as e:
+        log.warning("Could not load E2E keys: %s", e)
+
+
+def _save_e2e_keys():
+    """Persist E2E keys to disk. Only keep keys for active sessions."""
+    try:
+        import base64
+        os.makedirs(os.path.dirname(_E2E_KEYS_FILE), exist_ok=True)
+        raw = {}
+        for tok, key_bytes in _e2e_keys.items():
+            if tok in _auth_sessions:
+                raw[tok] = base64.b64encode(key_bytes).decode()
+        with open(_E2E_KEYS_FILE, "w") as f:
+            json.dump(raw, f)
+        os.chmod(_E2E_KEYS_FILE, 0o600)
+    except Exception as e:
+        log.warning("Could not save E2E keys: %s", e)
+
+
+def _load_sessions():
+    """Load sessions from disk on startup."""
+    global _auth_sessions
+    try:
+        if os.path.isfile(_SESSION_FILE):
+            with open(_SESSION_FILE) as f:
+                raw = json.load(f)
+            now = datetime.now()
+            for tok, data in raw.items():
+                created = datetime.fromisoformat(data["created"])
+                if now - created < timedelta(hours=AUTH_SESSION_HOURS):
+                    _auth_sessions[tok] = {
+                        "created": created,
+                        "ip": data.get("ip", "unknown"),
+                        "method": data.get("method", "unknown"),
+                    }
+            log.info("Restored %d auth session(s) from disk", len(_auth_sessions))
+    except Exception as e:
+        log.warning("Could not load auth sessions: %s", e)
+
+
+def _save_sessions():
+    """Persist current sessions to disk. Caller must hold _auth_lock."""
+    try:
+        os.makedirs(os.path.dirname(_SESSION_FILE), exist_ok=True)
+        raw = {}
+        for tok, data in _auth_sessions.items():
+            raw[tok] = {
+                "created": data["created"].isoformat(),
+                "ip": data.get("ip", "unknown"),
+                "method": data.get("method", "unknown"),
+            }
+        with open(_SESSION_FILE, "w") as f:
+            json.dump(raw, f)
+        os.chmod(_SESSION_FILE, 0o600)
+    except Exception as e:
+        log.warning("Could not save auth sessions: %s", e)
+
+
+# Load on import
+_load_sessions()
+_load_e2e_keys()
+
+
+def _is_auth_compiled():
+    return os.path.isfile(AUTH_BINARY) and os.access(AUTH_BINARY, os.X_OK)
+
+
+def _auth_available():
+    """Check if any auth method is available (Touch ID binary or PIN configured)."""
+    return _is_auth_compiled() or bool(AUTH_PIN_HASH)
+
+
+def _is_totp_enabled():
+    """Check if TOTP 2FA is configured and not disabled."""
+    try:
+        with open(CONFIG_PATH) as f:
+            cfg = json.load(f)
+        return bool(cfg.get("totp_secret")) and not cfg.get("totp_disabled", False)
+    except Exception:
+        return False
+
+
+def _session_token_valid(token) -> bool:
+    """Core session validity: the token exists, is unexpired, and is
+    TOTP-verified when TOTP is enabled. Shared by the cookie path
+    (_verify_biometric_session) AND the ?s= query-param fallback in
+    AuthMiddleware — re-audit N5: the ?s= path previously checked only
+    existence + age, skipping the TOTP-verified gate, so a pre-TOTP token could
+    bypass 2FA via ?s=<token> on any GET /api endpoint."""
+    if not token:
+        return False
+    with _auth_lock:
+        session = _auth_sessions.get(token)
+        if not session:
+            return False
+        if datetime.now() - session["created"] > timedelta(hours=AUTH_SESSION_HOURS):
+            del _auth_sessions[token]
+            _save_sessions()
+            return False
+        if _is_totp_enabled() and not session.get("totp_verified"):
+            return False
+    return True
+
+
+def _verify_biometric_session(request):
+    """Check if the request has a valid auth session cookie."""
+    if not AUTH_ENABLED or not _auth_available():
+        return True
+    return _session_token_valid(request.cookies.get(AUTH_COOKIE_NAME))
+
+
+# ── Database helpers ──
+
+# M-5 (PR-4J): one SQLite connection PER THREAD instead of a single global shared
+# across all FastAPI/worker threads. SQLite serializes per-connection, so a shared
+# connection queued every read behind every other (and let one thread's uncommitted
+# writes leak into another via the shared transaction state). Per-thread + WAL lets
+# readers run concurrently (single writer, guarded by busy_timeout). `_db_conns`
+# tracks all of them so the dashboard shutdown can close them (checkpoint WAL).
+_db_local = threading.local()
+_db_conns: list = []
+_db_conns_lock = threading.Lock()
+
+
+def get_db():
+    conn = getattr(_db_local, "conn", None)
+    if conn is None:
+        conn = sqlite3.connect(DB_PATH, check_same_thread=False)
+        conn.execute("PRAGMA journal_mode=WAL")    # WAL is per-DB (idempotent)
+        conn.execute("PRAGMA busy_timeout=5000")   # busy_timeout is PER-CONNECTION
+        conn.row_factory = sqlite3.Row
+        _db_local.conn = conn
+        with _db_conns_lock:
+            _db_conns.append(conn)
+    return conn
+
+
+def _close_all_db_conns():
+    """Close every per-thread connection (shutdown). WAL is checkpointed on close;
+    any remaining handles are reclaimed on process exit. Never raises."""
+    with _db_conns_lock:
+        for c in _db_conns:
+            try:
+                c.close()
+            except Exception:
+                pass
+        _db_conns.clear()
+    try:
+        _db_local.conn = None
+    except Exception:
+        pass
+
+
+# ── In-memory job stores ──
+
+_pending_skills: dict = {}
+_research_jobs: dict = {}
+_research_jobs_lock = threading.Lock()  # re-audit N9: guards add/del of _research_jobs
+_agent_jobs: dict = {}
+_agent_jobs_lock = threading.Lock()  # guards structural add/del of _agent_jobs (H-4)
+_AGENT_JOB_TTL_SECONDS = 86400       # evict terminal jobs older than 24h (H-4)
+
+
+def _evict_stale_agent_jobs(now=None, ttl_seconds: int = _AGENT_JOB_TTL_SECONDS) -> int:
+    """H-4: drop terminal (non-running) crew jobs older than `ttl_seconds`.
+
+    `_agent_jobs` is otherwise never purged → unbounded growth → the dashboard
+    hits max_memory_restart and loses all in-flight crew state. Snapshot-iterates
+    under `_agent_jobs_lock` so a concurrent add/del can't raise 'dictionary
+    changed size during iteration'. A `running` job is never evicted; an entry
+    with a missing/unparseable `started` is kept (never lose data on a bad field).
+    Returns the number evicted. Never raises.
+    """
+    now = now if now is not None else datetime.now()
+    removed = 0
+    try:
+        with _agent_jobs_lock:
+            for jid, job in list(_agent_jobs.items()):
+                if not isinstance(job, dict) or job.get("status") == "running":
+                    continue
+                started = job.get("started", "")
+                try:
+                    age = (now - datetime.fromisoformat(started)).total_seconds()
+                except (ValueError, TypeError):
+                    continue  # unparseable timestamp → keep
+                if age > ttl_seconds:
+                    _agent_jobs.pop(jid, None)
+                    removed += 1
+    except Exception as e:
+        log.warning("agent-job eviction failed: %s", e)
+    return removed
+
+
+def _evict_stale_research_jobs(now=None, ttl_seconds: int = _AGENT_JOB_TTL_SECONDS) -> int:
+    """re-audit N9: mirror _evict_stale_agent_jobs for _research_jobs, which
+    previously had NO lock and NO eviction → unbounded growth (memory leak →
+    max_memory_restart) plus a 'dict changed size during iteration' race
+    against the deep_research worker. Snapshot-iterates under
+    `_research_jobs_lock`; never evicts a `running` job; keeps entries with a
+    missing/unparseable `started`. Returns the number evicted. Never raises."""
+    now = now if now is not None else datetime.now()
+    removed = 0
+    try:
+        with _research_jobs_lock:
+            for jid, job in list(_research_jobs.items()):
+                if not isinstance(job, dict) or job.get("status") == "running":
+                    continue
+                started = job.get("started", "")
+                try:
+                    age = (now - datetime.fromisoformat(started)).total_seconds()
+                except (ValueError, TypeError):
+                    continue  # unparseable timestamp → keep
+                if age > ttl_seconds:
+                    _research_jobs.pop(jid, None)
+                    removed += 1
+    except Exception as e:
+        log.warning("research-job eviction failed: %s", e)
+    return removed
+
+
+# ── Remote command approval (dashboard/phone) ──
+_pending_approvals: dict = {}  # {approval_id: {command, action, is_dangerous, explanation, timestamp, status}}
+_approval_lock = threading.Lock()
+_APPROVAL_TTL_SECONDS = 120          # delete approvals older than 120s, any status (H-6)
+
+
+def _evict_expired_approvals(now=None, ttl_seconds: int = _APPROVAL_TTL_SECONDS) -> int:
+    """H-6: delete `_pending_approvals` entries older than `ttl_seconds`, any
+    status. The auto-expire path only marked status='expired' and never deleted,
+    so the dict grew unbounded. CALLER MUST HOLD `_approval_lock` (the dashboard
+    endpoints call this inside their existing `with _approval_lock:`). Snapshot-
+    iterates the keys to delete. Returns the number evicted. Never raises."""
+    now = now if now is not None else time.time()
+    removed = 0
+    try:
+        stale = [aid for aid, a in _pending_approvals.items()
+                 if now - (a.get("timestamp", 0) or 0) > ttl_seconds]
+        for aid in stale:
+            _pending_approvals.pop(aid, None)
+            removed += 1
+    except Exception as e:
+        log.warning("approval eviction failed: %s", e)
+    return removed
+
+# PIN brute-force rate limiting
+_pin_attempts: dict = {}
+
+# Agents directory
+_AGENTS_DIR = os.path.expanduser("~/.codec/agents")
+os.makedirs(_AGENTS_DIR, exist_ok=True)

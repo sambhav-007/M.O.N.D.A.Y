@@ -1,0 +1,416 @@
+"""CODEC Dashboard -- Skill-related routes (review, approve, list, triggers).
+
+Skill creation is exclusively via the review-and-approve flow:
+    POST /api/skill/review   →  stages code for human review (no disk write)
+    POST /api/skill/approve  →  writes to disk after explicit approval
+
+The legacy direct-write endpoints `/api/save_skill` (D-3) and `/api/forge`
+(D-2) were removed in PR-1B (see `docs/audits/PHASE-1-SECURITY.md`). Both
+were CRITICAL RCE-enabling paths: save_skill wrote LLM/user-supplied code
+straight to `<skills_dir>/<name>.py` after only a substring blocker; forge
+fetched arbitrary URLs (SSRF) and turned the response into a skill via the
+LLM. Defense in depth pairs with PR-1A's `SkillRegistry.load` AST gate —
+even if a malicious file reached disk via some other path, the load-time
+hash + AST check refuses it.
+"""
+import json
+import os
+import re
+from datetime import datetime, timezone
+
+from fastapi import APIRouter, Request
+from fastapi.responses import JSONResponse
+
+from routes._shared import (
+    log, _get_skills_dir, _pending_skills,
+)
+
+router = APIRouter()
+
+
+# ── Staged-review persistence ─────────────────────────────────────────────────
+# Reviews were previously kept ONLY in the in-memory `_pending_skills` dict, so
+# every `codec-dashboard` restart wiped them and there was no way to list/approve
+# a skill staged in an earlier process. They now also live on disk at
+# ~/.codec/skill_reviews/<review_id>.json (atomic via codec_jsonstore) so they
+# survive a restart, and the list/approve/reject endpoints read from there. The
+# in-memory dict is kept as a write-through cache for backward compatibility with
+# callers/tests that populate it directly.
+
+_REVIEWS_DIR = os.path.expanduser("~/.codec/skill_reviews")
+# review_id is `uuid4()[:12]` (hex + one hyphen); this also guards the reject
+# endpoint's path param against traversal — only these chars are ever a filename.
+_REVIEW_ID_RE = re.compile(r"^[A-Za-z0-9_-]{1,64}$")
+
+
+def _reviews_dir() -> str:
+    """Directory holding staged skill reviews. A function (not a constant) so
+    tests can monkeypatch it to a tmp dir for isolation."""
+    return _REVIEWS_DIR
+
+
+def _safe_review_id(review_id) -> str | None:
+    """Return `review_id` iff it is a safe single-path-segment filename stem,
+    else None. Defends the on-disk review path against traversal / absolute
+    paths coming from the reject endpoint's URL parameter."""
+    rid = str(review_id or "")
+    if not _REVIEW_ID_RE.match(rid):
+        return None
+    if os.path.basename(rid) != rid:
+        return None
+    return rid
+
+
+def _review_path(review_id) -> str | None:
+    sid = _safe_review_id(review_id)
+    if sid is None:
+        return None
+    return os.path.join(_reviews_dir(), f"{sid}.json")
+
+
+def _persist_review(review_id: str, filename: str, code: str) -> dict:
+    """Write a staged review to disk (atomic). Returns the record. Never raises —
+    a persistence failure degrades to the in-memory dict, not a 500."""
+    rec = {
+        "id": review_id,
+        "filename": filename,
+        "code": code,
+        "staged_at": datetime.now(timezone.utc).isoformat(),
+    }
+    path = _review_path(review_id)
+    if path:
+        try:
+            import codec_jsonstore
+            codec_jsonstore.atomic_write_json(path, rec)
+        except Exception as e:
+            log.warning("Failed to persist skill review %s: %s", review_id, e)
+    return rec
+
+
+def _load_review(review_id):
+    """Return the staged review record (disk first, then the in-memory dict), or
+    None if it isn't staged anywhere."""
+    path = _review_path(review_id)
+    if path:
+        try:
+            with open(path, encoding="utf-8") as f:
+                return json.load(f)
+        except (FileNotFoundError, json.JSONDecodeError, OSError):
+            pass
+    mem = _pending_skills.get(review_id)
+    if mem:
+        return {
+            "id": review_id,
+            "filename": mem.get("filename", ""),
+            "code": mem.get("code", ""),
+            "staged_at": mem.get("staged_at", ""),
+        }
+    return None
+
+
+def _delete_review(review_id) -> None:
+    """Remove a staged review from both disk and the in-memory cache. Idempotent."""
+    _pending_skills.pop(review_id, None)
+    path = _review_path(review_id)
+    if path:
+        try:
+            os.remove(path)
+        except FileNotFoundError:
+            pass
+        except OSError as e:
+            log.warning("Failed to delete skill review %s: %s", review_id, e)
+
+
+def _list_reviews() -> list:
+    """All staged reviews on disk, newest first. A half-written file is never
+    observed (atomic write); an unreadable/corrupt one is skipped, not fatal."""
+    out = []
+    try:
+        names = os.listdir(_reviews_dir())
+    except OSError:
+        return out
+    for fn in names:
+        if not fn.endswith(".json"):
+            continue
+        try:
+            with open(os.path.join(_reviews_dir(), fn), encoding="utf-8") as f:
+                rec = json.load(f)
+        except (json.JSONDecodeError, OSError):
+            continue
+        out.append({
+            "id": rec.get("id") or fn[:-5],
+            "filename": rec.get("filename", ""),
+            "code": rec.get("code", ""),
+            "staged_at": rec.get("staged_at", ""),
+        })
+    out.sort(key=lambda r: r.get("staged_at", ""), reverse=True)
+    return out
+
+
+def _pinned_builtin_names():
+    """Basenames (e.g. 'calculator.py') of hash-pinned built-in skills, read
+    from the committed <repo>/skills/.manifest.json. An approved user skill must
+    never take one of these names: doing so shadows the trusted built-in (or,
+    if the write dir is the repo skills dir, overwrites the hash-pinned file).
+    Fix #7b / H2·H6. Returns a lowercased set on success, or **None on any read
+    failure** so the caller can FAIL CLOSED (re-audit N20: returning an empty
+    set let the approve guard block nothing during a transient manifest read
+    failure). Lowercased so the guard holds on case-insensitive filesystems."""
+    try:
+        repo_skills = os.path.join(
+            os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "skills"
+        )
+        with open(os.path.join(repo_skills, ".manifest.json"), encoding="utf-8") as f:
+            data = json.load(f)
+        return {str(n).lower() for n in (data.get("skills") or {}).keys()}
+    except Exception:
+        return None
+
+
+@router.post("/api/skill/review")
+async def skill_review(request: Request):
+    """Stage LLM-generated skill code for human review -- does NOT write to disk."""
+    import uuid
+    body = await request.json()
+    code = body.get("code", "")
+    filename = os.path.basename(body.get("filename", "custom_skill.py"))
+    if not filename.endswith(".py"):
+        filename += ".py"
+    if not code:
+        return JSONResponse({"error": "No code provided"}, status_code=400)
+    review_id = str(uuid.uuid4())[:12]
+    _pending_skills[review_id] = {"code": code, "filename": filename}
+    rec = _persist_review(review_id, filename, code)
+    return {
+        "review_id": review_id, "code": code, "filename": filename,
+        "staged_at": rec.get("staged_at", ""),
+    }
+
+
+@router.post("/api/skill/approve")
+async def skill_approve(request: Request):
+    """Approve a pending skill review -- writes to disk and removes from pending."""
+    body = await request.json()
+    review_id = body.get("review_id", "")
+    # Read disk-first (survives restart), fall back to the in-memory cache. The
+    # review is NOT removed here — only after a successful write below — so a
+    # blocked/invalid approve leaves the staged review in place to retry/reject.
+    pending = _load_review(review_id)
+    if not pending:
+        return JSONResponse({"error": "Review not found or already approved"}, status_code=404)
+    code = pending["code"]
+    filename = pending["filename"]
+    if "SKILL_DESCRIPTION" not in code or "def run(" not in code:
+        return JSONResponse({"error": "Invalid skill: must contain SKILL_DESCRIPTION and def run()"}, status_code=400)
+    # Fix #7b (H2/H6): never let an approved skill take a hash-pinned built-in's
+    # name — that would shadow (or overwrite) the trusted built-in. The PR-1A
+    # load-time hash/AST gate is the last line of defense; this refuses at the
+    # write point so the trusted file is never displaced in the first place.
+    # re-audit N20: FAIL CLOSED — _pinned_builtin_names() returns None if the
+    # manifest can't be read, in which case we refuse rather than allow (the old
+    # empty-set return blocked nothing during a transient read failure).
+    _pinned = _pinned_builtin_names()
+    if _pinned is None or filename.lower() in _pinned:
+        _reason = ("manifest_unreadable" if _pinned is None
+                   else "pinned_builtin_overwrite")
+        try:
+            from codec_audit import log_event
+            log_event(
+                "skill_approve_blocked", source="codec-routes-skills",
+                message=f"refused approve of {filename}: {_reason}",
+                level="warning", outcome="denied",
+                extra={"filename": filename, "reason": _reason},
+            )
+        except Exception:
+            pass
+        _msg = (
+            "Refused: cannot verify the protected built-in manifest."
+            if _pinned is None
+            else f"Refused: '{filename}' is a protected built-in skill name and cannot be overwritten"
+        )
+        return JSONResponse({"error": _msg}, status_code=400)
+    from codec_config import is_dangerous_skill_code
+    dangerous, reason = is_dangerous_skill_code(code)
+    if dangerous:
+        return JSONResponse({"error": f"Blocked: {reason}"}, status_code=400)
+    skill_dir = _get_skills_dir()
+    os.makedirs(skill_dir, exist_ok=True)
+    path = os.path.join(skill_dir, filename)
+    with open(path, "w") as f:
+        f.write(code)
+    # Only now that the skill is on disk do we clear the staged review (from both
+    # disk and the in-memory cache) so a crash mid-write leaves it re-approvable.
+    _delete_review(review_id)
+    try:
+        from codec_audit import log_event
+        log_event(
+            "skill_approved", source="codec-routes-skills",
+            message=f"approved skill {filename} ({len(code)} bytes) → {path}",
+            level="info", outcome="ok",
+            extra={"filename": filename, "review_id": review_id, "size": len(code)},
+        )
+    except Exception:
+        pass
+    return {"path": path, "skill": filename, "size": len(code)}
+
+
+@router.get("/api/skill/reviews")
+async def skill_reviews():
+    """List every skill staged for review (survives dashboard restart). The PWA
+    Skills panel renders these with Approve / Reject buttons."""
+    reviews = _list_reviews()
+    return {"reviews": reviews, "count": len(reviews)}
+
+
+@router.post("/api/skill/reject/{review_id}")
+async def skill_reject(review_id: str):
+    """Discard a staged skill review without writing it to disk."""
+    pending = _load_review(review_id)
+    if not pending:
+        return JSONResponse({"error": "Review not found"}, status_code=404)
+    _delete_review(review_id)
+    try:
+        from codec_audit import log_event
+        log_event(
+            "skill_review_rejected", source="codec-routes-skills",
+            message=f"rejected staged skill {pending.get('filename', '?')}",
+            level="info", outcome="ok",
+            extra={"review_id": review_id, "filename": pending.get("filename", "")},
+        )
+    except Exception:
+        pass
+    return {"status": "rejected", "id": review_id, "filename": pending.get("filename", "")}
+
+
+@router.get("/api/skills")
+async def skills():
+    """List installed skills"""
+    skills_dir = _get_skills_dir()
+    result = []
+    try:
+        for f in sorted(os.listdir(skills_dir)):
+            if f.endswith(".py") and not f.startswith("_"):
+                path = os.path.join(skills_dir, f)
+                name = f.replace(".py", "")
+                triggers = []
+                try:
+                    with open(path) as sf:
+                        for line in sf:
+                            if "SKILL_TRIGGERS" in line:
+                                import ast
+                                triggers = ast.literal_eval(line.split("=", 1)[1].strip())
+                                break
+                except (ValueError, SyntaxError, OSError) as e:
+                    log.warning(
+                        f"Failed to parse SKILL_TRIGGERS for {name}; "
+                        f"listing with no triggers: {e}")
+                result.append({"name": name, "triggers": triggers})
+    except OSError as e:
+        # Listing the skills dir itself failed — the endpoint returns an empty
+        # list and the user sees no skills. That's a real failure, not "non-critical".
+        log.error(f"Failed to list skills dir {skills_dir}: {e}")
+        try:
+            from codec_audit import log_event
+            log_event(
+                "skills_list_failed", source="codec-routes-skills",
+                message=f"Skills listing failed: {e}",
+                level="error", outcome="error",
+                extra={"skills_dir": str(skills_dir), "error": str(e)[:200]},
+            )
+        except Exception:
+            pass
+    return result
+
+
+# ── Custom Triggers Management ────────────────────────────────────────────────
+CUSTOM_TRIGGERS_PATH = os.path.expanduser("~/.codec/custom_triggers.json")
+
+
+def _load_custom_triggers() -> dict:
+    try:
+        with open(CUSTOM_TRIGGERS_PATH) as f:
+            return json.load(f)
+    except Exception:
+        return {}
+
+
+@router.get("/api/triggers")
+async def list_triggers():
+    """Return all skills with their default + custom triggers and hotkeys."""
+    skills_dir = _get_skills_dir()
+    custom = _load_custom_triggers()
+    skills = []
+    try:
+        for fname in sorted(os.listdir(skills_dir)):
+            if not fname.endswith(".py") or fname.startswith("_"):
+                continue
+            name = fname[:-3]
+            triggers, description = [], ""
+            try:
+                with open(os.path.join(skills_dir, fname)) as f:
+                    src = f.read()
+                import ast
+                for line in src.splitlines():
+                    stripped = line.strip()
+                    if stripped.startswith("SKILL_TRIGGERS"):
+                        # Handle multi-line lists
+                        start = src.index("SKILL_TRIGGERS")
+                        bracket_start = src.index("[", start)
+                        bracket_end = src.index("]", bracket_start) + 1
+                        triggers = ast.literal_eval(src[bracket_start:bracket_end])
+                        break
+                for line in src.splitlines():
+                    stripped = line.strip()
+                    if stripped.startswith("SKILL_DESCRIPTION"):
+                        description = ast.literal_eval(stripped.split("=", 1)[1].strip())
+                        break
+            except Exception:
+                pass
+            custom_triggers = custom.get(name, {}).get("triggers")
+            skills.append({
+                "name": name,
+                "description": description,
+                "default_triggers": triggers,
+                "triggers": custom_triggers if custom_triggers is not None else triggers,
+                "customized": custom_triggers is not None,
+            })
+    except Exception as e:
+        log.warning(f"Trigger list error: {e}")
+    # Hotkeys
+    hotkeys = [
+        {"key": "F13", "action": "Toggle CODEC on/off", "editable": False},
+        {"key": "F18", "action": "Voice command (hold to record)", "editable": False},
+        {"key": "F16", "action": "Text input dialog", "editable": False},
+        {"key": "** (double star)", "action": "Screenshot + vision analysis", "editable": False},
+        {"key": "++ (double plus)", "action": "Document input mode", "editable": False},
+        {"key": "-- (double minus)", "action": "Open live voice chat", "editable": False},
+        {"key": "Right CMD (hold)", "action": "Dictate — speak, release to paste", "editable": False},
+        {"key": "L (during dictate)", "action": "Live typing mode", "editable": False},
+    ]
+    wake_words = ["hey codec", "hey", "okay codec", "hey codex", "hey coda", "hey queue"]
+    return {"skills": skills, "hotkeys": hotkeys, "wake_words": wake_words}
+
+
+@router.post("/api/triggers")
+async def save_triggers(request: Request):
+    """Save custom triggers for one or more skills."""
+    body = await request.json()
+    custom = _load_custom_triggers()
+    for skill_name, data in body.items():
+        triggers = data.get("triggers")
+        if triggers is not None and isinstance(triggers, list):
+            # Filter empty strings
+            triggers = [t.strip().lower() for t in triggers if t.strip()]
+            if triggers:
+                custom[skill_name] = {"triggers": triggers}
+            else:
+                custom.pop(skill_name, None)
+        elif triggers is None:
+            # Reset to default
+            custom.pop(skill_name, None)
+    # re-audit medium: atomic write so a concurrent reader (SkillRegistry /
+    # _load_custom_triggers) can't catch a truncated file mid-write and silently
+    # fall back to {} (wiping all custom triggers for that read).
+    import codec_jsonstore
+    codec_jsonstore.atomic_write_json(CUSTOM_TRIGGERS_PATH, custom)
+    return {"status": "saved", "custom_count": len(custom)}

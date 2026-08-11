@@ -285,8 +285,8 @@ class MasterPlanner:
         # Step 3: Match intent to target agent tool execution
         tool_result = self._dispatch_to_agent(cmd, intent, user_approved)
 
-        # If standard dispatch requires generative reasoning, query Cognitive Engine
-        if fallback or (isinstance(tool_result, dict) and not tool_result.get("success") and not tool_result.get("refusal")):
+        # If standard dispatch requires generative reasoning (no tool handled it), query Cognitive Engine
+        if (tool_result is None or (isinstance(tool_result, dict) and not tool_result.get("success") and not tool_result.get("refusal"))):
             llm_response = self.cognitive_engine.generate_cognitive_response(cmd, context_memories)
             if llm_response:
                 tool_result = {
@@ -451,6 +451,25 @@ class MasterPlanner:
                 "refusal": True,
                 "message": f"❌ Security Refusal: Command '{command}' violates M.O.N.D.A.Y. Moral Firewall safety rules."
             }
+
+        # ── 000. CODEC 89+ Skill Engine Dispatch ──────────────────────────────
+        try:
+            from codec_skill_registry import SkillRegistry
+            if not hasattr(self, "_codec_registry"):
+                self._codec_registry = SkillRegistry("skills")
+                self._codec_registry.scan()
+            matched_skills = self._codec_registry.match_all_triggers(command)
+            if matched_skills:
+                skill_name = matched_skills[0]
+                res = self._codec_registry.run(skill_name, command)
+                if res and isinstance(res, str) and len(res.strip()) > 0:
+                    return {
+                        "success": True,
+                        "intent": f"codec_skill:{skill_name}",
+                        "message": f"⚡ [CODEC Skill: {skill_name}]\n{res}"
+                    }
+        except Exception as e:
+            pass
 
         # ── 00000. Capabilities & Features Menu Intercept ───────────────────────
         if any(k in cmd_lower for k in ["what can you do", "what can u do", "what can you perform", "capabilities", "features", "help", "commands"]):
