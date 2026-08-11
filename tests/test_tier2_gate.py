@@ -89,7 +89,9 @@ def test_tier2_prompt_carries_eta_from_component_2_2(planner):
     res = _exec(planner.process_command("kill notepad"))
     assert isinstance(res.get("predicted_eta_seconds"), (int, float))
     assert res["predicted_eta_seconds"] > 0
-    assert "Est." in res["message"]
+    # The prompt was shortened for speech; what must survive is that the
+    # ETA from component 2.2 is still shown to the user (PRD §9).
+    assert "est." in res["message"].lower()
 
 
 def test_email_send_still_gated_despite_flag(planner):

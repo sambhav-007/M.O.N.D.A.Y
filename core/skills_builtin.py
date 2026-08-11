@@ -292,6 +292,93 @@ def build_builtin_registry(planner: Any) -> SkillRegistry:
         offline=True,
     ))
 
+    # Asking *what* a number is, is not asking to send anything. "what is papa's
+    # whatsapp number?" used to fall into the WhatsApp send flow, which parsed
+    # the sentence for a recipient, took "what" as the name, and replied "I don't
+    # have a phone number for 'what'. What's their number?" — offering to save a
+    # contact called "what". Reading a contact is its own skill.
+    def lookup_contact_number(name: str = "", **_: Any) -> Dict[str, Any]:
+        who = planner._clean_contact_name(name)
+        if not who:
+            return AgentResult.failed(
+                "Whose number are you after?", error="NO_CONTACT_NAME"
+            ).as_dict()
+
+        resolved = planner._resolve_phone_number(who)
+        phone = resolved.get("phone")
+        if not phone:
+            return AgentResult.failed(
+                f"I don't have a number saved for {who}. Tell me with "
+                f"\"{who}'s number is 9876543210\".",
+                error="CONTACT_NOT_FOUND",
+            ).as_dict()
+
+        return AgentResult.ok(
+            f"{who}: {phone}",
+            evidence=SystemQuery(source="memories.db", detail=f"contact '{who}'"),
+            data={"name": who, "phone": phone, "source": resolved.get("source", "")},
+        ).as_dict()
+
+    registry.register(Skill(
+        name="lookup_contact_number",
+        description="Look up a saved phone number",
+        patterns=[
+            "[(what is|whats|what's)] {name}'s (whatsapp|phone|mobile|contact) number",
+            "[(what is|whats|what's)] {name}'s number",
+            "[(what is|whats|what's)] the number for {name}",
+            "(do you have|find|get) {name}'s number",
+        ],
+        handler=lookup_contact_number,
+        tier=1,
+        offline=True,
+    ))
+
+    # "how many files are on my desktop" was classified `chitchat` at 0.25 and
+    # fell through to a web search, which returned an SEO article titled "How to
+    # Know How Many Files I Have on My PC". The machine can simply be asked.
+    def desktop_contents(**_: Any) -> Dict[str, Any]:
+        from pathlib import Path
+
+        desktop = Path.home() / "Desktop"
+        if not desktop.exists():
+            return AgentResult.failed(
+                f"I can't find a Desktop folder at {desktop}.",
+                error="NO_DESKTOP",
+            ).as_dict()
+
+        entries = sorted(p for p in desktop.iterdir() if not p.name.startswith("."))
+        files = [p for p in entries if p.is_file()]
+        folders = [p for p in entries if p.is_dir()]
+
+        names = ", ".join(p.name for p in entries[:8])
+        if len(entries) > 8:
+            names += f", +{len(entries) - 8} more"
+        summary = f"{len(files)} files and {len(folders)} folders on your Desktop"
+        return AgentResult.ok(
+            f"{summary}." + (f" {names}" if names else ""),
+            evidence=SystemQuery(source=str(desktop), detail=f"{len(entries)} entries"),
+            data={
+                "file_count": len(files),
+                "folder_count": len(folders),
+                "names": [p.name for p in entries],
+                "speech": summary,
+            },
+        ).as_dict()
+
+    registry.register(Skill(
+        name="desktop_contents",
+        description="What is on the desktop, and how much",
+        patterns=[
+            "how many (files|items|things) [are] [there] on [my] desktop",
+            "[(what is|whats|what's)] on [my] desktop",
+            "list [my] desktop",
+            "(count|show) [my] desktop (files|items)",
+        ],
+        handler=desktop_contents,
+        tier=1,
+        offline=True,
+    ))
+
     registry.register(Skill(
         name="remember_fact",
         description="Save something to memory",
@@ -305,7 +392,9 @@ def build_builtin_registry(planner: Any) -> SkillRegistry:
             "remember [that] {fact}",
         ],
         handler=remember,
-        intents=["memory_query"],
+        # No `intents`: stage 2 passes no slots, and this needs a key and a
+        # value. Declaring memory_query here routed "what is on my desktop" into
+        # the memory writer.
         tier=1,
         offline=True,
     ))
@@ -348,7 +437,7 @@ def build_builtin_registry(planner: Any) -> SkillRegistry:
             "give me a summary of {path}",
         ],
         handler=summarize,
-        intents=["document_intel"],
+        # No `intents`, same reason: without a path there is nothing to summarise.
         tier=1,
         offline=True,
     ))

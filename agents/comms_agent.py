@@ -747,12 +747,14 @@ class CommunicationAgent:
             "enter_sent": True,
             # Deliberately not "message sent" — see the docstring.
             "delivery_confirmed": False,
+            # Tightened, not weakened. The caveat is load-bearing — nothing here
+            # can read WhatsApp back, so this must never say "delivered" — but it
+            # was three lines of prose that the voice then read out in full.
             "message": (
-                f"✓ Opened the chat for +{number} and pressed Enter.\n"
-                f"  I can't read WhatsApp back, so check the chat to confirm it "
-                f"actually went — if the window wasn't focused, the keypress "
-                f"landed elsewhere."
+                f"✓ Opened the chat for +{number} and pressed Enter. "
+                f"Can't confirm delivery — check the chat."
             ),
+            "speech": "Sent it. I can't confirm delivery, so check the chat.",
         }
 
     def send_desktop_notification(self, title: str, message: str) -> Dict[str, Any]:

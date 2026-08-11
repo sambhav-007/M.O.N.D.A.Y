@@ -108,6 +108,20 @@ ROUTING_SET: List[Tuple[str, str]] = [
     # reach the validated contact path, not the generic memory store.
     ("remember papa number is 9876543210", "save_contact_number"),
     ("mummy's number is 9876543210", "save_contact_number"),
+
+    # ── From live use, 2026-08-10 ────────────────────────────────────────────
+    # Asking what a number *is* is not asking to send anything. This fell into
+    # the WhatsApp send flow, which read "what" as the recipient's name and
+    # offered to save a contact called "what".
+    ("what is papa's whatsapp number", "lookup_contact_number"),
+    ("what's mummy's number", "lookup_contact_number"),
+    ("what is the number for papa", "lookup_contact_number"),
+    # Classified `chitchat` at 0.25 and answered with a web search that returned
+    # an SEO article titled "How to Know How Many Files I Have on My PC". The
+    # machine can just be asked.
+    ("how many files are on my desktop", "desktop_contents"),
+    ("what is on my desktop", "desktop_contents"),
+    ("list my desktop", "desktop_contents"),
 ]
 
 

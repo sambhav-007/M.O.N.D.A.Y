@@ -39,13 +39,18 @@ def router():
         name="set_volume", patterns=["set volume to {level:int}"],
         handler=_ok("set_volume"), intents=[], tier=1,
     ))
+    # `runs_without_slots` is mandatory alongside `intents`: stage 2 routes on a
+    # classifier family and passes no slots, so anything reachable that way must
+    # do something useful with none.
     reg.register(Skill(
         name="summarize", patterns=["summarize {path}"],
         handler=_ok("summarize"), intents=["document_intel"], tier=1,
+        runs_without_slots=True,
     ))
     reg.register(Skill(
         name="remember", patterns=["remember {fact}"],
         handler=_ok("remember"), intents=["memory_query"], tier=1,
+        runs_without_slots=True,
     ))
     return Router(reg)
 
@@ -117,8 +122,10 @@ def test_an_ambiguous_intent_is_not_a_decision():
     could actually parse an email command.
     """
     reg = SkillRegistry()
-    reg.register(Skill(name="a", patterns=["aaa"], handler=_ok("a"), intents=["communication"]))
-    reg.register(Skill(name="b", patterns=["bbb"], handler=_ok("b"), intents=["communication"]))
+    reg.register(Skill(name="a", patterns=["aaa"], handler=_ok("a"),
+                       intents=["communication"], runs_without_slots=True))
+    reg.register(Skill(name="b", patterns=["bbb"], handler=_ok("b"),
+                       intents=["communication"], runs_without_slots=True))
     d = Router(reg).route("unmatched text", intent="communication", confidence=0.95)
 
     assert d.stage == "fallback"
@@ -170,6 +177,27 @@ def real_router():
     planner = MasterPlanner()
     planner.enable_voice = False
     return planner.router
+
+
+# ── Stage 2 may only reach skills that work without slots ────────────────────
+def test_intent_routing_requires_runs_without_slots():
+    """
+    Stage 2 passes no slots. A skill that needs a key, a path or a target and is
+    still reachable by intent gets called with nothing — which is how
+    "what is on my desktop", classified `memory_query` at 0.52, was routed into
+    the memory *writer* and answered "What should I remember?". A question
+    reaching a write path is the failure this router exists to prevent.
+    """
+    with pytest.raises(ValueError, match="runs_without_slots"):
+        Skill(name="needs_slots", patterns=["remember {fact}"],
+              handler=_ok("x"), intents=["memory_query"])
+
+
+def test_tier2_skills_are_never_reachable_from_the_classifier():
+    """An irreversible action needs the exactness of a pattern, not a family guess."""
+    with pytest.raises(ValueError, match="must not be reachable from the classifier"):
+        Skill(name="danger", patterns=["kill {p}"], handler=_ok("x"),
+              intents=["desktop_automation"], tier=2, runs_without_slots=True)
 
 
 # ── Registry invariants ──────────────────────────────────────────────────────

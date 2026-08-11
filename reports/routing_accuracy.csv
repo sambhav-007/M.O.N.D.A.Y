@@ -54,3 +54,9 @@ summarize README.md,summarize_document,summarize_document,pattern,True,{'path': 
 summarise the file notes.txt,summarize_document,summarize_document,pattern,True,{'path': 'notes.txt'}
 remember papa number is 9876543210,save_contact_number,save_contact_number,pattern,True,"{'name': 'papa', 'phone': '9876543210'}"
 mummy's number is 9876543210,save_contact_number,save_contact_number,pattern,True,"{'name': 'mummy', 'phone': '9876543210'}"
+what is papa's whatsapp number,lookup_contact_number,lookup_contact_number,pattern,True,{'name': 'papa'}
+what's mummy's number,lookup_contact_number,lookup_contact_number,pattern,True,{'name': 'mummy'}
+what is the number for papa,lookup_contact_number,lookup_contact_number,pattern,True,{'name': 'papa'}
+how many files are on my desktop,desktop_contents,desktop_contents,pattern,True,
+what is on my desktop,desktop_contents,desktop_contents,pattern,True,
+list my desktop,desktop_contents,desktop_contents,pattern,True,

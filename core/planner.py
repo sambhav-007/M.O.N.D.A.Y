@@ -191,6 +191,51 @@ _NEW_TOPIC_MARKERS = (
 )
 
 
+# ── Speech ───────────────────────────────────────────────────────────────────
+# Replies are written to be read on screen: multi-line reports, bullet lists,
+# file paths, tick marks. Reading all of that aloud is slow and unpleasant —
+# a health check spoke three lines of percentages, and a web result spoke an
+# entire article. The screen keeps the full answer; the voice gets the gist.
+_SPEECH_MAX_CHARS = 180
+_DECORATION = re.compile(r"[✓✅⚠️❌🤖📧🎙️📝🌍🌤️🛸💰📚🔍💡🧠⚡🖥️📊🗣️🔒🎓⚙️📁🌐↩️•·►]")
+_BULLET_LINE = re.compile(r"^\s*[•\-*]\s*")
+
+
+def spoken_form(result: Dict[str, Any]) -> str:
+    """Reduces a reply to something worth hearing.
+
+    A handler may set `data["speech"]` to say exactly what it wants spoken.
+    Otherwise the first meaningful line is used, stripped of decoration and
+    capped — the rest stays on screen where it can be read at a glance.
+    """
+    if not isinstance(result, dict):
+        return ""
+
+    explicit = result.get("speech")
+    if isinstance(explicit, str) and explicit.strip():
+        return explicit.strip()[:_SPEECH_MAX_CHARS]
+
+    message = str(result.get("message") or "")
+    lines = [ln.strip() for ln in message.splitlines() if ln.strip()]
+    if not lines:
+        return ""
+
+    headline = _DECORATION.sub("", lines[0]).strip()
+    headline = _BULLET_LINE.sub("", headline).strip()
+
+    # A heading with the substance underneath it ("Live Weather Forecast for
+    # Delhi:") is not worth speaking on its own — take the first detail too.
+    if headline.endswith(":") and len(lines) > 1:
+        detail = _BULLET_LINE.sub("", _DECORATION.sub("", lines[1])).strip()
+        headline = f"{headline.rstrip(':')}. {detail}"
+
+    if len(headline) > _SPEECH_MAX_CHARS:
+        cut = headline[:_SPEECH_MAX_CHARS]
+        headline = cut[: cut.rfind(" ")] if " " in cut else cut
+        headline = headline.rstrip(" ,;:") + "…"
+    return headline
+
+
 def _prepend_notice(result: Dict[str, Any], notice: str) -> Dict[str, Any]:
     """Puts `notice` in front of a result's message without disturbing the rest.
 
@@ -585,11 +630,13 @@ class MasterPlanner:
             "execution_result": tool_result,
         }
 
-        # Trigger voice output in background thread so UI thread does not freeze
+        # Trigger voice output in background thread so UI thread does not freeze.
+        # Speaks a short form, not the whole reply — see `spoken_form`.
         if getattr(self, "enable_voice", True) and isinstance(tool_result, dict) and tool_result.get("message"):
-            msg_text = tool_result.get("message", "")
-            import threading
-            threading.Thread(target=self.voice_agent.speak, args=(msg_text,), daemon=True).start()
+            speech = spoken_form(tool_result)
+            if speech:
+                import threading
+                threading.Thread(target=self.voice_agent.speak, args=(speech,), daemon=True).start()
 
         return output
 
@@ -963,12 +1010,12 @@ class MasterPlanner:
             "target": target,
             "predicted_eta_seconds": eta,
             "message": (
-                f"⚠️ This is a Tier-2 action — it cannot be undone.\n"
-                f"  Action  : {action_name}\n"
-                f"  Target  : {target}{details}\n"
-                f"  Est.    : {int(eta)}s\n\n"
-                f"{question}"
+                f"⚠️ {action_name} → {target} · can't be undone · est. {int(eta)}s"
+                f"{details}\n{question}"
             ),
+            # The voice gets the decision, not the form. Reading out the action
+            # name, target, ETA and instructions took longer than the action.
+            "speech": f"{action_name.replace('_', ' ')} to {target}. Shall I?",
         }
 
     def _resolve_tier2_approval(
