@@ -18,7 +18,8 @@ that decided routing before the intent classifier was ever consulted.
 Syntax
 ------
 ``{name}``         capture a slot
-``{name:int}``     typed capture (simplematch's types: int, float, word, ...)
+``{name:int}``     typed capture (simplematch's types: int, float, email, ...)
+``{name:app}``     an app or domain name — at most ``MAX_APP_TOKENS`` tokens
 ``(one|two)``      alternation
 ``[optional]``     optional segment
 
@@ -58,6 +59,22 @@ _ALTERNATION = re.compile(r"\(([^()]*)\)")
 _OPTIONAL = re.compile(r"\[([^\[\]]*)\]")
 _WHITESPACE = re.compile(r"\s+")
 _SLOT = re.compile(r"\{[^{}]*\}")
+
+#: Most tokens a `{name:app}` slot will accept.
+MAX_APP_TOKENS = 3
+
+# `{target}` compiles to `.*`, which swallows the rest of the command: "open
+# whatsapp and message papa saying hi" reads as a request to launch an
+# application called "whatsapp and message papa saying hi".
+#
+# The substring chain guarded against that by counting words — it stripped the
+# verb and gave up if more than three were left. That guard was doing real work
+# and is kept, but as a property of the *slot* rather than of the whole command,
+# which is what let "open youtube.com on my browser" (four words after the verb)
+# be rejected as an app name instead of understood as a URL plus a destination.
+# A program or domain name is one to three tokens; anything longer is a sentence
+# and belongs to a handler that can parse it.
+simplematch.register_type("app", r"\S+(?: \S+){0,%d}" % (MAX_APP_TOKENS - 1))
 
 
 def expand_pattern(pattern: str) -> List[str]:

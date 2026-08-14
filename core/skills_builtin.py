@@ -442,4 +442,130 @@ def build_builtin_registry(planner: Any) -> SkillRegistry:
         offline=True,
     ))
 
+    # ── Apps and websites ────────────────────────────────────────────────────
+    # Third tranche: the browser surface. Every one of these was mis-served, and
+    # the three failures are worth recording because they are three different
+    # ways for a substring chain to be wrong.
+    #
+    # **"open gmail" opened an email composer.** The email branch fired on
+    # `"gmail" in cmd_lower` and sat ~70 lines above the launcher, so the reply
+    # was "✓ Recipient set to 'recipient@example.com'! What is the subject of the
+    # email?" — a command to open a website silently became a half-built message
+    # to a placeholder address. This is the exact collision `core/skills.py`
+    # names in its header; it survived because the launcher could never be
+    # reached to disagree.
+    #
+    # **"open youtube.com on my browser" was not understood at all.** The
+    # launcher stripped the verb and gave up if more than three words were left,
+    # so a URL plus a destination failed the count, fell through to `CoderAgent`
+    # and came back "I'm not sure how to do that yet". Saying *where* to open
+    # something was never a thing the system could hear.
+    #
+    # The word count was still doing real work — it is what stopped "open
+    # whatsapp and message papa saying hi" being read as an application named
+    # "whatsapp and message papa saying hi". It is kept, as the `:app` slot type
+    # (`core/intent_patterns.py`), so it now bounds the target rather than the
+    # whole command, and the browser suffix is matched instead of counted.
+    #
+    # "start" is deliberately not a verb here: `start {target:app}` would match
+    # "start meeting recording", which belongs to the audio agent. The legacy
+    # chain still serves "start <app>", and it runs after that intercept.
+    _POLITENESS = re.compile(r"\s+(please|for me|now|thanks)$", re.IGNORECASE)
+
+    def open_target(target: str = "", **_: Any) -> Dict[str, Any]:
+        name = _POLITENESS.sub("", target.strip().strip("\"'")).strip()
+        if not name:
+            return AgentResult.failed(
+                "What should I open?", error="NO_TARGET"
+            ).as_dict()
+        # WhatsApp keeps its own entry point: it opens the app *and* says how to
+        # dictate a message from here. Launching it directly would work and would
+        # drop that, so the more useful handler keeps the command.
+        if name.lower().replace(" ", "") in {"whatsapp", "whatsappweb"}:
+            return planner._handle_whatsapp(f"open {name}", f"open {name}".lower())
+        return planner.browser_agent.open_app_or_website(name)
+
+    registry.register(Skill(
+        name="open_app_or_website",
+        description="Open an application or a website",
+        patterns=[
+            "(open|launch|visit|go to|pull up|bring up) [(the|my)] {target:app}",
+            # Naming the browser is the whole point of the second pattern: it
+            # carries more literal text, so it wins the specificity ranking and
+            # the suffix lands in the pattern instead of in the app name.
+            "(open|launch|visit|go to|pull up|bring up) [(the|my)] {target:app} "
+            "(on|in) [my] (browser|chrome|edge|firefox|web browser)",
+            "open [(the|my)] (website|site|page|url|link) {target:app}",
+        ],
+        handler=open_target,
+        tier=1,
+        # Launching an app needs no network; the web fallback does.
+        offline=True,
+    ))
+
+    # ── Web search ───────────────────────────────────────────────────────────
+    # **"search web for YouTube" searched for "web for YouTube".** The legacy
+    # branch stripped the verb with `^(search for|search|find|look up|google)\s+`
+    # and passed whatever was left straight to DuckDuckGo, so every word the user
+    # spent saying *where* to search became part of what was searched for. It
+    # reported five results and looked like a success, which is why it went
+    # unnoticed: the failure is in the query, not in the status.
+    #
+    # A slot cannot make that mistake — "search the web for {query}" carries more
+    # literal text than "search {query}", so it wins the ranking and captures
+    # only the query.
+    #
+    # One deliberate move: "search api for X" used to reach the public-API
+    # directory (`"search api" in cmd_lower`) and now reaches the web search. The
+    # directory is still served by its own phrasing ("public api for X"), and a
+    # command that says "search" should search.
+    def search_web(query: str = "", **_: Any) -> Dict[str, Any]:
+        q = query.strip().strip("\"'").rstrip("?").strip()
+        if not q:
+            return AgentResult.failed(
+                "What should I search for?", error="NO_QUERY"
+            ).as_dict()
+        return planner.browser_agent.web_search(q)
+
+    registry.register(Skill(
+        name="web_search",
+        description="Search the web and cite the sources",
+        patterns=[
+            "search [the] (web|internet|net|online) for {query}",
+            "search [the] (web|internet|net|online) {query}",
+            "web search for {query}",
+            "search for {query}",
+            "search {query}",
+            "(google|bing) {query}",
+            "find {query} (online|on the web|on the internet)",
+        ],
+        handler=search_web,
+        tier=1,
+        offline=False,
+    ))
+
+    # `research quantum computing` reached `research_topic("research quantum
+    # computing")` — the verb-stripping regex above listed every search verb
+    # except this one, so the topic searched for included the word "research".
+    def research(topic: str = "", **_: Any) -> Dict[str, Any]:
+        t = topic.strip().strip("\"'").rstrip("?").strip()
+        if not t:
+            return AgentResult.failed(
+                "What should I research?", error="NO_TOPIC"
+            ).as_dict()
+        return planner.browser_agent.research_topic(t)
+
+    registry.register(Skill(
+        name="research_topic",
+        description="Multi-source research summary on a topic",
+        patterns=[
+            "research {topic}",
+            "research (on|about|into) {topic}",
+            "[(do|run|give me)] [a] deep research (on|about) {topic}",
+        ],
+        handler=research,
+        tier=1,
+        offline=False,
+    ))
+
     return registry

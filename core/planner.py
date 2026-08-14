@@ -1860,8 +1860,16 @@ class MasterPlanner:
         # "mail"/"mail to" matter: without them "send mail to a@outlook.com" fell
         # through to the chitchat block and got a greeting. It only ever appeared
         # to work because "gmail" happens to be a substring of a Gmail address.
+        #
+        # Bare "gmail" was in this list and is gone. It matched "open gmail",
+        # which reached here ~70 lines before the launcher and answered a request
+        # to open a website with "✓ Recipient set to 'recipient@example.com'!
+        # What is the subject of the email?". Nothing is lost: every real email
+        # phrasing containing it ("send a gmail to bob@x.com") also contains
+        # "mail to", and the launcher now owns "open gmail" outright — the
+        # `open_app_or_website` skill matches it in stage 1, ahead of this block.
         if any(v in cmd_lower for v in ["draft email", "send email", "write email",
-                                        "email to", "gmail", "compose email",
+                                        "email to", "compose email",
                                         "send mail", "mail to", "draft mail",
                                         "write mail", "compose mail"]):
             # Pass directly to Communication Agent Email Wizard

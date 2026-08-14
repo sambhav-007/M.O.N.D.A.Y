@@ -36,10 +36,10 @@ what did i say about the method,recall_memory,recall_memory,pattern,True,{'query
 tell me something about whether it rains,(fallback),(fallback),fallback,True,
 what is the capital of france,(fallback),(fallback),fallback,True,
 send mail to a@b.com,(fallback),(fallback),fallback,True,
-open notepad,(fallback),(fallback),fallback,True,
+open notepad,open_app_or_website,open_app_or_website,pattern,True,{'target': 'notepad'}
 determination is important,(fallback),(fallback),fallback,True,
 i need to book a flight,(fallback),(fallback),fallback,True,
-search for python tutorials,(fallback),(fallback),fallback,True,
+search for python tutorials,web_search,web_search,pattern,True,{'query': 'python tutorials'}
 this sentence is a statement,(fallback),(fallback),fallback,True,
 the meeting is on friday,(fallback),(fallback),fallback,True,
 screenshot,take_screenshot,take_screenshot,pattern,True,
@@ -60,3 +60,16 @@ what is the number for papa,lookup_contact_number,lookup_contact_number,pattern,
 how many files are on my desktop,desktop_contents,desktop_contents,pattern,True,
 what is on my desktop,desktop_contents,desktop_contents,pattern,True,
 list my desktop,desktop_contents,desktop_contents,pattern,True,
+open gmail,open_app_or_website,open_app_or_website,pattern,True,{'target': 'gmail'}
+open file explorer,open_app_or_website,open_app_or_website,pattern,True,{'target': 'file explorer'}
+launch spotify,open_app_or_website,open_app_or_website,pattern,True,{'target': 'spotify'}
+go to github.com,open_app_or_website,open_app_or_website,pattern,True,{'target': 'github.com'}
+open youtube.com on my browser,open_app_or_website,open_app_or_website,pattern,True,{'target': 'youtube.com'}
+open youtube in chrome,open_app_or_website,open_app_or_website,pattern,True,{'target': 'youtube'}
+search web for YouTube,web_search,web_search,pattern,True,{'query': 'YouTube'}
+search the internet for rust tutorials,web_search,web_search,pattern,True,{'query': 'rust tutorials'}
+google weather in delhi,web_search,web_search,pattern,True,{'query': 'weather in delhi'}
+search current AI news,web_search,web_search,pattern,True,{'query': 'current AI news'}
+research quantum computing,research_topic,research_topic,pattern,True,{'topic': 'quantum computing'}
+open whatsapp and message papa saying hi,(fallback),(fallback),fallback,True,
+start meeting recording,(fallback),(fallback),fallback,True,

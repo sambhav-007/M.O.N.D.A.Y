@@ -4,20 +4,20 @@ End-to-end routing accuracy: *which handler does a command actually reach?*
 This supersedes component 2.1's offline macro-F1 as the measure of routing,
 because until this phase the classifier's output was computed and discarded.
 
-- **Skills registered**: 17
-- **Patterns compiled**: 381
+- **Skills registered**: 20
+- **Patterns compiled**: 818
 
 | Set | n | Accuracy |
 |-----|---|----------|
-| Commands that must reach a skill | 51 | 1.000 |
+| Commands that must reach a skill | 64 | 1.000 |
 | Commands that must NOT be captured | 10 | 1.000 |
-| **Overall** | **61** | **1.000** |
+| **Overall** | **74** | **1.000** |
 
 ## Stages used
 
 | Stage | n |
 |-------|---|
-| pattern | 51 |
+| pattern | 64 |
 | fallback | 10 |
 
 ## Why the negatives are the interesting half
@@ -30,6 +30,9 @@ Every negative below was mis-served by the substring chain this replaces:
   `"eth" in cmd_lower`, which matches *m-eth-od*, *som-eth-ing* and
   *wh-eth-er*.
 - `determination is important` → contains `terminate`.
+- `open gmail` → the email branch fired on `"gmail" in cmd_lower` and
+  answered a request to open a website by starting a message to
+  `recipient@example.com`.
 
 Patterns match whole commands, so none of these can be captured by accident.
 

@@ -86,10 +86,12 @@ ROUTING_SET: List[Tuple[str, str]] = [
     ("tell me something about whether it rains", "(fallback)"),   # "eth" again
     ("what is the capital of france", "(fallback)"),
     ("send mail to a@b.com", "(fallback)"),
-    ("open notepad", "(fallback)"),
+    # Both reclassified in tranche 3: the browser surface has skills now, so
+    # reaching one is the correct answer rather than a capture. See below.
+    ("open notepad", "open_app_or_website"),
     ("determination is important", "(fallback)"),                 # "terminate"
     ("i need to book a flight", "(fallback)"),
-    ("search for python tutorials", "(fallback)"),
+    ("search for python tutorials", "web_search"),
     ("this sentence is a statement", "(fallback)"),               # bare "{key} is {value}"
     ("the meeting is on friday", "(fallback)"),
 
@@ -122,6 +124,41 @@ ROUTING_SET: List[Tuple[str, str]] = [
     ("how many files are on my desktop", "desktop_contents"),
     ("what is on my desktop", "desktop_contents"),
     ("list my desktop", "desktop_contents"),
+
+    # ── Tranche 3: the browser surface ───────────────────────────────────────
+    # "open gmail" answered "✓ Recipient set to 'recipient@example.com'! What is
+    # the subject of the email?" — the email branch fired on `"gmail" in
+    # cmd_lower` ~70 lines above the launcher, so a request to open a website
+    # became a half-built message to a placeholder address.
+    ("open gmail", "open_app_or_website"),
+    ("open file explorer", "open_app_or_website"),
+    ("launch spotify", "open_app_or_website"),
+    ("go to github.com", "open_app_or_website"),
+    # Four words after the verb, so the launcher's word-count guard rejected it,
+    # and it fell all the way to CoderAgent: "I'm not sure how to do that yet".
+    ("open youtube.com on my browser", "open_app_or_website"),
+    ("open youtube in chrome", "open_app_or_website"),
+    # Searched DuckDuckGo for "web for YouTube" and reported five results, so it
+    # looked like a success. The verb-stripping regex took "search" and left the
+    # words that said *where* to search inside what was searched for.
+    ("search web for YouTube", "web_search"),
+    ("search the internet for rust tutorials", "web_search"),
+    ("google weather in delhi", "web_search"),
+    # Classified `desktop_automation` at 0.33 and dispatched to CoderAgent, which
+    # wrote a scraper and ran it in a subprocess — the live fetch that
+    # `--block-network` cannot see (handoff.md, Phase 1 note 1).
+    ("search current AI news", "web_search"),
+    ("research quantum computing", "research_topic"),
+
+    # ── Tranche 3 negatives ──────────────────────────────────────────────────
+    # The launcher's word count was load-bearing: it is what stopped this being
+    # read as an application named "whatsapp and message papa saying hi". It
+    # survives as the `:app` slot bound, so the command still falls through to
+    # the WhatsApp handler that can parse it.
+    ("open whatsapp and message papa saying hi", "(fallback)"),
+    # "start" is not a launch verb here — `start {target:app}` would match this,
+    # and it belongs to the audio agent.
+    ("start meeting recording", "(fallback)"),
 ]
 
 
@@ -201,6 +238,9 @@ def main() -> int:
         "  `\"eth\" in cmd_lower`, which matches *m-eth-od*, *som-eth-ing* and",
         "  *wh-eth-er*.",
         "- `determination is important` → contains `terminate`.",
+        "- `open gmail` → the email branch fired on `\"gmail\" in cmd_lower` and",
+        "  answered a request to open a website by starting a message to",
+        "  `recipient@example.com`.",
         "",
         "Patterns match whole commands, so none of these can be captured by accident.",
         "",
