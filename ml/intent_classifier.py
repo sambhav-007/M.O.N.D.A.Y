@@ -230,13 +230,29 @@ COMMAND_SEEDS: Dict[str, List[str]] = {
 }
 
 
-def build_synthetic_dataset(samples_per_class: int = 500) -> pd.DataFrame:
+#: Rows kept per intent. This was **500**, which quietly threw away 72% of the
+#: corpus: `commands.csv` held 9,996 rows and the model was fitted on 2,800 of
+#: them. Growing the dataset does nothing at all until this number moves, so it
+#: is named here rather than left as a default buried in three call sites.
+#:
+#: 2,500 is the per-class target `datagen.generate` builds to, so the cap now
+#: admits the whole corpus and stops being the binding constraint.
+SAMPLES_PER_CLASS = 2500
+
+#: The pipeline `get_trained_classifier()` fits for the running app. Named here
+#: so `intent_classifier_report.md` can state it alongside the comparison
+#: winner: SVM edges Logistic Regression on macro-F1 and costs ~47× the fit
+#: time, and the model is refitted on any clone without the cached artefact.
+PRODUCTION_MODEL = "Logistic Regression"
+
+
+def build_synthetic_dataset(samples_per_class: int = SAMPLES_PER_CLASS) -> pd.DataFrame:
     """
     Loads the labelled command dataset, preferring the `datagen/` corpus.
 
     Resolution order:
       1. data/synthetic/commands.csv  (written by `python -m datagen.generate`)
-      2. datagen.commands.generate_commands() in-process
+      2. datagen.commands.build_corpus() in-process
       3. the COMMAND_SEEDS fallback above (last resort — see its caveat)
 
     The datagen corpus deliberately shares filler vocabulary across intents and
@@ -272,8 +288,8 @@ def _load_datagen_commands() -> pd.DataFrame | None:
 
     if df is None:
         try:
-            from datagen.commands import generate_commands
-            df = generate_commands(n=10000)
+            from datagen.commands import build_corpus
+            df = build_corpus()
         except Exception:
             return None
 
@@ -496,10 +512,16 @@ def run() -> Pipeline:
     console.print("\n[dim]CLO04 · Classification · Lab 14–20[/]\n")
 
     # ── Dataset ────────────────────────────────────────────────────────────────
-    console.print("[cyan]► Generating synthetic command dataset...[/]")
-    df = build_synthetic_dataset(samples_per_class=500)
+    console.print("[cyan]► Loading the labelled command corpus...[/]")
+    df = build_synthetic_dataset()
     console.print(f"  Total samples  : [bold]{len(df)}[/]")
     console.print(f"  Classes        : [bold]{df['intent'].nunique()}[/]")
+    if "source" in df.columns:
+        prov = df["source"].value_counts().to_dict()
+        console.print(
+            f"  Provenance     : [bold]{prov.get('massive', 0)}[/] real (Amazon "
+            f"MASSIVE, en-US) + [bold]{prov.get('generated', 0)}[/] generated"
+        )
     console.print(f"  Class balance  :\n{df['intent'].value_counts().to_string()}\n")
 
     X = df["command"].tolist()
@@ -535,6 +557,16 @@ def run() -> Pipeline:
     # ── Detailed Classification Report ────────────────────────────────────────
     console.print(f"\n[bold cyan]Full Classification Report — {best_name}[/]")
     console.print(results[best_name]["report"])
+
+    # ── Persist the comparison ────────────────────────────────────────────────
+    # `reports/intent_classifier_comparison.csv` and `intent_classifier_report.md`
+    # were last written on 2026-07-23 by a generator that no longer exists, and
+    # nothing in the repo has rewritten them since — while `data/DATASET.md`
+    # cites the report as the five-model evidence. Anyone quoting it was quoting
+    # a number produced from a corpus that had since been replaced twice. They
+    # are written from this run now, so the published comparison and the live
+    # corpus cannot drift apart again.
+    _write_comparison_artefacts(results, best_name, df)
 
     # ── Live Inference Demo ────────────────────────────────────────────────────
     console.rule("[bold gold1]Live Inference Demo[/]")
@@ -574,6 +606,85 @@ def run() -> Pipeline:
     return best_pipeline
 
 
+def _write_comparison_artefacts(
+    results: Dict[str, Dict], best_name: str, df: pd.DataFrame
+) -> None:
+    """Writes the five-model comparison to `reports/`, keyed to this corpus."""
+    reports = PROJECT_ROOT / "reports"
+    reports.mkdir(parents=True, exist_ok=True)
+
+    rows = sorted(
+        (
+            {
+                "model": name.replace(" ", ""),
+                "accuracy": round(r["accuracy"], 4),
+                "precision_macro": round(r["macro_precision"], 4),
+                "recall_macro": round(r["macro_recall"], 4),
+                "f1_macro": round(r["macro_f1"], 4),
+                "fit_seconds": round(r["train_time_s"], 3),
+            }
+            for name, r in results.items()
+        ),
+        key=lambda r: r["f1_macro"],
+        reverse=True,
+    )
+    pd.DataFrame(rows).to_csv(reports / "intent_classifier_comparison.csv", index=False)
+
+    prov = df["source"].value_counts().to_dict() if "source" in df.columns else {}
+    provenance = (
+        f"{prov.get('massive', 0)} real (Amazon MASSIVE, en-US) + "
+        f"{prov.get('generated', 0)} generated"
+        if prov else f"{len(df)} rows"
+    )
+    header = "| " + " | ".join(rows[0]) + " |"
+    divider = "| " + " | ".join("---" for _ in rows[0]) + " |"
+    body = [
+        "| " + " | ".join(str(v) for v in r.values()) + " |" for r in rows
+    ]
+    best = results[best_name]
+    md = [
+        "# 2.1 Intent Classifier — Results (CLO04)",
+        "",
+        f"Winner: **{best_name}** by macro-F1.",
+        "",
+        f"Corpus: **{len(df)}** rows, {df['intent'].nunique()} classes — {provenance}.",
+        "",
+        "## Model comparison",
+        "",
+        header, divider, *body,
+        "",
+        "## Best model — macro metrics",
+        "",
+        f"- accuracy: {best['accuracy']:.4f}",
+        f"- precision (macro): {best['macro_precision']:.4f}",
+        f"- recall (macro): {best['macro_recall']:.4f}",
+        f"- f1 (macro): {best['macro_f1']:.4f}",
+        "",
+        "## What this number is, and is not",
+        "",
+        "This is a held-out slice of the corpus the model trained on. It measures",
+        "that the model learned the corpus — not that the corpus resembles what a",
+        "user types. For the second question see",
+        "[`real_command_evidence.md`](real_command_evidence.md), which evaluates",
+        "the app's own advertised commands and paraphrases of them.",
+        "",
+        "## Which model production actually loads",
+        "",
+        f"`get_trained_classifier()` fits **{PRODUCTION_MODEL}**, not necessarily the",
+        f"winner above. On this corpus {PRODUCTION_MODEL} fits in "
+        f"{results[PRODUCTION_MODEL]['train_time_s']:.2f}s against "
+        f"{best['train_time_s']:.2f}s for {best_name}, for "
+        f"{best['macro_f1'] - results[PRODUCTION_MODEL]['macro_f1']:+.4f} macro-F1 —"
+        " and the model is refitted whenever the cached artefact is missing, "
+        "including on a fresh clone. The comparison is the coursework "
+        "deliverable; the production choice is a latency trade-off, and stating "
+        "both is the point.",
+        "",
+        "_Generated by `py -3.12 -m ml.intent_classifier`._",
+    ]
+    (reports / "intent_classifier_report.md").write_text("\n".join(md) + "\n", encoding="utf-8")
+
+
 # ── Public API ─────────────────────────────────────────────────────────────────
 def get_trained_classifier() -> Pipeline:
     """Returns a trained intent-classifier pipeline (uses best model found)."""
@@ -587,10 +698,10 @@ def get_trained_classifier() -> Pipeline:
         except Exception:
             pass
 
-    df = build_synthetic_dataset(samples_per_class=500)
+    df = build_synthetic_dataset()
     X, y = df["command"].tolist(), df["intent"].tolist()
     X_train, _, y_train, _ = train_test_split(X, y, test_size=0.2, random_state=42, stratify=y)
-    pipeline = build_pipelines()["Logistic Regression"]
+    pipeline = build_pipelines()[PRODUCTION_MODEL]
     pipeline.fit(X_train, y_train)
 
     try:

@@ -1,0 +1,105 @@
+set,command,expected_intent,predicted_intent,confidence,correct,below_routing_floor,llm_fallback
+coverage,set volume to 40,desktop_automation,desktop_automation,0.8024,True,False,False
+coverage,mute,desktop_automation,desktop_automation,0.9131,True,False,False
+coverage,volume 65,desktop_automation,desktop_automation,0.9746,True,False,False
+coverage,turn the volume down,desktop_automation,desktop_automation,0.9773,True,False,False
+coverage,system volume to 35,desktop_automation,desktop_automation,0.9231,True,False,False
+coverage,screenshot,desktop_automation,desktop_automation,0.5978,True,False,True
+coverage,take a screenshot,desktop_automation,desktop_automation,0.7239,True,False,False
+coverage,health,desktop_automation,desktop_automation,0.5459,True,False,True
+coverage,system health,desktop_automation,desktop_automation,0.7701,True,False,False
+coverage,how is my pc doing,desktop_automation,desktop_automation,0.6574,True,False,False
+coverage,battery,desktop_automation,desktop_automation,0.8391,True,False,False
+coverage,battery status,desktop_automation,desktop_automation,0.7846,True,False,False
+coverage,am i charging,desktop_automation,desktop_automation,0.7635,True,False,False
+coverage,my ip,desktop_automation,desktop_automation,0.7745,True,False,False
+coverage,what time is it,desktop_automation,desktop_automation,0.966,True,False,False
+coverage,what is the date,desktop_automation,desktop_automation,0.8761,True,False,False
+coverage,kill notepad,desktop_automation,desktop_automation,0.6669,True,False,False
+coverage,terminate chrome,desktop_automation,desktop_automation,0.5596,True,False,True
+coverage,organize downloads,desktop_automation,desktop_automation,0.5312,True,False,True
+coverage,how many files are on my desktop,desktop_automation,desktop_automation,0.8173,True,False,False
+coverage,what is on my desktop,desktop_automation,desktop_automation,0.8239,True,False,False
+coverage,open notepad,desktop_automation,desktop_automation,0.3732,True,True,True
+coverage,open file explorer,desktop_automation,desktop_automation,0.7303,True,False,False
+coverage,launch spotify,desktop_automation,desktop_automation,0.5848,True,False,True
+coverage,open gmail,browser,browser,0.7127,True,False,False
+coverage,open youtube.com on my browser,browser,browser,0.804,True,False,False
+coverage,open youtube in chrome,browser,browser,0.671,True,False,False
+coverage,go to github.com,browser,browser,0.8315,True,False,False
+coverage,visit arxiv.org,browser,browser,0.909,True,False,False
+coverage,search web for youtube,browser,browser,0.9486,True,False,False
+coverage,search for python tutorials,browser,browser,0.8258,True,False,False
+coverage,search current AI news,browser,browser,0.9756,True,False,False
+coverage,google weather in delhi,browser,browser,0.9725,True,False,False
+coverage,research quantum computing,browser,browser,0.9496,True,False,False
+coverage,find rust tutorials online,browser,browser,0.8769,True,False,False
+coverage,what is the capital of france,browser,browser,0.8567,True,False,False
+coverage,weather in delhi,browser,browser,0.9433,True,False,False
+coverage,bitcoin price,browser,browser,0.9522,True,False,False
+coverage,iss location,browser,browser,0.8546,True,False,False
+coverage,where am i,browser,browser,0.8386,True,False,False
+coverage,"send mail to a@b.com subject ""Hi"" body ""Hello""",communication,communication,0.8401,True,False,False
+coverage,send mail to a@b.com,communication,communication,0.9678,True,False,False
+coverage,draft email to bob@example.com,communication,communication,0.9512,True,False,False
+coverage,message 9876543210 saying hi,communication,communication,0.8129,True,False,False
+coverage,message papa saying good morning,communication,communication,0.8229,True,False,False
+coverage,open whatsapp,communication,communication,0.9186,True,False,False
+coverage,whatsapp +919876543210,communication,communication,0.6975,True,False,False
+coverage,schedule meeting tomorrow 3pm,communication,communication,0.9606,True,False,False
+coverage,notify me the build finished,communication,communication,0.5088,True,False,True
+coverage,read latest email,communication,communication,0.84,True,False,False
+coverage,remember my prof is Dr. Gupta,memory_query,memory_query,0.7803,True,False,False
+coverage,recall prof,memory_query,memory_query,0.8817,True,False,False
+coverage,remember that the wifi password is on the fridge,memory_query,memory_query,0.9222,True,False,False
+coverage,what did i say about the exam,memory_query,memory_query,0.8043,True,False,False
+coverage,papa's number is 9876543210,memory_query,memory_query,0.935,True,False,False
+coverage,what is papa's whatsapp number,memory_query,memory_query,0.643,True,False,True
+coverage,look up my exam in my memory,memory_query,memory_query,0.8481,True,False,False
+coverage,proactive,memory_query,memory_query,0.9214,True,False,False
+coverage,summarize README.md,document_intel,document_intel,0.9034,True,False,False
+coverage,summarise the file notes.txt,document_intel,document_intel,0.872,True,False,False
+coverage,summarize report.pdf,document_intel,document_intel,0.9177,True,False,False
+coverage,give me a summary of the contract,document_intel,document_intel,0.8706,True,False,False
+coverage,hello,chitchat,chitchat,0.9248,True,False,False
+coverage,hey monday,chitchat,chitchat,0.7338,True,False,False
+coverage,who are you,chitchat,chitchat,0.8953,True,False,False
+coverage,thanks,chitchat,chitchat,0.4951,True,True,True
+coverage,tell me a joke,chitchat,chitchat,0.9153,True,False,False
+paraphrase,crank the sound up a bit,desktop_automation,desktop_automation,0.7727,True,False,False
+paraphrase,how much juice is left in this thing,desktop_automation,browser,0.3649,False,True,True
+paraphrase,what's eating my cpu right now,desktop_automation,desktop_automation,0.2749,True,True,True
+paraphrase,shut down the frozen chrome window,desktop_automation,desktop_automation,0.6392,True,False,True
+paraphrase,snap a picture of my screen,desktop_automation,communication,0.2868,False,True,True
+paraphrase,which network address is this machine on,desktop_automation,communication,0.4016,False,True,True
+paraphrase,quieten it down,desktop_automation,desktop_automation,0.4423,True,True,True
+paraphrase,fire up the code editor,desktop_automation,desktop_automation,0.5584,True,False,True
+paraphrase,tidy up my downloads directory,desktop_automation,desktop_automation,0.4441,True,True,True
+paraphrase,got the time,desktop_automation,desktop_automation,0.9276,True,False,False
+paraphrase,who won the world cup in 2014,browser,browser,0.6913,True,False,False
+paraphrase,is it going to rain tomorrow in mumbai,browser,browser,0.8551,True,False,False
+paraphrase,pull up the hacker news front page,browser,browser,0.9198,True,False,False
+paraphrase,how much is a dollar in rupees right now,browser,browser,0.8745,True,False,False
+paraphrase,dig up some articles about transformers,browser,browser,0.5625,True,False,True
+paraphrase,what's happening in the markets today,browser,browser,0.6894,True,False,False
+paraphrase,show me that wikipedia page about mughal architecture,browser,browser,0.3806,True,True,True
+paraphrase,whereabouts am i,browser,communication,0.2792,False,True,True
+paraphrase,shoot priyanka a quick note about the deadline,communication,memory_query,0.4656,False,True,True
+paraphrase,drop rahul a whatsapp saying i'll be late,communication,communication,0.7872,True,False,False
+paraphrase,put a meeting in for thursday afternoon,communication,communication,0.6464,True,False,True
+paraphrase,did anyone write to me today,communication,unclear,0.2973,False,True,True
+paraphrase,ping the team that the deploy is done,communication,communication,0.3524,True,True,True
+paraphrase,jot down that the router password is on the modem,memory_query,memory_query,0.6047,True,False,True
+paraphrase,what was that thing i told you about the exam,memory_query,unclear,0.4572,False,True,True
+paraphrase,stash my professor's email for later,memory_query,communication,0.8523,False,False,False
+paraphrase,dig out whatever you kept about the budget,memory_query,unclear,0.5105,False,False,True
+paraphrase,boil this pdf down to a paragraph,document_intel,desktop_automation,0.245,False,True,True
+paraphrase,what are the main takeaways from chapter3.pdf,document_intel,document_intel,0.2853,True,True,True
+paraphrase,trim the minutes into bullet points,document_intel,document_intel,0.4598,True,True,True
+paraphrase,skim thesis.pdf and tell me the gist,document_intel,document_intel,0.8093,True,False,False
+paraphrase,yo,chitchat,chitchat,0.2072,True,True,True
+paraphrase,what's up monday,chitchat,chitchat,0.4123,True,True,True
+paraphrase,cheers mate,chitchat,browser,0.2842,False,True,True
+paraphrase,sort my life out,unclear,unclear,0.8941,True,False,True
+paraphrase,you know the drill,unclear,unclear,0.5022,True,False,True
+paraphrase,do the usual,unclear,unclear,0.7997,True,False,True

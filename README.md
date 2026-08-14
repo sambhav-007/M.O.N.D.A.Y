@@ -167,6 +167,11 @@ python -m datagen.generate
 Writes `data/synthetic/{commands,action_tasks,action_sessions}.csv` — the
 documented corpora every ML component trains on. Safe to re-run; it is seeded.
 
+`commands.csv` mixes generated rows with real ones from
+`data/external/massive_en_us.csv`, which is committed. Re-deriving that file is a
+separate step (`python -m datagen.fetch_massive`) because it downloads 39.5 MB;
+nothing here needs the network.
+
 ### 5. Run individual ML modules
 
 ```bash
@@ -290,12 +295,23 @@ curl -X POST http://localhost:8000/ml/eta/predict -H "Content-Type: application/
 - **Accuracy, Precision, Recall, F1** per class
 - **Macro-averaged F1** for model comparison
 
-> The training corpus comes from `datagen/commands.py`, which shares filler
-> vocabulary across intents and injects ~6% label noise. That overlap is
-> deliberate: without it the classes are separable on disjoint keywords alone
-> and every linear model scores ~100%, which tells you nothing. Current results
-> on the 3,500-row balanced sample: Logistic Regression and SVM tie at **0.920**
-> macro-F1, Random Forest and KNN 0.909, Decision Tree 0.720.
+> The corpus is **17,487 rows — 6,847 real and 10,640 generated**. The real half
+> is Amazon MASSIVE (en-US), mapped onto MONDAY's 7 intents by
+> `datagen/massive.py`; the generated half is `datagen/commands.py`, which shares
+> filler vocabulary across intents and injects ~6% label noise into its own rows
+> only. That overlap is deliberate: without it the classes are separable on
+> disjoint keywords alone and every linear model scores ~100%.
+>
+> Held-out results: **SVM 0.919** macro-F1, Logistic Regression 0.910, KNN 0.895,
+> Random Forest 0.887, Decision Tree 0.581.
+>
+> **That number measures the corpus, not the user.** Against the commands the app
+> actually advertises, the previous generated-only corpus scored **0.657**, and
+> **0.486** on paraphrases of them. It is now 1.000 and **0.703**. Both are
+> reported, separately and for different reasons, in
+> [`reports/real_command_evidence.md`](reports/real_command_evidence.md) — see
+> [`data/DATASET.md`](data/DATASET.md) for why the 1.000 is a coverage check and
+> must not be quoted as accuracy.
 
 ### Component 2.2 — Task ETA Regression
 - **MAE** (Mean Absolute Error)
@@ -349,13 +365,14 @@ Written down deliberately, so nothing in this README claims more than the code d
 | Area | Status |
 |------|--------|
 | Components 2.1–2.6 | All run; evidence in `reports/` and `reports/figures/` |
+| Intent corpus (2.1) | 17,487 rows, 6,847 of them real (Amazon MASSIVE, Apache 2.0). Held-out macro-F1 0.919; real-command accuracy 1.000 coverage / 0.703 paraphrase — see `reports/real_command_evidence.md` |
 | FastAPI engine | 24 endpoints, verified against the live OpenAPI schema |
 | Tier-2 approval gate | Enforced for `send_email`, `send_whatsapp`, `terminate_process` |
 | WhatsApp | Opens a chat with the message pre-typed; auto-send is Tier-2 gated (see below) |
 | Audit log | Append-only JSON Lines (`data/action_history.jsonl`). Lossless across processes; records the full Tier-2 lifecycle |
-| Test suite | 441 passing, offline and deterministic (`py -3.12 -m pytest`) in ~40s |
+| Test suite | 505 passing, offline and deterministic (`py -3.12 -m pytest`) in ~50s |
 | Result contract | `core/contracts.py` — a handler may only claim success if it carries evidence of what it did. All 11 agents route through it |
-| Skill router | `core/router.py` — patterns → classifier → legacy fallback. Routing accuracy 1.000 (61/61), 17 skills, see [`reports/routing_evidence.md`](reports/routing_evidence.md) |
+| Skill router | `core/router.py` — patterns → classifier → legacy fallback. Routing accuracy 1.000 (74/74), 20 skills, see [`reports/routing_evidence.md`](reports/routing_evidence.md) |
 
 ### WhatsApp — what it can and cannot do
 

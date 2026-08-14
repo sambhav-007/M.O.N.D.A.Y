@@ -152,6 +152,139 @@ command a user issued paid to re-serialise their whole history.
 Covered by `tests/test_audit_log.py` (11 tests), including that write cost stops
 growing with the log.
 
+### 2026-08-13 — the browser surface (router tranche 3)
+
+Four commands typed into the app, and what came back:
+
+| Typed | Answered |
+|-------|----------|
+| `open Gmail` | "✓ Recipient set to `recipient@example.com`! What is the subject of the email?" |
+| `open WhatsApp` | ✓ Opened WhatsApp *(correct)* |
+| `open youtube.com on my browser` | "I'm not sure how to do that yet." |
+| `search web for YouTube` | "✓ Found 5 web search results for **'web for YouTube'**." |
+
+Three defects, one shape — the substring chain decided routing before anything
+could parse the command:
+
+- **`open gmail` opened an email composer.** The email branch fired on `"gmail"
+  in cmd_lower` and sat ~70 lines above the launcher, so a request to open a
+  website silently became a half-built message to a placeholder address. This is
+  the exact collision `core/skills.py` names in its header; it survived because
+  the launcher could never be reached to disagree. Bare `"gmail"` is out of that
+  keyword list — every real phrasing containing it (`send a gmail to bob@x.com`)
+  also contains `"mail to"`.
+- **`open youtube.com on my browser` was not understood at all.** The launcher
+  stripped the verb and gave up if more than three words were left, so a URL plus
+  a destination failed the count, fell through to `CoderAgent` and got its honest
+  refusal. Saying *where* to open something was never a thing the system could
+  hear.
+- **`search web for YouTube` searched for "web for YouTube".** The branch
+  stripped `^(search for|search|find|look up|google)\s+` and searched for
+  whatever remained, so the words saying where to search became part of what was
+  searched for. It reported five results and looked like a success — the failure
+  was in the query, never in the status.
+
+Fixed as tranche 3 of the router (`core/skills_builtin.py`): `open_app_or_website`,
+`web_search`, `research_topic`. 17 skills → **20**, routing accuracy **1.000
+(74/74)**, 381 → 818 patterns at 0.29 ms per command. Tests:
+`tests/test_browser_skills.py` (35). Suite **489 passing, 0 failing, ~65s**.
+
+**Two things worth knowing:**
+
+1. **The word count was load-bearing.** It is what stopped "open whatsapp and
+   message papa saying hi" being read as an application named "whatsapp and
+   message papa saying hi". It survives as the `{name:app}` slot type
+   (`core/intent_patterns.py`, `MAX_APP_TOKENS = 3`), so it now bounds the
+   *target* rather than the whole command — which is precisely what let the
+   browser suffix be matched instead of counted. Do not widen it without
+   re-reading that test.
+2. **`start` is deliberately not a launch verb.** `start {target:app}` matches
+   "start meeting recording", which belongs to the audio agent. The legacy chain
+   still serves `start <app>`, and it runs after that intercept.
+
+This also closes UPGRADE_PLAN §1.2 (Phase 1 note 1 below): `search current AI
+news` classified `desktop_automation` at **0.33** and reached `CoderAgent`, which
+wrote a scraper and ran it under `subprocess` — the live fetch `--block-network`
+cannot see. Stage 1 now places it before any classification is consulted.
+
+One deliberate move: `search api for X` used to reach the public-API directory
+(`"search api" in cmd_lower`) and now reaches the web search. The directory is
+still served by its own phrasing (`public api for X`), and a command that says
+"search" should search.
+
+### 2026-08-13 — the intent corpus is half real now
+
+**The gap that started it.** 2.1 publishes a macro-F1 measured on a held-out
+slice of the corpus it trained on. That says the model learned the corpus. It
+does not say the corpus resembles what a user types — and it did not:
+
+| | held-out synthetic | the app's own commands | paraphrases of them |
+|---|---|---|---|
+| before | 0.929 macro-F1 | **0.657** @ 0.549 conf | **0.486** @ 0.444 conf |
+| after | 0.919 macro-F1 (SVM) | **1.000** @ 0.813 conf | **0.703** @ 0.547 conf |
+
+`what time is it` returned `memory_query` at **0.33**. `battery` scored **0.26**.
+`bitcoin price` → `desktop_automation` at 0.26. All three are `/help` examples.
+42% of the app's own commands sat below the router's 0.50 stage-2 floor, and 46
+of 67 below `predict_intent`'s 0.65 LLM-fallback threshold — the app believed it
+did not understand most of what it could do.
+
+**The cause was coverage, not modelling.** 9,996 rows sounds like a dataset; it
+was **117 sentence skeletons** over a **924-word vocabulary**, and the row count
+was slot permutation. Battery, my ip, kill, recall, bitcoin, iss and proactive
+appeared in *no template at all*. Vocabulary is now **4,871** words.
+
+**And 72% of it was thrown away anyway.** `build_synthetic_dataset` capped at
+**500 rows per class**, so the 9,996-row corpus was fitted on 2,800 rows.
+Growing a dataset does nothing while that cap binds. It is now
+`ml.intent_classifier.SAMPLES_PER_CLASS = 2500`, named once and asserted.
+
+**What was added.** Amazon MASSIVE en-US (16,521 real utterances spoken to a
+virtual assistant, Apache 2.0), mapped onto MONDAY's 7 intents by
+`datagen/massive.py` — 35 of its 60 intents mapped, the other 25 listed with the
+reason they were refused. The rule: **an utterance is kept only if MONDAY has
+somewhere to send it.** `transport_ticket` and `play_music` are dropped because
+there is no booking or playback; `general_quirky` maps to `llm_fallback` because
+MASSIVE's catch-all is exactly this project's low-confidence bucket.
+
+`py -3.12 -m datagen.fetch_massive` re-derives it (39.5 MB download). The output
+is committed, so a fresh clone trains offline.
+
+**Four things worth knowing:**
+
+1. **The 1.000 is a coverage check, not accuracy.** The generator's templates
+   were written from the same capability list the coverage set is drawn from, so
+   the overlap is by construction. The number that means the model generalises is
+   the **paraphrase** set — 0.486 → 0.703 — written after the corpus was built and
+   deliberately never fed back into the generator.
+   `test_the_paraphrase_set_is_not_in_the_corpus` enforces that mechanically, so
+   a well-meaning "let's cover these too" fails a test instead of quietly turning
+   the generalisation number into a second coverage check.
+2. **A generated floor per class is load-bearing.** The first version of
+   `build_corpus` topped up with generation only where MASSIVE fell short — so
+   MASSIVE filled `browser` and `communication` outright, they got 88 and 98
+   generated rows, and **every MONDAY-specific template for them was absent**.
+   `search web for youtube` scored 0.29. MASSIVE is a *spoken* corpus: no bare
+   URLs, no `subject "…" body "…"`, no WhatsApp, no `iss location`.
+   `MIN_GENERATED_PER_CLASS = 800` is coverage, not padding.
+3. **Label noise is applied to generated rows only.** Corrupting real human
+   labels to make a benchmark harder would be vandalism.
+4. **`document_intel` gets nothing from MASSIVE**, and `chitchat` almost nothing —
+   nobody dictates "summarise chapter 3 of the PDF" to a smart speaker. Those two
+   classes are still effectively synthetic-only and are the least well evidenced
+   of the seven.
+
+**A stale artefact found on the way.** `reports/intent_classifier_comparison.csv`
+and `intent_classifier_report.md` were last written on **2026-07-23** by a
+generator that no longer exists, and nothing in the repo rewrote them — while
+`data/DATASET.md` cited the report as the five-model evidence. Anyone quoting it
+was quoting 0.9417 from a corpus that had since been replaced twice.
+`ml.intent_classifier.run()` writes both now, including which model production
+actually loads (Logistic Regression — SVM wins by +0.009 macro-F1 and costs ~47×
+the fit time).
+
+Tests: `tests/test_intent_corpus.py` (15). Suite **505 passing, ~50s**.
+
 ## 9. WhatsApp (added 2026-08-08)
 
 WhatsApp has **no API a desktop script may send through**. The deep link
@@ -413,8 +546,11 @@ the current browser TTS) — just route UI speech through `POST /agent/voice/spe
 
 ## 6. Known limitations / next steps
 
-- ~~**Intent classifier ~99.8% accuracy**~~ — FIXED 2026-08-03. Now sourced from
-  `datagen/`; LR/SVM 0.929, RF 0.920, KNN 0.919, DT 0.761 macro-F1.
+- ~~**Intent classifier ~99.8% accuracy**~~ — FIXED 2026-08-03, then **superseded
+  2026-08-13**. The 0.929 was real but described a held-out slice of a corpus
+  built from 117 templates; on the app's own commands the same model scored
+  0.657. The corpus is now half real (Amazon MASSIVE) — SVM 0.919 held-out,
+  0.703 on unseen paraphrases. See the 2026-08-13 section above.
 - ~~**`common/`** is still orphaned~~ — **WRONG, corrected 2026-08-07.** It is
   imported by `datagen/generate.py:16` (`common.io.save_csv`) and by
   `notebooks/2_1_intent_classifier.ipynb` (`common.preprocessing`,
