@@ -423,17 +423,43 @@ so that is what the approved path does.
 This captures the state of work so anyone (teammate or future session) can pick up
 without re-deriving the hard-won environment knowledge.
 
-## 10. The one thing to look at next
+## 10. The UI starts offline (2026-08-14)
 
-**The UI depends on seven CDN `<script>` tags** — Tailwind and six three.js
-files. Loading `ui/index.html` with those blocked kills the whole inline script,
-so the app is not degraded without a network, it is dead: no commands, no voice,
-no console. Found while testing the voice work in a sandboxed browser, not in
-normal use, because a working connection hides it completely.
+**Was:** `ui/index.html` loaded **eight** libraries from three CDNs (I said seven
+first time — it is Tailwind plus seven three.js files) and imported Google Fonts.
+They are plain `<script src>` tags, so a failed load is silent, and the
+`ReferenceError: THREE is not defined` it caused in the inline script aborted
+everything after it — `sendCommand`, `Voice`, the input handler. With no network
+the app was not degraded, it was dead: no commands, no voice, no console, no
+visible error. A working connection hides that completely, which is why it
+survived this long; it turned up in a sandboxed browser while testing something
+else.
 
-That collides directly with the standing top risk in §6 — the offline demo path.
-Vendoring the seven files into `ui/vendor/` is an afternoon's work and removes
-both problems at once. Nothing else in the repo needs the network to start.
+**Now:** all eight, plus the two font families (latin + latin-ext, 12 woff2
+files), live in `ui/vendor/`. ~1.3 MB committed.
+
+    py -3.12 -m ui.vendor.fetch_vendor          # verify what is committed
+    py -3.12 -m ui.vendor.fetch_vendor --write  # re-download
+
+That script records every source URL, version and licence, so the files are
+auditable rather than unattributed blobs. three.js and Tailwind are MIT; both
+fonts are SIL OFL 1.1. Versions are pinned together on purpose — the three.js
+`examples/js` add-ons attach to the `THREE` global and only work against a
+matching core.
+
+**The part that nearly shipped broken.** Vendoring the files is the obvious
+half; *serving* them is the half that is easy to miss. `/app` returns the HTML
+with a `FileResponse`, which serves one file and nothing beside it — and both
+entry points go through it, because `app.py` points the pywebview window at
+`http://127.0.0.1:8000/app` rather than opening the file from disk. Without a
+static mount every `vendor/*.js` request 404s and the fix reintroduces the exact
+bug it was meant to remove. `api/main.py` mounts `/vendor`;
+`tests/test_offline_assets.py` (8) asserts it, and was checked against a
+deliberately removed mount to confirm it can actually fail.
+
+Verified in a browser at `/app`: THREE r128 and all six add-ons defined,
+Tailwind applied, WebGL canvas up at 165 FPS, `Voice` and `sendCommand` present,
+both vendored fonts loading. Suite **525 passing**.
 
 ---
 

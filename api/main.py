@@ -165,11 +165,27 @@ async def root() -> Dict[str, Any]:
     }
 
 
+#: The front-end libraries `ui/index.html` used to pull from CDNs.
+#:
+#: This mount is not optional. `/app` returns the HTML with a `FileResponse`,
+#: which serves one file and nothing beside it — and **both** entry points go
+#: through it: `app.py` points the pywebview window at `http://127.0.0.1:8000/app`
+#: rather than opening the file from disk, and the browser-only path is the same
+#: URL. Without this, every `vendor/*.js` request 404s, `THREE` is undefined, and
+#: the inline script dies before defining `sendCommand` — which is the exact
+#: failure vendoring was meant to remove, reintroduced by the fix for it.
+_UI_DIR = Path(__file__).resolve().parent.parent / "ui"
+if (_UI_DIR / "vendor").is_dir():
+    from fastapi.staticfiles import StaticFiles
+
+    app.mount("/vendor", StaticFiles(directory=str(_UI_DIR / "vendor")), name="vendor")
+
+
 @app.get("/app", tags=["Interactive Desktop GUI"])
 async def serve_desktop_app():
     """Serves the living 3D AI Entity Desktop GUI App."""
     from fastapi.responses import FileResponse
-    ui_path = Path(__file__).resolve().parent.parent / "ui" / "index.html"
+    ui_path = _UI_DIR / "index.html"
     if ui_path.exists():
         return FileResponse(str(ui_path))
     raise HTTPException(404, "Desktop UI file not found.")

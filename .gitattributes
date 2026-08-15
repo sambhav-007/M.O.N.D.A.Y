@@ -2,3 +2,14 @@
 # the interpreter path unresolvable ("bad interpreter: /bin/sh^M"), so these
 # must stay LF regardless of the checkout platform.
 .githooks/* text eol=lf
+
+# Vendored third-party assets are stored exactly as downloaded.
+#
+# Without this, Windows line-ending conversion rewrites the minified JS on
+# checkout, so the committed bytes no longer match upstream and the sha256 that
+# `py -3.12 -m ui.vendor.fetch_vendor` prints stops meaning anything. These are
+# not files anyone edits here, so there is nothing to normalise.
+ui/vendor/** -text
+
+# woff2 are binary; be explicit rather than relying on detection.
+*.woff2 binary
