@@ -9,6 +9,11 @@ data/memories.db
 data/memory.db
 data/*.db
 data/staging/
+# VisionAgent overwrites this on every screen capture, and the test suite
+# triggers one per run — pure churn in every diff, exactly like data/calendar.json
+# and action_history.json below. Committed once in 192ae32 and never usefully
+# updated since.
+data/scratch/
 
 # Machine-generated runtime artifacts. These are rewritten on every run and
 # caused repeated merge conflicts; the voice profile also embeds an absolute
@@ -18,6 +23,12 @@ data/action_history.json
 data/action_history.*.tmp
 data/action_history.corrupt-*.json
 models/monday_voice_profile.joblib
+
+# Written by voice/tts_bridge.py when torchaudio cannot read mondayvoice.mp3
+# directly: it transcodes the reference to 22 kHz WAV beside it. Generated, not
+# authored — the same reason action_history.json and the voice profile above are
+# ignored. The XTTS work it belongs to is parked anyway (handoff.md §5).
+ui/_monday_ref_22k.wav
 
 # Runtime calendar store. The agent appends an event on every scheduling call
 # (the test suite adds one per run), so a tracked copy is pure churn and would

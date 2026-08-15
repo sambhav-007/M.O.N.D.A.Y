@@ -1,6 +1,6 @@
 # M.O.N.D.A.Y — Session Handoff
 
-_Last updated: 2026-08-08. Machine: Windows 11 Home, user `sambh`._
+_Last updated: 2026-08-14. Machine: Windows 11 Home, user `sambh`._
 
 > **Read this first.** `README.md` § *Status & Known Limitations* is the
 > authoritative statement of what works and what does not. This file is a running
@@ -287,6 +287,14 @@ Tests: `tests/test_intent_corpus.py` (15). Suite **505 passing, ~50s**.
 
 ### 2026-08-14 — identity, WhatsApp, spoken length, and live voice
 
+**Confirmed working by the user on the real machine**, which matters for the
+voice half specifically: none of it could be exercised here. Wake-word matching,
+echo suppression and barge-in were verified against a real `speechSynthesis` in
+a browser, but no audio ever went through a microphone during development, and
+whether WebView2 exposes `webkitSpeechRecognition` at all was an open question
+until it ran. It does. If that ever changes, the Live button disables itself and
+says why, and push-to-talk still works.
+
 **The name bug was self-amplifying.** The identity branch fired on `"my name" in
 cmd_lower`, called `memory_agent.recall("name")` and read `matches[0]["value"]`
 as the answer. `recall` is a TF-IDF *similarity* search and
@@ -414,6 +422,18 @@ so that is what the approved path does.
 
 This captures the state of work so anyone (teammate or future session) can pick up
 without re-deriving the hard-won environment knowledge.
+
+## 10. The one thing to look at next
+
+**The UI depends on seven CDN `<script>` tags** — Tailwind and six three.js
+files. Loading `ui/index.html` with those blocked kills the whole inline script,
+so the app is not degraded without a network, it is dead: no commands, no voice,
+no console. Found while testing the voice work in a sandboxed browser, not in
+normal use, because a working connection hides it completely.
+
+That collides directly with the standing top risk in §6 — the offline demo path.
+Vendoring the seven files into `ui/vendor/` is an afternoon's work and removes
+both problems at once. Nothing else in the repo needs the network to start.
 
 ---
 
@@ -573,9 +593,11 @@ fbce7e7 feat(2.6): real XAI layer via exact closed-form Shapley values
 23aa4e9 feat(email): confirm-then-send over SMTP; fix parsing, routing and startup
 ```
 
-Still untracked and undecided: `voice/` and `ui/_monday_ref_22k.wav`. The `.wav`
-is a resampled copy of the voice reference made for the abandoned XTTS work and
-is probably deletable.
+> **Resolved 2026-08-14.** `voice/tts_bridge.py` is committed — it is real
+> source and the only record of how far the XTTS attempt got (§5).
+> `ui/_monday_ref_22k.wav` is now **gitignored**: `tts_bridge.py` writes it
+> itself when torchaudio cannot read the mp3 directly, so it is generated, not
+> authored, like `action_history.json` and the voice profile.
 
 How each merge conflict was originally resolved:
 - `agents/comms_agent.py` — kept the honest "not sent" branch; folded in the other
@@ -595,9 +617,8 @@ Cleaned up:
 - `data/action_history.json` and `models/monday_voice_profile.joblib` are now
   gitignored and untracked (files remain on disk).
 
-Still untracked and undecided: `voice/` (contains `tts_bridge.py`) and
-`ui/_monday_ref_22k.wav`. The `.wav` is a resampled copy of the voice reference
-made for the abandoned XTTS work (§5) and is probably deletable.
+Nothing is left untracked and undecided. `voice/tts_bridge.py` is committed;
+`ui/_monday_ref_22k.wav` is gitignored as a generated artefact of it.
 
 Repo: `https://github.com/sambhav-007/M.O.N.D.A.Y` (private).
 
