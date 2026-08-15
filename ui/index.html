@@ -46,6 +46,11 @@
       <span class="bg-zinc-900/80 border border-zinc-800 px-2.5 py-1 rounded-lg text-amber-400 font-bold">
         FPS: <span id="fps-counter">60</span>
       </span>
+      <button id="live-btn" onclick="Voice.toggleLive()" title="Always-on listening — say &quot;Hey Monday&quot; (Ctrl+L)"
+              class="bg-zinc-900/80 hover:bg-zinc-800 border border-zinc-800 text-zinc-400 px-3 py-1 rounded-lg font-bold transition-all flex items-center gap-1.5">
+        <span id="live-dot" class="w-2 h-2 rounded-full bg-zinc-600 transition-all"></span>
+        <span id="live-btn-text">Live Off</span>
+      </button>
       <button onclick="toggleViewMode()" class="bg-amber-500 hover:bg-amber-400 text-black px-3 py-1 rounded-lg font-bold transition-all shadow-lg shadow-amber-500/20">
         <span id="mode-btn-text">Console Mode</span>
       </button>
@@ -66,9 +71,9 @@
     <!-- Status & Caption Subtitle -->
     <div class="flex flex-col items-center gap-2 text-center pointer-events-auto">
       <div id="presence-caption" class="bg-black/70 border border-amber-500/30 backdrop-blur-md text-amber-300 font-mono text-sm px-5 py-2.5 rounded-2xl max-w-xl shadow-2xl transition-all">
-        "M.O.N.D.A.Y. Online. Hold Spacebar or click entity to speak."
+        "M.O.N.D.A.Y. Online. Say 'Hey Monday', or hold Space."
       </div>
-      <span class="text-[11px] font-mono text-zinc-500">Hold Spacebar to speak • Press Ctrl+` for Console</span>
+      <span class="text-[11px] font-mono text-zinc-500">Say "Hey Monday" with Live on • Space to talk • Ctrl+L live • Ctrl+` console</span>
     </div>
   </div>
 
@@ -379,44 +384,300 @@
       }
     }
 
-    let recognition = null;
-    let isListening = false;
+    // ─────────────────────────────────────────────────────────────────────────
+    // Voice: wake word, continuous listening, and barge-in.
+    //
+    // This replaces a one-shot recogniser (`continuous = false`,
+    // `interimResults = false`) that could only be started by pressing a key,
+    // heard exactly one utterance, and could not be interrupted once MONDAY
+    // started talking — you waited for it to finish, however long it went on.
+    //
+    // Three things make it feel like a conversation instead:
+    //
+    //   1. It keeps listening. Chrome ends a recognition session on its own
+    //      every ~60s and after most results, so `onend` restarts it. Without
+    //      that restart, "continuous" lasts about a minute.
+    //   2. Nothing acts until it hears the wake word. Always-on listening that
+    //      acts on everything is unusable in a room with other people in it.
+    //   3. Interim results are the whole trick. They arrive while you are still
+    //      speaking, so the moment you start talking over MONDAY we can cancel
+    //      the utterance — which is what "barge-in" is, and why waiting for a
+    //      final result would be far too late.
+    //
+    // All of it is browser-native (Web Speech API). There is no backend TTS on
+    // this machine — gTTS and pyttsx3 are both absent — so `speechSynthesis` is
+    // the only voice, which as a side effect finally settles the double-speak
+    // problem in handoff.md §6: there is exactly one speech path now.
+    const Voice = {
+      rec: null,
+      supported: false,
+      live: false,            // always-on listening armed
+      awake: false,           // wake word heard; next words are a command
+      speaking: false,
+      restartTimer: null,
+      wakeTimer: null,
+      lastSpoken: '',
+      utterance: null,
 
-    function initSpeechRecognition() {
-      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-      if (!SpeechRecognition) return;
+      // Deliberately generous, because a wake word that misses is a feature
+      // that does not work. "Hey Monday" comes back as "hey Monday", "heyy
+      // Monday", "hay Monday", "hey munday" and "hey mondey" depending on
+      // accent and how much of the first word survives the start of the audio
+      // buffer — so the greeting allows repeated letters and the name allows
+      // the vowels people actually get transcribed.
+      //
+      // The second pattern is bare "Monday", for when the greeting is clipped
+      // entirely. It costs the occasional false wake on "see you Monday", which
+      // is a stray "Yes? I'm listening" — cheap next to not waking at all.
+      // Order matters: the first match wins, so the greeting form is tried
+      // first and keeps its command text intact.
+      WAKE: [
+        /\b(?:h[ae]+y+|hi+|hell+o+|o+k+(?:ay)?|yo+)[\s,]+m[ou]n+d[aei]y\b[\s,.:;!?-]*/i,
+        /\bm[ou]n+d[aei]y\b[\s,.:;!?-]*/i
+      ],
 
-      recognition = new SpeechRecognition();
-      recognition.continuous = false;
-      recognition.interimResults = false;
-      recognition.lang = 'en-US';
+      // How long to wait for a command after the wake word before standing down.
+      WAKE_TIMEOUT_MS: 8000,
 
-      recognition.onstart = function() {
-        isListening = true;
-        setEntityMode('listening');
-        document.getElementById('presence-caption').innerText = '🎙️ "Listening... Speak your command now."';
-      };
-
-      recognition.onresult = function(event) {
-        const transcript = event.results[0][0].transcript;
-        if (transcript && transcript.trim()) {
-          document.getElementById('cmd-input').value = transcript.trim();
-          sendCommand();
+      init() {
+        const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+        if (!SR) {
+          this.supported = false;
+          const btn = document.getElementById('live-btn');
+          if (btn) {
+            btn.disabled = true;
+            btn.title = 'This build has no Web Speech recognition — push-to-talk still works';
+            btn.classList.add('opacity-40', 'cursor-not-allowed');
+          }
+          return;
         }
-      };
+        this.supported = true;
 
-      recognition.onerror = function(event) {
-        isListening = false;
-        setEntityMode('idle');
-        document.getElementById('presence-caption').innerText = '"M.O.N.D.A.Y. Online. Hold Spacebar or click entity to speak."';
-      };
+        const rec = new SR();
+        rec.continuous = true;
+        rec.interimResults = true;
+        rec.lang = 'en-US';
+        rec.maxAlternatives = 1;
 
-      recognition.onend = function() {
-        isListening = false;
+        rec.onresult = (e) => this.onResult(e);
+        rec.onerror = (e) => this.onError(e);
+        rec.onend = () => this.onEnd();
+        this.rec = rec;
+      },
+
+      // ── Barge-in ──────────────────────────────────────────────────────────
+      // Called on every interim result. If MONDAY is mid-sentence and the user
+      // has started saying something of their own, stop talking immediately.
+      maybeBargeIn(text) {
+        if (!this.isTalking()) return false;
+        const t = (text || '').trim();
+        if (t.length < 3) return false;              // a cough, a click, a plosive
+        if (this.isEcho(t)) return false;            // the mic hearing MONDAY
+        this.stopSpeaking();
+        return true;
+      },
+
+      // The microphone hears the speakers. Without this, MONDAY interrupts
+      // itself on its own voice and the reply is cut off after three words.
+      // Proper acoustic echo cancellation is the real answer; comparing against
+      // what we are currently saying is the cheap one that works here.
+      isEcho(text) {
+        if (!this.lastSpoken) return false;
+        const said = this.lastSpoken.toLowerCase().replace(/[^a-z0-9 ]/g, '');
+        const heard = text.toLowerCase().replace(/[^a-z0-9 ]/g, '');
+        if (!heard) return false;
+        if (said.includes(heard)) return true;
+        // Or a decent overlap of the words we are in the middle of saying.
+        const heardWords = heard.split(/\s+/).filter(w => w.length > 3);
+        if (!heardWords.length) return false;
+        const hits = heardWords.filter(w => said.includes(w)).length;
+        return hits / heardWords.length >= 0.6;
+      },
+
+      // ── Wake word ─────────────────────────────────────────────────────────
+      // Returns the command that followed the wake phrase, '' if the wake word
+      // was heard with nothing after it, or null if it was not heard at all.
+      //
+      // The slice is taken from the ORIGINAL text, not a normalised copy. An
+      // earlier version flattened punctuation to spaces before searching and
+      // returned the flattened string, so "hey monday what's the time" became
+      // "what s the time" — which matches no skill pattern, since those are
+      // written with the apostrophe ("what's my name", "papa's number"). The
+      // wake word is found case-insensitively; everything after it is passed
+      // through untouched.
+      afterWakeWord(text) {
+        const raw = (text || '').trim();
+        if (!raw) return null;
+        for (const re of this.WAKE) {
+          const m = re.exec(raw);
+          if (m) return raw.slice(m.index + m[0].length).trim();
+        }
+        return null;
+      },
+
+      onResult(event) {
+        let interim = '', final = '';
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+          const chunk = event.results[i][0].transcript;
+          if (event.results[i].isFinal) final += chunk; else interim += chunk;
+        }
+
+        // Barge-in runs on interim text, before anything else — the point is to
+        // react while the user is still mid-word.
+        if (interim) this.maybeBargeIn(interim);
+        if (final) this.maybeBargeIn(final);
+
+        const text = (final || '').trim();
+        if (!text) {
+          if (interim && this.awake) this.caption(`🎙️ "${interim.trim()}"`);
+          return;
+        }
+        if (this.isEcho(text)) return;
+
+        if (this.awake) {
+          this.clearWakeTimer();
+          this.awake = false;
+          this.run(text);
+          return;
+        }
+
+        const after = this.afterWakeWord(text);
+        if (after === null) return;          // not addressed to us
+        if (after) { this.run(after); return; }   // "hey monday, what's the time"
+        this.arm();                          // just "hey monday" — wait for more
+      },
+
+      arm() {
+        this.awake = true;
+        setEntityMode('listening');
+        this.caption('🎙️ "Yes? I\'m listening."');
+        this.clearWakeTimer();
+        this.wakeTimer = setTimeout(() => {
+          this.awake = false;
+          setEntityMode('idle');
+          this.caption(this.live ? '👂 "Listening for \'Hey Monday\'..."' : IDLE_CAPTION);
+        }, this.WAKE_TIMEOUT_MS);
+      },
+
+      clearWakeTimer() {
+        if (this.wakeTimer) { clearTimeout(this.wakeTimer); this.wakeTimer = null; }
+      },
+
+      run(command) {
+        const input = document.getElementById('cmd-input');
+        if (input) input.value = command;
+        sendCommand();
+      },
+
+      caption(text) {
+        const el = document.getElementById('presence-caption');
+        if (el) el.innerText = text;
+      },
+
+      onError(event) {
+        // `no-speech` and `aborted` are routine in a continuous session and mean
+        // nothing; `not-allowed` means the user declined the microphone, and
+        // retrying that in a loop would spin forever.
+        if (event.error === 'not-allowed' || event.error === 'service-not-allowed') {
+          this.live = false;
+          this.paint();
+          this.caption('🎙️ "Microphone blocked — allow it to use voice."');
+        }
+      },
+
+      onEnd() {
+        if (!this.live) { this.paint(); return; }
+        // Chrome ends the session by itself; restart it. The delay keeps a
+        // permission failure from becoming a busy loop.
+        clearTimeout(this.restartTimer);
+        this.restartTimer = setTimeout(() => this.start(), 350);
+      },
+
+      start() {
+        if (!this.supported || !this.live) return;
+        try { this.rec.start(); } catch (e) { /* already running */ }
+      },
+
+      toggleLive() {
+        if (!this.supported) return;
+        this.live = !this.live;
+        if (this.live) {
+          this.start();
+          this.caption('👂 "Listening for \'Hey Monday\'..."');
+        } else {
+          this.awake = false;
+          this.clearWakeTimer();
+          clearTimeout(this.restartTimer);
+          try { this.rec.stop(); } catch (e) {}
+          this.caption(IDLE_CAPTION);
+          setEntityMode('idle');
+        }
+        this.paint();
+      },
+
+      paint() {
+        const dot = document.getElementById('live-dot');
+        const txt = document.getElementById('live-btn-text');
+        const btn = document.getElementById('live-btn');
+        if (!dot || !txt || !btn) return;
+        txt.innerText = this.live ? 'Live On' : 'Live Off';
+        dot.className = 'w-2 h-2 rounded-full transition-all ' +
+          (this.live ? 'bg-emerald-400 animate-pulse' : 'bg-zinc-600');
+        btn.className = 'px-3 py-1 rounded-lg font-bold transition-all flex items-center gap-1.5 border ' +
+          (this.live
+            ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-300'
+            : 'bg-zinc-900/80 border-zinc-800 text-zinc-400 hover:bg-zinc-800');
+      },
+
+      // ── Speaking ──────────────────────────────────────────────────────────
+      // Whether there is anything to interrupt right now.
+      //
+      // `speaking` used to be set in the utterance's `onstart`, which is
+      // asynchronous — there is a gap of a hundred milliseconds or more between
+      // calling `speak()` and the voice actually starting. Barge-in inside that
+      // gap did nothing, so interrupting the instant a reply arrived (the most
+      // natural moment to do it) was exactly when it failed. The flag is now set
+      // synchronously, and `speechSynthesis.pending` covers a queued utterance
+      // that has not begun.
+      isTalking() {
+        if (this.speaking) return true;
+        if (!('speechSynthesis' in window)) return false;
+        return window.speechSynthesis.speaking || window.speechSynthesis.pending;
+      },
+
+      speak(text) {
+        if (!('speechSynthesis' in window)) return;
+        this.stopSpeaking();
+        const clean = (text || '').replace(/[✓❌🔒🤖🗣️🎙️🖥️\[\]]/g, '').trim();
+        if (!clean) return;
+
+        this.lastSpoken = clean;
+        // Set before speaking, not in onstart — see isTalking().
+        this.speaking = true;
+        const u = new SpeechSynthesisUtterance(clean);
+        u.rate = 1.05;
+        u.pitch = 0.92;
+        u.onstart = () => { this.speaking = true; setEntityMode('talking'); };
+        u.onend = () => { this.speaking = false; this.lastSpoken = ''; this.idle(); };
+        u.onerror = () => { this.speaking = false; this.lastSpoken = ''; this.idle(); };
+        this.utterance = u;
+        setEntityMode('talking');
+        window.speechSynthesis.speak(u);
+      },
+
+      stopSpeaking() {
+        if ('speechSynthesis' in window) window.speechSynthesis.cancel();
+        this.speaking = false;
+        this.lastSpoken = '';
+      },
+
+      idle() {
         setEntityMode('idle');
-        document.getElementById('presence-caption').innerText = '"M.O.N.D.A.Y. Online. Hold Spacebar or click entity to speak."';
-      };
-    }
+        this.caption(this.live ? '👂 "Listening for \'Hey Monday\'..."' : IDLE_CAPTION);
+      }
+    };
+
+    const IDLE_CAPTION = '"M.O.N.D.A.Y. Online. Say \'Hey Monday\', or hold Space."';
 
     function toggleViewMode() {
       viewMode = viewMode === 'presence' ? 'console' : 'presence';
@@ -430,7 +691,7 @@
       if (isListening) {
         isListening = false;
         setEntityMode('idle');
-        document.getElementById('presence-caption').innerText = '"M.O.N.D.A.Y. Online. Hold Spacebar or click entity to speak."';
+        Voice.idle();
         return;
       }
 
@@ -452,12 +713,12 @@
           sendCommand();
         } else {
           setEntityMode('idle');
-          document.getElementById('presence-caption').innerText = '"M.O.N.D.A.Y. Online. Hold Spacebar or click entity to speak."';
+          Voice.idle();
         }
       } catch(err) {
         isListening = false;
         setEntityMode('idle');
-        document.getElementById('presence-caption').innerText = '"M.O.N.D.A.Y. Online. Type or speak command below..."';
+        Voice.idle();
         const cmdIn = document.getElementById('cmd-input');
         if (cmdIn) cmdIn.focus();
       }
@@ -473,8 +734,13 @@
         }
       } else if (e.code === 'Backquote' && e.ctrlKey) {
         toggleViewMode();
+      } else if (e.code === 'KeyL' && e.ctrlKey) {
+        e.preventDefault();
+        Voice.toggleLive();
       } else if (e.code === 'Space' && document.activeElement.tagName !== 'INPUT') {
         e.preventDefault();
+        // Reaching for the mic while MONDAY is talking means "stop and listen".
+        Voice.stopSpeaking();
         togglePushToTalk();
       }
     }
@@ -498,31 +764,16 @@
       renderer.setSize(window.innerWidth, window.innerHeight);
     }
 
-    function speakText(text) {
-      // Do NOT play mondayvoice.mp3 here. It is the fixed reference recording,
-      // so playing it on every reply made the same lines repeat endlessly on
-      // top of the actual spoken response.
-      if (!('speechSynthesis' in window)) return;
-      window.speechSynthesis.cancel();
-      const clean = text.replace(/[✓❌🔒🤖🗣️🎙️🖥️\[\]]/g, '').trim();
-      if (!clean) return;
-
-      const utterance = new SpeechSynthesisUtterance(clean);
-      utterance.rate = 1.05;
-      utterance.pitch = 0.92;
-
-      utterance.onstart = function() {
-        setEntityMode('talking');
-      };
-      utterance.onend = function() {
-        setEntityMode('idle');
-        document.getElementById('presence-caption').innerText = '"M.O.N.D.A.Y. Online. Hold Spacebar or click entity to speak."';
-      };
-      utterance.onerror = function() {
-        setEntityMode('idle');
-      };
-      window.speechSynthesis.speak(utterance);
-    }
+    // Do NOT play mondayvoice.mp3 here. It is the fixed reference recording, so
+    // playing it on every reply made the same lines repeat endlessly on top of
+    // the actual spoken response.
+    //
+    // `text` should be `execution_result.speech`, not `.message`. The backend
+    // decides the spoken form in `core/speech.py` — one place, shared by the
+    // CLI, the API and this UI. Passing `.message` is what had it reading a
+    // whole scraped search result, and a Tier-2 prompt including
+    // "can't be undone · est. 1s", out loud.
+    function speakText(text) { Voice.speak(text); }
 
     async function sendCommand() {
       const input = document.getElementById('cmd-input');
@@ -543,10 +794,13 @@
           const ic = data.intent_classification || {};
           const exec = data.execution_result || {};
           const msg = exec.message || 'Action completed.';
+          // `.speech` is the short spoken form the backend derived; `.message`
+          // is what belongs on screen. They are deliberately different.
+          const spoken = exec.speech || msg;
 
           setEntityMode('talking');
           document.getElementById('presence-caption').innerText = `🗣️ "${msg}"`;
-          speakText(msg);
+          speakText(spoken);
 
           let gmailBtnHtml = '';
           if (exec.gmail_compose_url) {
@@ -605,10 +859,11 @@
         const ic = data.intent_classification || {};
         const exec = data.execution_result || {};
         const msg = exec.message || 'Action completed.';
+        const spoken = exec.speech || msg;
 
         setEntityMode('talking');
         document.getElementById('presence-caption').innerText = `🗣️ "${msg}"`;
-        speakText(msg);
+        speakText(spoken);
 
         let gmailBtnHtml = '';
         if (exec.gmail_compose_url) {
@@ -636,7 +891,8 @@
 
     window.onload = function() {
       init3D();
-      initSpeechRecognition();
+      Voice.init();
+      Voice.paint();
     };
   </script>
 </body>
