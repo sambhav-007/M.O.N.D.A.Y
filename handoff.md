@@ -365,6 +365,140 @@ only voice. One path, not two.
 and runs it under node, so it tests the shipped source rather than a copy that
 can drift. Skipped where node is absent. Suite **517 passing**.
 
+### 2026-08-15 — the keyword chain is gone (Phase 3 complete)
+
+**`_dispatch_to_agent` was ~520 lines and is now four steps**: refuse, help,
+route, run. Three tranches migrated — live data, the desktop surface, and email
+and WhatsApp last, behind their 74 tests.
+
+| | before | after |
+|---|---|---|
+| Skills | 20 | **51** |
+| Patterns | 818 | **2,271** |
+| Routing accuracy | 1.000 (74 commands) | **1.000 (123 commands)** |
+| `core/planner.py` | 2,141 lines | **570** |
+| Suite | 525 | **687**, offline, ~75s |
+
+That closes UPGRADE_PLAN Phase 3's "done when" in full: planner under 600 lines,
+every existing test still passing, routing table in `reports/`.
+
+**Four defects found on the way**, each a branch answering confidently about
+something it had not been asked:
+
+- **`"light" in cmd_lower`** matches *f-light*, *de-light*, *high-light*. "i need
+  to book a flight" reached the smart-home tool and was answered "✓ Smart Home
+  IoT: Turned 'Living Room Light' ON."
+- **`calculate 2^3` answered 1.** `^` is XOR in Python and the branch ran `eval`
+  on the captured text. `core/arithmetic.py` parses to an AST, reads `^` as
+  exponentiation, refuses non-arithmetic and bounds the exponent (`9**9**9`
+  cannot hang the process).
+- **`my ip` was swallowed by the geolocation branch above it**, so a question
+  about an IP address was answered by asking a third party where the user lives.
+  `/help` has always called it "local network details"; now it is, and it is
+  offline.
+- **`schedule …` and `notify me …` are in `/help` and were reachable by nothing**
+  — no branch in the chain mentioned either verb, so both fell through to the
+  coder agent's honest refusal.
+
+**Five things worth knowing:**
+
+1. **Nothing reaches code execution from a guess any more.** The chain's final
+   `else` handed every unrecognised command to `CoderAgent`, which wrote a Python
+   script and ran it under `subprocess`. `CoderAgent` is now reachable only from
+   `create_desktop_folder`, which needs an explicit pattern match. The
+   `web_scraper` domain is deliberately not routed to at all — its template is
+   the one that printed `[SUCCESS]` and exited 0 when the fetch raised.
+2. **Stage 2 does something for the first time.** `chitchat`, `memory_query` and
+   `document_intel` each have exactly one skill that runs sensibly with no slots,
+   so a classification alone can route them. The other four families contain
+   irreversible or slot-dependent actions and stay on patterns — and
+   `Skill.__post_init__` *raises* if a Tier-2 skill declares intents.
+3. **Ranking gained a tie-break: literal text first, then typed slots.** It is
+   what separates `what is {expression:math}` from `what is {topic}` — identical
+   literal text, otherwise decided by registration order, which is the invisible
+   ordering this phase existed to remove.
+4. **Routing moved; parsing did not.** `_parse_email_command`,
+   `_parse_whatsapp_command`, `_resolve_phone_number` and the four contact guards
+   are unchanged, moved out as mixins (`core/contacts.py`, `core/email_flow.py`,
+   `core/tier2.py`) so every call site and test keeps working against
+   `MasterPlanner`. Re-expressing the most safety-critical parsing in the repo as
+   patterns, in the same change that rerouted it, was not worth it.
+5. **Two tests were reclassified, not deleted.** `test_a_sentence_is_not_an_app_name`
+   and `test_start_is_not_a_launch_verb` asserted `== "(fallback)"` while WhatsApp
+   and the audio agent were still served by the legacy chain. They now assert
+   against the skill each must reach, which checks the same claim in both
+   directions.
+
+### 2026-08-15 — the demo runs with the Wi-Fi off, and a test proves it
+
+`DEMO.md` is a rehearsed ten-minute script in six acts.
+`tests/test_demo_script.py` (31) **parses `DEMO.md` itself** and runs every
+command in it with sockets blocked. Three claims, all checked: the offline
+commands route to skills declared `offline=True`, they all succeed with no
+network, and the closing act's refusals really refuse.
+
+It caught a real mislabel on the first run: `send_email` was declared
+`offline=False`, but drafting is entirely local — the SMTP connection happens in
+`_send_confirmed_email`, on the following turn, only after an explicit yes.
+
+**Act 6 is the closer.** `turn on the living room light`, `start meeting
+recording`, `read my latest email`, `summarize this`, `xyzzyspoon12345` — all
+five fail on purpose, with error codes, and each one used to fabricate a success.
+`summarize this` was fixed while writing it: `{path}` captured "this", and
+`summarize_document` treats an unreadable path as a raw text snippet, so it
+summarised the four-letter word and reported five key points.
+
+### 2026-08-15 — CLO01 chapter and a self-verifying evidence index
+
+- **`reports/CLO01_ethics_and_safety.md`** — the report chapter, structured
+  around the three moments that decide whether an agent is safe: before an
+  irreversible action, after any action, and when something does not work. §7 is
+  a table of what the system deliberately does *not* claim.
+- **`reports/EVIDENCE_INDEX.md`** — every claim → artefact → the command that
+  regenerates it.
+- **`tests/test_evidence_index.py`** (73) checks that every path cited exists and
+  every `py -3.12 -m <module>` names a real module. It found five wrong paths in
+  the index on the first run, which is exactly the failure it was written for:
+  `intent_classifier_report.md` had been stale for three weeks because its
+  generator no longer existed and nothing was checking.
+
+### 2026-08-15 — the 2.1 stopword counterfactual
+
+`py -3.12 -m reports.stopword_counterfactual` →
+`reports/2_1_stopword_counterfactual.md`.
+
+| | shipped | `stop_words="english"` |
+|---|---|---|
+| held-out macro-F1 | 0.9101 | 0.8945 (**−0.0157**) |
+| coverage accuracy | 1.000 | 0.970 |
+| **paraphrase accuracy** | **0.703** | **0.703 (±0.000)** |
+| function words in top-8 attributions | **71%** | **0%** |
+
+**The explanation improves enormously and the generalisation figure does not
+move.** That points at the corpus rather than the vectoriser: if the function
+words carried real signal about intent, removing them would cost something on
+unseen phrasings. It costs nothing there, and a little on the two sets that share
+vocabulary with the generator — which is what you would expect if what the
+stopwords predict is the *template* (`please`, `asap`, `thanks`), not the intent.
+
+**Two things worth knowing:**
+
+1. **Coefficients and mean |SHAP| disagree, and the disagreement is the
+   finding.** The top `browser` *coefficients* are `news`, `weather`, `research`
+   — perfectly healthy. The top *attributions* are `my`, `you`, `please`, `is`.
+   Ranking on coefficients alone would have made this study look like a
+   refutation of the 2.6 finding. The report carries both tables.
+2. **The shipped model is unchanged, and that is now enforced.**
+   `PRODUCTION_TFIDF` is named in `ml/intent_classifier.py` and imported by the
+   study, and `tests/test_stopword_counterfactual.py` fails if it ever gains a
+   `stop_words` key. Adopting the variant means regenerating every 2.1 and 2.6
+   artefact and deleting that test in the same commit.
+
+`reports/2_6_xai_intent_top_features.csv` was regenerated on the way: it was last
+written 2026-08-07, before the corpus was rebuilt on 2026-08-13, so it described
+a model trained on data that no longer existed. The finding survived the
+regeneration — the top attributions are still function words.
+
 ## 9. WhatsApp (added 2026-08-08)
 
 WhatsApp has **no API a desktop script may send through**. The deep link
@@ -689,16 +823,15 @@ the current browser TTS) — just route UI speech through `POST /agent/voice/spe
   **verified against a live 200 response on 2026-08-06** once the block lifted; that
   check also exposed that lite wraps every result in a `//duckduckgo.com/l/?uddg=`
   redirect, now unwrapped by `BrowserAgent._unwrap_ddg_redirect`.
-- **Test suite: 276 passed, 1 failed** (2026-08-08). The failure is
-  `test_agent_public_api_fetch_iss_location` — `api.open-notify.org` unreachable.
-  Not a code defect: it passed on 2026-08-07 and failed in four of the five runs on
-  2026-08-08 without anything touching that path.
-- **⚠️ Several tests depend on live third-party APIs** (DuckDuckGo, open-notify,
-  CoinGecko), so a red suite does **not** currently mean a regression. This is the
-  top outstanding task: mark them `@pytest.mark.network` so
-  `pytest -m "not network"` is meaningfully green. Runtime also swings on network
-  conditions — 117s to 301s across runs, and one run exceeded a 600s timeout
-  entirely. **This is a live demo risk, not just test hygiene.**
+- ~~**Test suite: 276 passed, 1 failed**~~ and ~~**several tests depend on live
+  third-party APIs**~~ — **both FIXED 2026-08-08 in UPGRADE_PLAN Phase 1**, and
+  these two bullets sat here stale for a week afterwards, which cost a later
+  session real time. The suite is **687 passing, 0 failing, offline, ~75s**;
+  cassettes replay the HTTP, `--block-network` is on by default, and the four
+  genuinely-live tests are `@pytest.mark.network` and deselected. A red suite
+  now means a regression.
+- ~~**Offline demo path + rehearsed script**~~ — DONE 2026-08-15. `DEMO.md`, and
+  `tests/test_demo_script.py` executes it with sockets blocked.
 - ~~**`data/calendar.json` is tracked but is runtime churn**~~ — FIXED 2026-08-07.
   Untracked and gitignored; both call sites in `agents/comms_agent.py` create it on
   demand. A fresh clone reports an empty calendar until an event is scheduled.
@@ -714,24 +847,34 @@ the current browser TTS) — just route UI speech through `POST /agent/voice/spe
 - **`/help` content is width-budgeted to 68 columns** so it fits the CLI's panel on
   an 80-column terminal. Verified in the CLI and as raw text, **not** yet in the
   WebGL console pane — worth a look next time the app is run.
-- **2.1 leans on stopwords.** The XAI layer exposed that the top attributions for
-  `browser` are `on, my, me, for, to`, because the shared `tfidf = dict(...)`
-  config in `ml/intent_classifier.py:352-357` (`build_pipelines`) sets
-  `ngram_range`, `max_features`, `sublinear_tf` and `strip_accents` but no
-  `stop_words`. Deliberately **not** changed: it would move the published 0.929
-  macro-F1, the confusion matrix and the comparison CSVs. The suggested write-up is
-  a counterfactual — train a `stop_words='english'` variant, report the delta and
-  the cleaner attributions as a 2.6 finding, leave the shipped model alone.
+- ~~**2.1 leans on stopwords**~~ — MEASURED 2026-08-15, and the finding holds:
+  71% of the top-8 attributions are function words, 0% with `stop_words="english"`,
+  at **no cost** to the paraphrase (generalisation) figure. Still deliberately
+  **not** adopted — see the 2026-08-15 entry above and
+  `reports/2_1_stopword_counterfactual.md`. The recommendation for anyone
+  continuing it: **the corpus is the thing to change, not the vectoriser.**
 
 ### Suggested order for the remaining work
 
-1. **`@pytest.mark.network`** — cheap, and makes every later result trustworthy.
-2. **Offline demo path + rehearsed script** — the largest demo-day risk. DDG
-   rate-limits this machine and open-notify has failed repeatedly.
-3. ~~**Voice double-speak**~~ — done 2026-08-14; one path, in the UI.
-4. **CLO01 report chapter + evidence index** — now backed by a gate that really
-   runs, with `tests/test_tier2_gate.py` and the audit log as evidence.
-5. The 2.1 stopword counterfactual, if time allows.
+Everything on the previous list is done. What is left, roughly by value:
+
+1. **UPGRADE_PLAN Phase 4 — one voice, offline.** The one phase not started. The
+   backend has no TTS at all on this machine (gTTS and pyttsx3 both absent), so
+   `speechSynthesis` in the UI is the only voice — which resolved the
+   double-speak by circumstance rather than by design. If `cli.py` ever needs to
+   talk, route it through the same decision rather than letting both fire. Piper
+   (`pip install piper-tts`) is the plan; verify it against Smart App Control
+   with a throwaway import **before** adding it to `requirements.txt`.
+2. **UPGRADE_PLAN Phase 5 — the typed `contacts` table.** §2.3 of that document,
+   and the most valuable item on it: the four guards in `_resolve_phone_number`
+   are correct and must stay, but they are a filter bolted onto the wrong data
+   model. A contact lookup that reads a `contacts` table cannot return a
+   conversation transcript, because it does not read that table.
+3. **The corpus, per the stopword finding above.** `document_intel` gets nothing
+   from MASSIVE and `chitchat` almost nothing, so those two classes are still
+   effectively synthetic-only and are the least well evidenced of the seven.
+4. **`/help` in the WebGL console pane** — the width-budget item above; still
+   never actually looked at in the app.
 
 ---
 

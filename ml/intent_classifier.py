@@ -46,7 +46,7 @@ import sys
 import time
 import warnings
 from pathlib import Path
-from typing import Dict, List, Tuple
+from typing import Any, Dict, List, Tuple
 
 # Ensure project root is in sys.path
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
@@ -360,17 +360,31 @@ def _build_seed_dataset(samples_per_class: int = 500) -> pd.DataFrame:
     return df
 
 
+#: The vectoriser configuration every model in the comparison shares, and the one
+#: production loads. Named rather than inlined so the stopword counterfactual
+#: (`reports/stopword_counterfactual.py`) can import it instead of restating it —
+#: a study that quietly stops describing the shipped model is worse than no study.
+#:
+#: **There is deliberately no `stop_words` here.** The XAI layer found that the
+#: top attributions for the `browser` class are `on`, `my`, `me`, `for`, `to`, so
+#: the model is leaning on function words. Adding `stop_words="english"` would
+#: move the published macro-F1, the confusion matrix and the five-model
+#: comparison, so the finding is reported as a counterfactual and the shipped
+#: model is left alone — see `reports/2_1_stopword_counterfactual.md`.
+PRODUCTION_TFIDF: Dict[str, Any] = dict(
+    ngram_range=(1, 2),
+    max_features=8000,
+    sublinear_tf=True,
+    strip_accents="unicode",
+)
+
+
 def build_pipelines() -> Dict[str, Pipeline]:
     """
     Returns a dict of named scikit-learn pipelines (TF-IDF → classifier),
     one for each algorithm being compared.
     """
-    tfidf = dict(
-        ngram_range=(1, 2),
-        max_features=8000,
-        sublinear_tf=True,
-        strip_accents="unicode",
-    )
+    tfidf = dict(PRODUCTION_TFIDF)
     return {
         "Logistic Regression": Pipeline([
             ("tfidf", TfidfVectorizer(**tfidf)),

@@ -66,7 +66,14 @@ def register_comms_skills(registry: SkillRegistry, planner: Any) -> None:
         ],
         handler=send_email,
         tier=1,
-        offline=False,
+        # Offline, and the distinction is exact: this skill *drafts* and asks.
+        # The draft is written to `data/staging/` and the confirmation is a
+        # local prompt — no socket is opened. The SMTP connection happens in
+        # `_send_confirmed_email`, on the following turn, only after an explicit
+        # yes. So composing an email is demonstrable with the Wi-Fi off, and
+        # `tests/test_demo_script.py` proves it every run rather than taking the
+        # flag's word for it. (It was `False`, and that test is what caught it.)
+        offline=True,
     ))
 
     # ── Email: the wizard path ───────────────────────────────────────────────
@@ -86,7 +93,9 @@ def register_comms_skills(registry: SkillRegistry, planner: Any) -> None:
         ],
         handler=compose_email,
         tier=1,
-        offline=False,
+        # Same reasoning: the wizard collects a recipient, a subject and a body,
+        # all locally, and ends at the same confirmation.
+        offline=True,
     ))
 
     # ── WhatsApp ─────────────────────────────────────────────────────────────

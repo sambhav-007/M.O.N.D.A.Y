@@ -445,9 +445,17 @@ def build_builtin_registry(planner: Any) -> SkillRegistry:
     # `"summarize" in cmd_lower or "pdf" in cmd_lower` then a regex for the path,
     # falling back to **README.md** when it found nothing — so "summarize this"
     # confidently summarised the project's own readme.
+    # Words that are a gesture, not a filename. "summarize this" captured
+    # "this" as a path; `summarize_document` treats an unreadable path as a raw
+    # text snippet, so it summarised the four-letter string "this" and reported
+    # "✓ Summarised text snippet (1 words → 5 key points)". A demonstrative is
+    # the user pointing at something MONDAY cannot see, and the honest answer is
+    # to ask which file — not to summarise the word.
+    _DEICTIC = {"this", "that", "it", "these", "those", "the file", "the document"}
+
     def summarize(path: str = "", **_: Any) -> Dict[str, Any]:
         target = path.strip().strip("\"'")
-        if not target:
+        if not target or target.lower() in _DEICTIC:
             return AgentResult.failed(
                 "Which file should I summarise? Give me a path, e.g. "
                 "summarize notes.pdf",

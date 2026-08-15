@@ -371,14 +371,16 @@ Written down deliberately, so nothing in this README claims more than the code d
 | Components 2.1–2.6 | All run; evidence in `reports/` and `reports/figures/` |
 | Intent corpus (2.1) | 17,487 rows, 6,847 of them real (Amazon MASSIVE, Apache 2.0). Held-out macro-F1 0.919; real-command accuracy 1.000 coverage / 0.703 paraphrase — see `reports/real_command_evidence.md` |
 | FastAPI engine | 24 endpoints, verified against the live OpenAPI schema |
-| Tier-2 approval gate | Enforced for `send_email`, `send_whatsapp`, `terminate_process` |
+| Tier-2 approval gate | Enforced for `send_email` and `terminate_process` — `core.security.TIER_2_IMPLEMENTED`. See [`reports/CLO01_ethics_and_safety.md`](reports/CLO01_ethics_and_safety.md) |
 | WhatsApp | Opens a chat with the message pre-typed; auto-send is Tier-2 gated (see below) |
 | Audit log | Append-only JSON Lines (`data/action_history.jsonl`). Lossless across processes; records the full Tier-2 lifecycle |
-| Test suite | 525 passing, offline and deterministic (`py -3.12 -m pytest`) in ~68s |
+| Test suite | 687 passing, offline and deterministic (`py -3.12 -m pytest`) in ~75s |
 | Offline start | The UI has no external dependency. Tailwind, three.js and its six add-ons, and both font families are vendored in `ui/vendor/` and served from `/vendor`; re-fetch with `py -3.12 -m ui.vendor.fetch_vendor --write` |
 | Voice | Wake word, always-on listening and barge-in, all browser-side. Backend TTS is unavailable here (gTTS and pyttsx3 absent), so `speechSynthesis` is the only voice — which is what finally collapsed the long-standing double-speak |
 | Result contract | `core/contracts.py` — a handler may only claim success if it carries evidence of what it did. All 11 agents route through it |
-| Skill router | `core/router.py` — patterns → classifier → legacy fallback. Routing accuracy 1.000 (74/74), 20 skills, see [`reports/routing_evidence.md`](reports/routing_evidence.md) |
+| Skill router | `core/router.py` — patterns → classifier → honest refusal. **The substring chain is gone**: `_dispatch_to_agent` was ~520 lines and is now four steps. Routing accuracy 1.000 (123/123), 51 skills, 2,271 patterns — [`reports/routing_evidence.md`](reports/routing_evidence.md) |
+| Demo | [`DEMO.md`](DEMO.md) is a rehearsed ten-minute script that runs with the Wi-Fi off, and `tests/test_demo_script.py` parses and executes it with sockets blocked |
+| Evidence | [`reports/EVIDENCE_INDEX.md`](reports/EVIDENCE_INDEX.md) maps every claim to its artefact and the command that regenerates it; `tests/test_evidence_index.py` checks the paths resolve |
 
 ### WhatsApp — what it can and cannot do
 

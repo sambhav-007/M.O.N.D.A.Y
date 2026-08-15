@@ -290,18 +290,40 @@ read. The contract is the validator, not the vocabulary.
 **Done when:** every agent returns `AgentResult`; the contract test passes; no
 handler can report success it cannot witness.
 
-### Phase 3 — The router 🟡 **STARTED 2026-08-08**
+### Phase 3 — The router ✅ **DONE 2026-08-15**
 
-Done: `core/intent_patterns.py`, `core/skills.py`, `core/router.py`, the first
-tranche of 9 skills in `core/skills_builtin.py`, wired into
-`_dispatch_to_agent` ahead of the legacy chain. **Routing accuracy 1.000 (44/44)**
-— `reports/routing_evidence.md`, asserted per-command so a regression names the
-command it broke. Suite: **402 passing, 25s**.
+**The legacy chain is gone.** `_dispatch_to_agent` was ~520 lines of substring
+tests and is now four steps: refuse, help, route, run.
 
-Not done: the legacy chain is still there. Migrated so far are the offline
-utility commands (time, date, battery, volume ×5, health). `kill`, memory,
-document, email and WhatsApp still fall through — deliberately, and the fallback
-count in the evidence report is the progress bar.
+| "Done when" | Target | Actual |
+|---|---|---|
+| `planner.py` under 600 lines | < 600 | **570** (was 2,141) |
+| Every existing test still passes | — | **687 passing**, 0 failing, ~75s |
+| `reports/` has a routing-accuracy table | — | `reports/routing_evidence.md`, **1.000 over 123 commands** |
+
+51 skills, 2,271 patterns, migrated in six tranches — utilities, memory and
+identity, the browser surface, live data, the desktop, and email/WhatsApp last
+behind their 74 tests. Full write-up in `handoff.md` under 2026-08-15.
+
+Three things that were not in the original design and turned out to matter:
+
+1. **§1.2 is closed completely.** The chain's final `else` handed every
+   unrecognised command to `CoderAgent`. Nothing reaches code execution from a
+   classification any more — `CoderAgent` is reachable only from
+   `create_desktop_folder`, behind an explicit pattern.
+2. **Stage 2 is live, and narrow on purpose.** Three families (`chitchat`,
+   `memory_query`, `document_intel`) have exactly one skill that runs sensibly
+   with no slots. `Skill.__post_init__` *raises* if a Tier-2 skill declares
+   intents: irreversible actions need the exactness of a pattern, not a family
+   guess.
+3. **Ranking needed a tie-break** — literal text first, then typed slots.
+   `what is {expression:math}` and `what is {topic}` carry identical literal
+   text and were otherwise decided by registration order, which is the invisible
+   ordering dependency this phase existed to remove.
+
+Routing moved; parsing did not. `_parse_email_command`,
+`_parse_whatsapp_command`, `_resolve_phone_number` and the four contact guards
+are unchanged, moved out as mixins so every call site and test keeps working.
 
 **Do not use the padacioso package.** Its `calc_intent` dispatches every match
 through a `ProcessPoolExecutor` — measured at **~200 ms per command** against
