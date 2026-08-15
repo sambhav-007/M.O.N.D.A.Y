@@ -285,6 +285,78 @@ the fit time).
 
 Tests: `tests/test_intent_corpus.py` (15). Suite **505 passing, ~50s**.
 
+### 2026-08-14 — identity, WhatsApp, spoken length, and live voice
+
+**The name bug was self-amplifying.** The identity branch fired on `"my name" in
+cmd_lower`, called `memory_agent.recall("name")` and read `matches[0]["value"]`
+as the answer. `recall` is a TF-IDF *similarity* search and
+`auto_store_conversation_turn` writes one row per exchange whose value is the
+whole turn serialised, so:
+
+```
+> whats my name
+✓ Your name is Agent: MasterPlanner | User: is my name | Assistant:
+  ✓ Your name is Agent: MasterPlanner | User: name is sambhag | Assistant:
+    Hello! I am M.O.N.D.A.Y. … (OS User: sambh). (OS User: sambh).
+```
+
+Every answer was stored as the next turn, so each retelling nested the previous
+one and the reply grew without bound. It also fired on *statements* — "my name
+is sambhav" ran the reader — while "name is sambhag" missed the branch entirely
+and got the chitchat greeting.
+
+Replaced by two skills, `set_user_name` and `get_user_name`: reading and writing
+are separate, the name lives under one canonical key, and machine-written rows
+are refused via `agents.memory_agent.is_machine_written` — the same guard the
+WhatsApp contact lookup already used, now shared rather than duplicated. The old
+`boot_context.get("username", "Siddhant")` default is gone too.
+
+**WhatsApp no longer claims to send.** Reported from live use: the Tier-2 gate
+was approved, the reply read "Opened the chat for +91… and pressed Enter", and
+no message was sent. `send_whatsapp_now` is deleted, not reworded — it slept a
+fixed 8 seconds and fired `pyautogui.press("enter")` into whatever window held
+focus, so a slow launch, a notification or one stray click sent the keystroke
+elsewhere, and nothing here can read WhatsApp back to notice. **A gate in front
+of an action that does not happen is worse than no gate**: it asks the user to
+authorise something and then reports it done.
+
+The deep link pre-fills and declines to send by design (anti-spam), so preparing
+the message *is* the feature. `send_whatsapp` is out of `TIER_2_IMPLEMENTED` and
+stays in `TIER_2_ACTIONS`, where default-deny keeps it gated if it is ever
+implemented for real. The live Tier-2 surface is now `send_email` and
+`terminate_process`.
+
+**Speaking is not printing.** The UI passed `execution_result.message` straight
+to `speechSynthesis`, so a scraped search result was read to the end and a
+Tier-2 prompt was recited including "can't be undone · est. 1s". `core/speech.py`
+decides the spoken form once for every surface: a handler that knows its own
+short form sets `speech`, otherwise the message is stripped of decoration, URLs
+and citations and cut to whole sentences within `MAX_SPEECH_CHARS` (240).
+
+**Live voice, in the UI.** Wake word ("Hey Monday" / "Hello Monday", Live button
+or Ctrl+L), continuous listening, and barge-in — talk over MONDAY and it stops.
+All browser-native. Three things worth knowing:
+
+1. **Interim results are the whole trick.** They arrive while the user is still
+   speaking, which is what makes barge-in feel immediate; a final result would
+   be far too late.
+2. **`speaking` must be set synchronously.** It was set in the utterance's
+   `onstart`, which fires 100 ms+ after `speak()` returns, so interrupting the
+   instant a reply arrived — the most natural moment — did nothing. Caught by
+   driving the real `speechSynthesis` in a browser, not by the unit tests.
+3. **The microphone hears the speakers.** Without `isEcho`, MONDAY barges in on
+   its own voice and cuts every reply off after three words. Proper acoustic
+   echo cancellation is the real answer; comparing against what it is currently
+   saying is the cheap one that works.
+
+This also settles the double-speak item in §6: gTTS and pyttsx3 are both absent
+on this machine, so the backend has no TTS at all and `speechSynthesis` is the
+only voice. One path, not two.
+
+`tests/test_voice_ui.py` (14) extracts the `Voice` object *from `ui/index.html`*
+and runs it under node, so it tests the shipped source rather than a copy that
+can drift. Skipped where node is absent. Suite **517 passing**.
+
 ## 9. WhatsApp (added 2026-08-08)
 
 WhatsApp has **no API a desktop script may send through**. The deep link
@@ -292,21 +364,24 @@ WhatsApp has **no API a desktop script may send through**. The deep link
 deliberately will not send it. Simulating the Enter keypress is the only route,
 so that is what the approved path does.
 
-- **Any message with text is Tier-2 gated**, then sent for real: it shows the
-  message, asks *"Send it?"*, and on `yes` opens the chat and presses Enter.
-- A command with no text just opens the chat (Tier 1 — nothing to send).
+> **Superseded 2026-08-14.** This section described a Tier-2 gate followed by a
+> simulated Enter keypress. Both are gone — the keypress did not work and could
+> not be made to. See the 2026-08-14 entry above. What remains below is current.
+
+- **Every message is prepared, never sent.** The chat opens with the text typed
+  in the box and MONDAY stops there; the user presses Enter. Tier 1 throughout —
+  nothing leaves the machine, so there is nothing to confirm.
+- A command with no text just opens the chat.
 - Numbers default to **+91** (`DEFAULT_COUNTRY_CODE` in `.env`). Lengths are
   validated, not merely bounded.
 - Unknown name → asks for the number, saves it as `<name>'s number`, and resumes
-  the message that was originally asked for.
-- Needs optional `pyautogui`; without it the chat still opens pre-filled and it
-  says which part it could not do.
+  the message that was originally asked for, typed and waiting.
+- No optional dependency. `pyautogui` was only ever needed for the keypress.
 
 **Two things that must not drift:**
 
-1. It reports that **Enter was pressed**, never that the message was delivered.
-   Nothing here can read WhatsApp back, and the keypress goes to whatever window
-   has focus.
+1. It reports that the message was **typed**, never that it was sent or
+   delivered. Nothing here can read WhatsApp back.
 2. Number lookup is deliberately strict. `normalise_phone` once stripped every
    non-digit from arbitrary text, and `memory_agent.recall` is a TF-IDF
    *similarity* search — together they addressed a message to a number lifted
@@ -462,12 +537,16 @@ sending is not configured — it does not fake a delivery.
 
 - **Listening**: `sounddevice` + `SpeechRecognition` installed. Works on a machine
   with a mic + internet (Google Web Speech). Use the mic/press-to-talk in the app.
-- **Speaking (current)**: UI uses the browser's robotic `speechSynthesis`; backend
-  `speak()` uses gTTS. Neither uses the `ui/mondayvoice.mp3` voice.
-- **Replies are still spoken twice** — once by the UI's `speechSynthesis` and once by
-  the backend's gTTS through pygame, in two different voices. Collapsing to one is a
-  behaviour choice: backend-only keeps `cli.py` talking but needs network; UI-only is
-  instant and offline but silences the CLI.
+- **Speaking (current)**: the UI's `speechSynthesis`, and only that. It does not
+  use the `ui/mondayvoice.mp3` voice.
+- ~~**Replies are still spoken twice**~~ — RESOLVED 2026-08-14, and partly by
+  circumstance: gTTS and pyttsx3 are both absent on this machine, so the backend
+  `speak()` has no synthesiser to reach and returns `TTS_UNAVAILABLE`. There is
+  one voice path, in the UI. Installing gTTS would bring the second one back, so
+  if `cli.py` ever needs to talk, route it through the same decision rather than
+  letting both fire.
+- **What is spoken is not what is printed.** `core/speech.py` decides once, for
+  every surface; the UI reads `execution_result.speech`, never `.message`.
 - **Real cloning of mondayvoice.mp3**: attempted, **blocked** — see §5.
 
 ---
@@ -602,8 +681,7 @@ the current browser TTS) — just route UI speech through `POST /agent/voice/spe
 1. **`@pytest.mark.network`** — cheap, and makes every later result trustworthy.
 2. **Offline demo path + rehearsed script** — the largest demo-day risk. DDG
    rate-limits this machine and open-notify has failed repeatedly.
-3. **Voice double-speak** — collapse to one path (UI-only is offline and instant
-   but silences `cli.py`; backend-only keeps the CLI talking but needs network).
+3. ~~**Voice double-speak**~~ — done 2026-08-14; one path, in the UI.
 4. **CLO01 report chapter + evidence index** — now backed by a gate that really
    runs, with `tests/test_tier2_gate.py` and the audit log as evidence.
 5. The 2.1 stopword counterfactual, if time allows.
@@ -633,7 +711,7 @@ py -3.12 -c "from api.main import app; print(sorted(app.openapi()['paths']))"
 `/help` · `health` · `battery` · `what time is it` · `history` · `proactive` ·
 `remember X is Y` → `recall X` · `kill notepad` (shows the Tier-2 gate) ·
 `send mail to a@b.com subject "Hi" body "Hello"` (draft → confirm) ·
-`message 9876543210 saying hi` (Tier-2 → sends)
+`message 9876543210 saying hi` (opens the chat with it typed)
 
 Everything above works offline. Avoid `search …`, `research …`, `weather …`,
 `bitcoin price` and `iss location` on an unreliable network — those are the ones

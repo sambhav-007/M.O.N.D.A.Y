@@ -40,14 +40,11 @@ def stub_whatsapp(planner, monkeypatch):
             "message_sent": False, "message": f"opened +{phone}",
         },
     )
-    monkeypatch.setattr(
-        planner.comms_agent, "send_whatsapp_now",
-        lambda phone, text: calls["sent"].append((phone, text)) or {
-            "success": True, "phone": phone, "text": text,
-            "enter_sent": True, "delivery_confirmed": False,
-            "message": f"pressed Enter for +{phone}",
-        },
-    )
+    # `send_whatsapp_now` used to be stubbed here too. It is gone — see the
+    # header of the WhatsApp section in agents/comms_agent.py. `calls["sent"]`
+    # stays and must remain empty in every test: nothing in this app sends a
+    # WhatsApp message, and a test that could record one would be testing a
+    # capability that does not exist.
     yield calls
     planner.pending_clarification = None
 
@@ -214,16 +211,19 @@ def test_only_contact_shaped_memories_resolve(planner, monkeypatch):
 
 
 def test_end_to_end_uses_the_number_the_user_typed(planner, stub_whatsapp):
-    """The reported bug, end to end: the gate must quote the typed number."""
+    """The reported bug, end to end: the number typed is the number used.
+
+    `normalise_phone` once stripped every non-digit from arbitrary text and
+    `recall` is a similarity search, so between them a message was once
+    addressed to a number lifted from an unrelated saved transcript. The chat
+    that opens must be the one the user named.
+    """
     res = _exec(planner.process_command(
         'open whatsapp and send message "Hello" to +917988280245'
     ))
-    assert res.get("target") == "+917988280245"
-    assert '"Hello"' in res["message"]
+    assert res.get("success") is True
+    assert stub_whatsapp["opened"] == [("917988280245", "Hello")]
     assert stub_whatsapp["sent"] == []
-
-    _exec(planner.process_command("yes"))
-    assert stub_whatsapp["sent"] == [("917988280245", "Hello")]
 
 
 # ── Teaching a number ────────────────────────────────────────────────────────
@@ -287,13 +287,11 @@ def test_unknown_contact_asks_then_saves_then_resumes(planner, stub_whatsapp, no
 
     second = _exec(planner.process_command("9996624322"))
     assert no_memory_writes.get("papa's number") == "+919996624322"
-    # The original message is carried through to the send prompt, not discarded.
-    assert second.get("awaiting_tier2_approval") is True
-    assert '"hello"' in second["message"]
+    # The original message is carried through and typed, not discarded — the
+    # point of parking it was never to make the user retype the whole command.
+    assert second.get("awaiting_tier2_approval") is not True
+    assert stub_whatsapp["opened"] == [("919996624322", "hello")]
     assert stub_whatsapp["sent"] == []
-
-    _exec(planner.process_command("yes"))
-    assert stub_whatsapp["sent"] == [("919996624322", "hello")]
 
 
 def test_mid_sentence_on_whatsapp_is_not_message_text(planner):
@@ -308,8 +306,8 @@ def test_known_contact_routes_bare_message_to_whatsapp(planner, stub_whatsapp, n
     planner.process_command("papa number is 9996624322")
     planner.pending_clarification = None
     res = _exec(planner.process_command("message papa saying good morning"))
-    assert res.get("awaiting_tier2_approval") is True
-    assert res.get("target") == "+919996624322"
+    assert res.get("success") is True
+    assert stub_whatsapp["opened"] == [("919996624322", "good morning")]
 
 
 def test_unknown_bare_name_does_not_become_a_whatsapp_message(planner, stub_whatsapp, no_memory_writes):
@@ -353,22 +351,27 @@ def test_remembered_number_is_found(planner, monkeypatch):
     assert "remembered" in resolved["source"]
 
 
-# ── The Tier-1 / Tier-2 split ────────────────────────────────────────────────
-def test_any_message_asks_before_sending(planner, stub_whatsapp):
-    """
-    Every message with text is gated and then sent for real. Leaving the user to
-    press Enter themselves was needless — they had already said what to send and
-    to whom, so the only thing worth asking is whether to go ahead.
-    """
+# ── Preparing, never sending ─────────────────────────────────────────────────
+# This section used to assert a Tier-2 gate followed by a real send. Both are
+# gone. Reported from live use on 2026-08-13: the gate was approved, the reply
+# read "Opened the chat for +91… and pressed Enter", and no message was sent.
+#
+# It was not fixable. `pyautogui.press("enter")` fired after a fixed 8-second
+# sleep into whatever window held focus, so a slow WhatsApp launch, a
+# notification, or one stray click sent the keystroke somewhere else — and
+# nothing here can read WhatsApp back to notice. Asking the user to authorise
+# something and then reporting it done is the exact failure mode this repo has
+# spent its history removing, so the whole path went rather than the wording.
+def test_a_message_is_typed_and_not_sent(planner, stub_whatsapp):
+    """The chat opens with the text in the box. The user presses Enter."""
     res = _exec(planner.process_command("message +919876543210 saying hello"))
-    assert res.get("awaiting_tier2_approval") is True
-    assert "send it?" in res["message"].lower()
-    assert stub_whatsapp["sent"] == [], "nothing may be sent before approval"
-    assert stub_whatsapp["opened"] == []
+    assert res.get("success") is True
+    assert res.get("awaiting_tier2_approval") is not True, "nothing to approve"
+    assert stub_whatsapp["opened"] == [("919876543210", "hello")]
+    assert stub_whatsapp["sent"] == []
 
 
-def test_opening_with_no_message_is_tier1(planner, stub_whatsapp):
-    """No text means nothing to send, so it just opens the chat."""
+def test_opening_with_no_message_opens_an_empty_chat(planner, stub_whatsapp):
     res = _exec(planner.process_command("whatsapp +919876543210"))
     assert res.get("success") is True
     assert res.get("awaiting_tier2_approval") is not True
@@ -376,77 +379,47 @@ def test_opening_with_no_message_is_tier1(planner, stub_whatsapp):
     assert stub_whatsapp["sent"] == []
 
 
-def test_send_is_gated_and_sends_nothing_until_approved(planner, stub_whatsapp):
+def test_no_confirmation_is_requested_for_a_message(planner, stub_whatsapp):
     res = _exec(planner.process_command("send whatsapp to +919876543210 saying hello"))
-    assert res.get("awaiting_tier2_approval") is True
-    assert res.get("risk_tier") == 2
-    assert stub_whatsapp["sent"] == [], "nothing may be sent before approval"
-
-
-def test_send_runs_only_after_explicit_yes(planner, stub_whatsapp):
-    planner.process_command("send whatsapp to +919876543210 saying hello")
-    res = _exec(planner.process_command("yes"))
-    assert res.get("approved_by_user") is True
-    assert stub_whatsapp["sent"] == [("919876543210", "hello")]
-
-
-def test_send_cancelled_sends_nothing(planner, stub_whatsapp):
-    planner.process_command("send whatsapp to +919876543210 saying hello")
-    res = _exec(planner.process_command("no"))
-    assert res.get("cancelled") is True
+    assert res.get("awaiting_tier2_approval") is not True
+    assert res.get("risk_tier") != 2
+    assert planner.pending_clarification is None
     assert stub_whatsapp["sent"] == []
 
 
-def test_unknown_number_never_reaches_the_gate(planner, stub_whatsapp):
+def test_unknown_number_still_asks_whose_it_is(planner, stub_whatsapp):
     res = _exec(planner.process_command("send whatsapp to nobody_known_xyz saying hi"))
     assert res.get("awaiting_tier2_approval") is not True
+    assert stub_whatsapp["opened"] == []
     assert stub_whatsapp["sent"] == []
 
 
 # ── Honesty of the reported outcome ──────────────────────────────────────────
-def test_send_whatsapp_is_registered_as_tier2():
+def test_send_whatsapp_is_no_longer_a_live_tier2_action():
+    """
+    It stays in TIER_2_ACTIONS — that list is default-deny, so naming an action
+    there keeps it gated if it is ever implemented for real. It must NOT be in
+    TIER_2_IMPLEMENTED, which is what the report and the demo cite as enforced.
+    """
     assert "send_whatsapp" in TIER_2_ACTIONS
-    assert "send_whatsapp" in TIER_2_IMPLEMENTED
+    assert "send_whatsapp" not in TIER_2_IMPLEMENTED
     assert classify_action_risk("send_whatsapp")[0] == 2
 
 
-def test_auto_send_never_claims_confirmed_delivery(planner, stub_whatsapp):
-    """
-    Nothing here can read WhatsApp back, so the result reports that Enter was
-    pressed — never that the message was delivered.
-    """
-    planner.process_command("send whatsapp to +919876543210 saying hello")
-    res = _exec(planner.process_command("yes"))
-    assert res.get("delivery_confirmed") is False
+def test_nothing_claims_the_message_was_sent(planner, stub_whatsapp):
+    res = _exec(planner.process_command("message +919876543210 saying hello"))
+    assert res.get("message_sent") is False
+    assert res.get("delivery_confirmed") is not True
+    assert "sent" not in res["message"].lower().replace("send.", "")
 
 
-def test_auto_send_without_pyautogui_degrades_honestly(monkeypatch):
-    """
-    Approval has already been given at this point, so do as much as is possible —
-    open the chat with the message typed — and say exactly which part could not
-    be done, rather than dead-ending or claiming it was sent.
-    """
-    import builtins
+def test_the_send_path_is_gone(planner):
+    """A guard against reintroduction. It reported success and did nothing."""
+    assert not hasattr(planner.comms_agent, "send_whatsapp_now")
+    assert "send_whatsapp" not in planner._tier2_executors
 
-    real_import = builtins.__import__
 
-    def fake_import(name, *args, **kwargs):
-        if name == "pyautogui":
-            raise ImportError("No module named 'pyautogui'")
-        return real_import(name, *args, **kwargs)
-
-    agent = CommunicationAgent()
-    opened = []
-    monkeypatch.setattr(
-        agent, "open_whatsapp_chat",
-        lambda phone, text="": opened.append((phone, text)) or {
-            "success": True, "phone": phone, "message": "opened",
-        },
-    )
-    monkeypatch.setattr(builtins, "__import__", fake_import)
-
-    res = agent.send_whatsapp_now("+919876543210", "hi")
-    assert res["error"] == "PYAUTOGUI_MISSING"
-    assert res["message_sent"] is False
-    assert opened == [("919876543210", "hi")], "should still prepare the message"
-    assert "pyautogui" in res["message"]
+# `test_auto_send_without_pyautogui_degrades_honestly` was here. It asserted
+# that a missing pyautogui still prepared the message and said so — reasonable
+# cover for a path that no longer exists, since preparing the message is now the
+# only behaviour and needs no optional dependency at all.

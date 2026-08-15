@@ -17,7 +17,8 @@ import re
 from datetime import datetime
 from typing import Any, Dict
 
-from core.contracts import AgentResult, SystemQuery
+from agents.memory_agent import is_machine_written
+from core.contracts import AgentResult, RecordStored, SystemQuery
 from core.skills import Skill, SkillRegistry
 
 
@@ -438,6 +439,173 @@ def build_builtin_registry(planner: Any) -> SkillRegistry:
         ],
         handler=summarize,
         # No `intents`, same reason: without a path there is nothing to summarise.
+        tier=1,
+        offline=True,
+    ))
+
+    # ── A confirmation with nothing to confirm ───────────────────────────────
+    # "yes" answers a pending question. With nothing pending it reached the
+    # coder agent, which replied 'I'm not sure how to do that yet: "yes". I can
+    # currently open apps, search the web, …' — four lines of capability menu in
+    # answer to one word. It happens constantly: the user says "yes" a second
+    # time, or confirms something that already completed.
+    #
+    # `process_command` handles a genuine pending gate long before dispatch, so
+    # anything reaching here has nothing to answer, by construction.
+    def stray_confirmation(**_: Any) -> Dict[str, Any]:
+        return AgentResult.ok(
+            "Nothing's waiting on a yes or no — what would you like me to do?",
+            evidence=SystemQuery(source="planner", detail="no pending clarification"),
+            data={"intent": "stray_confirmation", "speech": "Nothing's pending."},
+        ).as_dict()
+
+    registry.register(Skill(
+        name="stray_confirmation",
+        description="A yes/no with no question outstanding",
+        patterns=[
+            "yes", "yeah", "yep", "yup", "sure", "ok", "okay", "go ahead",
+            "confirm", "do it", "no", "nope", "cancel", "nevermind", "never mind",
+        ],
+        handler=stray_confirmation,
+        tier=1,
+        offline=True,
+    ))
+
+    # ── Who the user is ──────────────────────────────────────────────────────
+    # The worst-behaved path in the app, and the failure is worth writing down
+    # in full because it was self-amplifying.
+    #
+    # The old branch fired on `"my name" in cmd_lower`, called
+    # `memory_agent.recall("name")` and read `matches[0]["value"]` as the answer.
+    # `recall` is a TF-IDF *similarity* search over every row, and
+    # `auto_store_conversation_turn` writes one row per exchange whose value is
+    # the whole turn serialised. So:
+    #
+    #   > whats my name
+    #   ✓ Your name is Agent: MasterPlanner | User: is my name | Assistant:
+    #     ✓ Your name is Agent: MasterPlanner | User: name is sambhag |
+    #     Assistant: Hello! I am M.O.N.D.A.Y. … (OS User: sambh). (OS User: sambh).
+    #
+    # Every answer was stored as the next turn, so each retelling nested the
+    # previous one and the reply grew without bound. Three things fix it:
+    #
+    # 1. Reading and writing are separate skills. `my name is X` is a statement
+    #    and used to reach the *reader* (or, missing the branch entirely, the
+    #    chitchat greeting — "name is sambhag" was answered with "Hello!").
+    # 2. The name lives under one canonical key, so the reader never has to
+    #    guess which row is the answer.
+    # 3. Machine-written rows are refused outright (`is_machine_written`), the
+    #    same guard the WhatsApp contact lookup already used.
+    USER_NAME_KEY = "user_name"
+
+    # A name is a name — not a sentence, not a transcript. This is what stops a
+    # bad write becoming a permanent bad read.
+    _NAME_OK = re.compile(r"^[A-Za-z][A-Za-z .'\-]{0,48}$")
+    # Trailing verbs the parser used to swallow: "remember my name is sambhav
+    # save" stored the name as "Sambhav save".
+    _NAME_TAIL = re.compile(
+        r"\s+(save|saved|please|now|ok|okay|thanks|thank you|for me|got it)$",
+        re.IGNORECASE,
+    )
+
+    def _clean_name(raw: str) -> str:
+        name = (raw or "").strip().strip("\"'").strip(" .,!?")
+        previous = None
+        while previous != name:
+            previous = name
+            name = _NAME_TAIL.sub("", name).strip()
+        return name
+
+    def set_user_name(name: str = "", **_: Any) -> Dict[str, Any]:
+        cleaned = _clean_name(name)
+        if not cleaned or not _NAME_OK.match(cleaned):
+            return AgentResult.failed(
+                "That doesn't look like a name — try \"my name is Sambhav\".",
+                error="BAD_NAME",
+            ).as_dict()
+        res = planner.memory_agent.remember(
+            USER_NAME_KEY, cleaned, topic="user_identity"
+        )
+        if not res.get("success"):
+            return res
+        return AgentResult.ok(
+            f"✓ Got it — I'll call you {cleaned}.",
+            evidence=RecordStored(store="memories.db", key=USER_NAME_KEY),
+            data={"name": cleaned, "speech": f"Got it, I'll call you {cleaned}."},
+        ).as_dict()
+
+    registry.register(Skill(
+        name="set_user_name",
+        description="Tell MONDAY your name",
+        patterns=[
+            "[remember [that]] my name is {name}",
+            "[remember [that]] my name's {name}",
+            "remember [that] i am {name}",
+            "call me {name}",
+            "name is {name}",
+            "i'm called {name}",
+        ],
+        handler=set_user_name,
+        tier=1,
+        offline=True,
+    ))
+
+    def get_user_name(**_: Any) -> Dict[str, Any]:
+        os_user = str(planner.boot_context.get("username", "") or "").strip()
+
+        stored = ""
+        try:
+            recalled = planner.memory_agent.recall(USER_NAME_KEY, limit=5)
+        except Exception:
+            recalled = {"matches": []}
+
+        for match in recalled.get("matches", []):
+            key = str(match.get("key", ""))
+            value = str(match.get("value", "")).strip()
+            # Only the canonical key, and only when it still holds a name. A
+            # transcript would satisfy neither, which is the whole point.
+            if is_machine_written(key) or key.lower() != USER_NAME_KEY:
+                continue
+            if _NAME_OK.match(value):
+                stored = value
+            break
+
+        if stored:
+            msg = f"✓ Your name is {stored}."
+            if os_user and os_user.lower() != stored.lower():
+                msg += f" (Signed in as {os_user}.)"
+            return AgentResult.ok(
+                msg,
+                evidence=SystemQuery(source="memories.db", detail=USER_NAME_KEY),
+                data={"name": stored, "os_user": os_user,
+                      "speech": f"Your name is {stored}."},
+            ).as_dict()
+
+        if os_user:
+            return AgentResult.ok(
+                f"I don't have your name saved — you're signed in as {os_user}. "
+                f"Tell me with \"my name is …\".",
+                evidence=SystemQuery(source="boot_context", detail="os username"),
+                data={"name": "", "os_user": os_user,
+                      "speech": f"I don't have your name saved. You're signed in as {os_user}."},
+            ).as_dict()
+
+        return AgentResult.failed(
+            "I don't know your name yet. Tell me with \"my name is …\".",
+            error="NAME_UNKNOWN",
+        ).as_dict()
+
+    registry.register(Skill(
+        name="get_user_name",
+        description="What MONDAY has saved as your name",
+        patterns=[
+            "[(what is|whats|what's)] my name",
+            "who am i",
+            "tell me my name",
+            "do you (know|remember) my name",
+            "my username",
+        ],
+        handler=get_user_name,
         tier=1,
         offline=True,
     ))

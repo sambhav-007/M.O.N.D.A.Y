@@ -104,6 +104,10 @@ M.O.N.D.A.Y. features a **Python + WebGL Native Desktop Application Shell (`app.
 - **Frameless OS Window**: Borderless window execution (`frameless=True`) with native JavaScript bridge (`DesktopWindowApi`) supporting `✕` close, `—` minimize, and `Esc` keyboard shortcut.
 - **Dual Presentation Modes**:
   - **Presence Mode** (Default): Fullscreen 3D WebGL Living Entity with zero app chrome. Entity states (`idle`, `listening`, `thinking`, `speaking`) are communicated 100% visually through an audio-reactive particle field and GLSL Fresnel rim lighting shader. Push-to-talk via Spacebar.
+- **Voice — wake word, always-on listening, barge-in**: turn on **Live** (button, or `Ctrl+L`) and say **"Hey Monday, what's the time"**. It keeps listening between commands, acts only on speech addressed to it, and **stops talking the moment you talk over it** — the way Gemini and ChatGPT voice mode behave. All browser-native (Web Speech API); no extra dependency, no network beyond what the recogniser itself uses.
+  - Interim recognition results are what make the interruption feel immediate — waiting for a final result is far too late.
+  - It ignores its own voice coming back through the microphone, so it does not cut itself off mid-reply.
+  - **What it says is not what it prints.** [`core/speech.py`](core/speech.py) derives a short spoken form once, for every surface; the UI reads `execution_result.speech`. Before this, a whole scraped search result was read aloud to the end.
   - **Console Mode**: Full developer diagnostic console with real-time multi-agent execution logs and command input. Toggleable via `Ctrl+``.
 - **Multi-Turn Clarification Engine (`pending_clarification`)**: Interactive task pausing, candidate disambiguation, SQLite memory caching, and task resumption. Also carries the Tier-2 approval turn — see below.
 - **Tier-2 Approval Gate (PRD §9)**: Irreversible actions stop and ask before executing, quoting the ETA predicted by Component 2.2 (*"Est. 12s — approve?"*). Approval only ever comes from an explicit confirming reply; there is no flag a client can set to skip it.
@@ -370,7 +374,8 @@ Written down deliberately, so nothing in this README claims more than the code d
 | Tier-2 approval gate | Enforced for `send_email`, `send_whatsapp`, `terminate_process` |
 | WhatsApp | Opens a chat with the message pre-typed; auto-send is Tier-2 gated (see below) |
 | Audit log | Append-only JSON Lines (`data/action_history.jsonl`). Lossless across processes; records the full Tier-2 lifecycle |
-| Test suite | 505 passing, offline and deterministic (`py -3.12 -m pytest`) in ~50s |
+| Test suite | 517 passing, offline and deterministic (`py -3.12 -m pytest`) in ~65s |
+| Voice | Wake word, always-on listening and barge-in, all browser-side. Backend TTS is unavailable here (gTTS and pyttsx3 absent), so `speechSynthesis` is the only voice — which is what finally collapsed the long-standing double-speak |
 | Result contract | `core/contracts.py` — a handler may only claim success if it carries evidence of what it did. All 11 agents route through it |
 | Skill router | `core/router.py` — patterns → classifier → legacy fallback. Routing accuracy 1.000 (74/74), 20 skills, see [`reports/routing_evidence.md`](reports/routing_evidence.md) |
 
@@ -379,22 +384,26 @@ Written down deliberately, so nothing in this README claims more than the code d
 WhatsApp has **no API a desktop script may send through**. The official deep link
 (`whatsapp://send?phone=…&text=…`) opens the chat with the message already typed
 but deliberately will not send it — anti-spam design, not a gap in this code.
-So there are two behaviours:
+That is the whole feature, and it is the only honest one:
 
 | Command | Tier | What happens |
 |---------|------|--------------|
-| `message 9876543210 saying hi` | **2** | Shows you the message and asks *"Send it?"*. On `yes` it opens the chat **and sends it**. |
+| `message 9876543210 saying hi` | 1 | Opens the chat with `hi` **typed in the box**. You press Enter. |
 | `whatsapp +919876543210` | 1 | No message text, so it just opens the chat. |
 
-Every message with text goes through the approval gate and is then sent for
-real — you have already said what to send and to whom, so the only thing worth
-asking is whether to go ahead.
+Nothing is transmitted, so nothing is confirmed and nothing is gated.
 
-Sending simulates the Enter keypress, so it goes to whatever window has focus —
-if WhatsApp is slow to load or focus shifts, the Enter lands elsewhere. It also
-cannot read WhatsApp back, so it reports that **Enter was pressed**, never that
-the message was delivered. It needs the optional `pyautogui`; without it the
-chat still opens pre-filled and it says exactly which part it couldn't do.
+> **Changed 2026-08-14.** This used to gate on Tier 2 and then simulate the Enter
+> keypress. It did not work: an approved send reported "pressed Enter" and
+> delivered nothing. `pyautogui.press("enter")` fired after a fixed 8-second
+> sleep into whatever window held focus, so a slow WhatsApp launch, a
+> notification or one stray click sent the keystroke somewhere else — and
+> nothing here can read WhatsApp back to notice. A gate in front of an action
+> that does not happen is worse than no gate: it asks you to authorise
+> something, then tells you it was done. The path was removed rather than
+> reworded, so `send_whatsapp` is no longer in `TIER_2_IMPLEMENTED`.
+
+It reports that the message was **typed**, never that it was sent or delivered.
 
 **Numbers** default to `+91` (set `DEFAULT_COUNTRY_CODE` in `.env` to change),
 so a bare 10-digit mobile works. Lengths are validated, not just bounded — a

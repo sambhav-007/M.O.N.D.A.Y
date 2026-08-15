@@ -29,6 +29,30 @@ class ExtractedList(list):
         return default
 
 
+#: Key prefixes written by the machine, not by the user.
+#:
+#: `auto_store_conversation_turn` writes one row per exchange, keyed `turn_…`,
+#: whose value is the whole turn serialised — `"Agent: MasterPlanner | User: … |
+#: Assistant: …"`. `recall` is a TF-IDF *similarity* search, so those rows come
+#: back for almost any query, and anything that reads `matches[0]["value"]` as a
+#: fact is reading a transcript.
+#:
+#: That produced two separate incidents. A WhatsApp message was addressed to a
+#: number lifted from an unrelated saved turn (handoff.md §9.2). And "what's my
+#: name" answered `"Your name is Agent: MasterPlanner | User: is my name |
+#: Assistant: Hello! I am M.O.N.D.A.Y. …"` — then stored *that* as the next turn,
+#: so each retelling nested the previous one and the answer grew without bound.
+#:
+#: Both callers now filter on this one tuple rather than each keeping their own
+#: copy of the prefix list.
+MACHINE_WRITTEN_KEY_PREFIXES = ("turn_", "conversation", "session_", "log_")
+
+
+def is_machine_written(key: str) -> bool:
+    """Whether a memory row was written by the assistant rather than the user."""
+    return str(key or "").strip().lower().startswith(MACHINE_WRITTEN_KEY_PREFIXES)
+
+
 class MemoryAgent:
     """Specialized worker for persistent user context, memory recall, and clustering."""
 

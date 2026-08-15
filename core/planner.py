@@ -34,7 +34,7 @@ from agents.computer_agent import ComputerAgent
 from agents.document_agent import DocumentAgent
 from agents.browser_agent import BrowserAgent
 from agents.comms_agent import CommunicationAgent
-from agents.memory_agent import MemoryAgent
+from agents.memory_agent import MemoryAgent, is_machine_written
 from agents.habit_agent import HabitAgent
 from agents.coder_agent import CoderAgent
 from agents.vision_agent import VisionAgent
@@ -47,6 +47,7 @@ from core.skills_builtin import build_builtin_registry
 from core.tool_registry import ToolRegistry
 from core.autonomy import AutonomyDaemon
 from core.security import evaluate_action_permission, log_action
+from core.speech import to_speech
 from ml.intent_classifier import get_trained_classifier, predict_intent
 from ml.rl_router import EpsilonGreedyBandit, ROUTING_ACTIONS
 
@@ -133,10 +134,9 @@ Type these in plain English. Every example below works as written.
    send mail to a@b.com subject "Hi" body "Hello"
         ⚠️ Tier 2 — I draft it, show you, then ask. Reply 'send'
         to deliver or 'cancel' to keep it as a draft.
-   message 9876543210 saying hi      ⚠️ Tier 2 — I show you the
-                                     message and ask; say 'yes' and
-                                     I send it. 10 digits is fine,
-                                     I'll assume +91
+   message 9876543210 saying hi      opens the chat with it typed;
+                                     you press Enter to send it.
+                                     10 digits is fine, +91 assumed
    papa's number is 9876543210       saves a contact, then just say
                                      "message papa saying hi"
    schedule meeting tomorrow 3pm     add a calendar event
@@ -147,7 +147,10 @@ Type these in plain English. Every example below works as written.
 
 🗣️  VOICE
    speak hello world        say something out loud
+   "Hey Monday, ..."        wake word — turn Live on first
+   Live button / Ctrl+L     always-on listening
    Spacebar (in the app)    push-to-talk
+   just talk over me        I stop speaking and listen
 
 🔍  DIAGNOSTICS
    history                  the action audit log
@@ -432,7 +435,6 @@ class MasterPlanner:
         # this table can ever be resumed by a confirmation.
         self._tier2_executors: Dict[str, Any] = {
             "terminate_process": self._exec_terminate_process,
-            "send_whatsapp": self._exec_send_whatsapp,
         }
 
         # Boot-up System Context Scanner
@@ -610,6 +612,16 @@ class MasterPlanner:
         self.rl_bandit.update(routed_arm, 1.0 if tool_result.get("success", False) else -1.0)
 
         tool_result = _prepend_notice(tool_result, abandon_notice)
+
+        # What to say out loud, decided once, here, for every surface. The UI
+        # used to speak `message` verbatim, so a scraped search result was read
+        # to the end and a Tier-2 prompt was recited including "can't be undone ·
+        # est. 1s". A handler that knows its own spoken form sets `speech`
+        # itself; `to_speech` respects that and otherwise shortens the message.
+        if isinstance(tool_result, dict):
+            tool_result["speech"] = to_speech(
+                str(tool_result.get("message", "")), tool_result
+            )
 
         # Auto-store conversation turn to SQLite memory.db
         if isinstance(tool_result, dict) and tool_result.get("message"):
@@ -1079,10 +1091,6 @@ class MasterPlanner:
         """Approved executor for terminate_process. Only reachable post-approval."""
         return self.computer_agent.terminate_process(process, user_approved=True)
 
-    def _exec_send_whatsapp(self, phone: str, text: str) -> Dict[str, Any]:
-        """Approved executor for send_whatsapp. Only reachable post-approval."""
-        return self.comms_agent.send_whatsapp_now(phone, text)
-
     def _resolve_contact_number(
         self, clarification: Dict[str, Any], reply: str
     ) -> Dict[str, Any]:
@@ -1135,13 +1143,11 @@ class MasterPlanner:
                 "message": f"✓ Saved {name}'s number as +{phone}.",
             })
 
-        result = self._ask_to_send_whatsapp(
-            phone,
-            pending_text,
-            clarification.get("original_command", ""),
-            source=f"just saved for {name}",
-        )
-        result["message"] = f"✓ Saved {name}'s number as +{phone}.\n\n" + result["message"]
+        # Resume the message the user originally asked for, now that the number
+        # is known. It is prepared, not sent — see `_handle_whatsapp`.
+        result = self.comms_agent.open_whatsapp_chat(phone, pending_text)
+        result["message"] = f"✓ Saved {name}'s number as +{phone}. " + result["message"]
+        result["speech"] = f"Saved {name}'s number. It's typed in the chat — press Enter to send."
         return self._wrap_contact_result(reply, result)
 
     def _wrap_contact_result(self, reply: str, result: Dict[str, Any]) -> Dict[str, Any]:
@@ -1265,7 +1271,7 @@ class MasterPlanner:
             value = str(match.get("value", ""))
 
             # 1. Not a conversation transcript or other machine-written record.
-            if key_l.startswith(("turn_", "conversation", "session_", "log_")):
+            if is_machine_written(key):
                 continue
             # 2. The key must actually name the person asked for.
             if name not in key_l:
@@ -1449,38 +1455,26 @@ class MasterPlanner:
             }
         phone = resolved["phone"]
 
-        # Any message with text goes through the approval gate and is then sent
-        # for real. Leaving the user to press Enter themselves was needless: they
-        # had already said what to send and to whom, so the only thing worth
-        # asking is whether to go ahead — which is exactly what Tier 2 is for.
-        if text:
-            return self._ask_to_send_whatsapp(
-                phone, text, command, source=resolved.get("source", "")
-            )
-
-        # No message text — nothing to send, so just open the chat (Tier 1).
-        return self.comms_agent.open_whatsapp_chat(phone, "")
-
-    def _ask_to_send_whatsapp(
-        self, phone: str, text: str, command: str, source: str = ""
-    ) -> Dict[str, Any]:
-        """Puts a WhatsApp message through the Tier-2 gate before sending it."""
-        # Only worth showing when the number came from somewhere the user might
-        # want to double-check. "given directly" is just an echo of what they typed.
-        origin = [f"Number  : +{phone} — {source}"] if source and source != "given directly" else []
-        return self.require_tier2_approval(
-            action_name="send_whatsapp",
-            target=f"+{phone}",
-            executor="send_whatsapp",
-            executor_kwargs={"phone": phone, "text": text},
-            original_command=command,
-            task_type="communication",
-            agent="comms",
-            detail_lines=[f'Message : "{text}"'] + origin + [
-                "I'll open the chat and send it — keep that window focused.",
-            ],
-            question="Send it? Reply 'yes' to send now, or 'no' to cancel.",
-        )
+        # Open the chat with the message typed, and stop there — for both the
+        # text and no-text cases. Tier 1: nothing leaves the machine.
+        #
+        # This used to gate on Tier 2 and then simulate an Enter keypress, and
+        # it did not work. Reported in live use on 2026-08-13: the gate was
+        # approved, the reply said "Opened the chat for +91… and pressed Enter",
+        # and no message was sent. That path was never reliable and could not be
+        # made so — `pyautogui.press("enter")` goes to whatever window has focus
+        # after a fixed 8-second sleep, so WhatsApp loading slowly, a
+        # notification, or the user clicking anywhere sends the keystroke
+        # somewhere else. Nothing here can read WhatsApp back to find out.
+        #
+        # So the honest version is the one the user asked for: type it into the
+        # box and let them press Enter. That is also what the deep link is
+        # designed for — `whatsapp://send?…&text=…` pre-fills deliberately and
+        # declines to send, which is anti-spam design, not an obstacle to route
+        # around. A confirmation prompt is pointless once nothing is transmitted,
+        # so the Tier-2 gate goes with it: it was guarding a keypress that
+        # usually missed.
+        return self.comms_agent.open_whatsapp_chat(phone, text)
 
     def _handle_send_email(self, command: str, user_approved: bool) -> Dict[str, Any]:
         """Parses a 'send mail ...' command and runs the draft → send sequence.
@@ -1814,17 +1808,24 @@ class MasterPlanner:
                 return exec_res
             return search_res
 
-        # ── 0000. User Identity & Context Intercept (Fixes "what is my name") ─────
-        if any(k in cmd_lower for k in ["my name", "who am i", "what is my name", "tell me my name", "my username"]):
-            username = self.boot_context.get("username", "Siddhant")
-            mem_res = self.memory_agent.recall("name")
-            mem_name = mem_res.get("matches", [{}])[0].get("value") if (mem_res.get("matches") and len(mem_res["matches"]) > 0) else ""
-            display_name = mem_name or username
-            return {
-                "success": True,
-                "intent": "identity_context",
-                "message": f"✓ Your name is {display_name} (OS User: {username}).",
-            }
+        # ── 0000. User identity ──────────────────────────────────────────────────
+        # Deleted, not moved. This branch fired on `"my name" in cmd_lower`, then
+        # read `memory_agent.recall("name")["matches"][0]["value"]` as the answer.
+        # `recall` is a TF-IDF similarity search and `auto_store_conversation_turn`
+        # writes one row per exchange, so the "name" it found was a serialised
+        # transcript — and the reply was then stored as the next turn, nesting the
+        # previous one inside it:
+        #
+        #   ✓ Your name is Agent: MasterPlanner | User: is my name | Assistant:
+        #     ✓ Your name is Agent: MasterPlanner | User: name is sambhag | …
+        #
+        # It also fired on *statements* ("my name is sambhav"), so telling MONDAY
+        # your name ran the reader. The `set_user_name` / `get_user_name` skills
+        # split the two, key the name canonically, and refuse machine-written
+        # rows. They match in stage 1, ahead of everything here.
+        #
+        # The old default was `boot_context.get("username", "Siddhant")` — a
+        # hardcoded fallback to a different person's name.
 
         # ── 000. Multimodal Screen Vision Intercept ─────────────────────────────
         if any(v in cmd_lower for v in ["screen", "chart", "looking at", "error on screen", "visual", "what is on my screen", "written", "text on my screen"]):

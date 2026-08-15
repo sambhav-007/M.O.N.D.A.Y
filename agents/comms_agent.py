@@ -545,13 +545,24 @@ class CommunicationAgent:
     # WhatsApp has no API that a desktop script may send through. The official
     # deep link (whatsapp://send?phone=…&text=…) opens the chat with the message
     # already typed, but deliberately does not send it — that is anti-spam design,
-    # not something to code around. So there are exactly two honest behaviours:
+    # not something to code around.
     #
-    #   open_whatsapp_chat()  — prepares the message, user presses Enter. Tier 1:
-    #                           nothing leaves the machine.
-    #   send_whatsapp_now()   — additionally simulates the Enter keypress. This
-    #                           really does send, so it is Tier 2, and it cannot
-    #                           confirm delivery. See the warning in its docstring.
+    # `open_whatsapp_chat()` is therefore the only behaviour: prepare the message,
+    # the user presses Enter. Tier 1 — nothing leaves the machine.
+    #
+    # There used to be a second one, `send_whatsapp_now()`, which simulated the
+    # Enter keypress behind the Tier-2 gate. **It is gone, because it did not
+    # work.** Reported from live use on 2026-08-13: the gate was approved, the
+    # reply read "Opened the chat for +91… and pressed Enter", and nothing was
+    # sent. It could not be repaired — `pyautogui.press("enter")` fires after a
+    # fixed 8-second sleep into whatever window happens to hold focus, so a slow
+    # WhatsApp launch, a notification, or one click anywhere sends the keystroke
+    # elsewhere; and nothing here can read WhatsApp back to notice. A Tier-2
+    # prompt guarding a keypress that usually misses is worse than no feature: it
+    # asks the user to authorise something, then reports having done it.
+    #
+    # Do not reintroduce it. If WhatsApp ever exposes a real send API, that is a
+    # different function with real evidence behind it.
 
     # The WHOLE string must be a phone number — digits with optional +, spaces,
     # dashes, dots or parentheses. Anchored deliberately. A space after the '+'
@@ -667,94 +678,25 @@ class CommunicationAgent:
             }
 
         log_action("open_whatsapp_chat", number, 1, "success", self.name)
-        typed = f' with "{text}" typed in' if text else ""
-        return {
-            "success": True,
-            "phone": number,
-            "text": text,
-            "message_sent": False,
-            "message": (
-                f"✓ Opened the WhatsApp chat for +{number}{typed}.\n"
-                f"  Press Enter in that window to send it — I've only prepared it."
-            ),
-        }
-
-    def send_whatsapp_now(self, phone: str, text: str, load_wait_s: float = 8.0) -> Dict[str, Any]:
-        """
-        Opens the chat and simulates the Enter keypress, which really does send.
-
-        Tier 2. Two limits the caller must not paper over:
-
-        * **Focus.** The keystroke goes to whatever window is focused when it
-          fires. If WhatsApp is slow to load, or the user clicks elsewhere, or a
-          notification steals focus, Enter lands somewhere else entirely.
-        * **No delivery confirmation.** Nothing here can read WhatsApp's state,
-          so this reports that Enter was *sent*, never that the message was
-          delivered. Do not upgrade that wording.
-        """
-        number = self.normalise_phone(phone)
-        if not number:
+        if text:
             return {
-                "success": False,
-                "error": "BAD_PHONE",
-                "message": f"'{phone}' doesn't look like a phone number with a country code.",
-            }
-        if not (text or "").strip():
-            return {
-                "success": False,
-                "error": "NO_TEXT",
-                "message": "There's no message text to send.",
-            }
-
-        try:
-            import pyautogui
-        except ImportError:
-            # Approval was already given, so do as much as is possible rather
-            # than dead-ending: open the chat with the message typed and say
-            # exactly which part could not be done.
-            opened = self.open_whatsapp_chat(number, text)
-            opened["error"] = "PYAUTOGUI_MISSING"
-            opened["message_sent"] = False
-            opened["message"] = (
-                f"✓ Opened the chat for +{number} with your message typed.\n"
-                f"  I couldn't press Enter for you — that needs the optional "
-                f"'pyautogui' package (pip install pyautogui). Press Enter to send."
-            )
-            return opened
-
-        opened = self.open_whatsapp_chat(number, text)
-        if not opened.get("success"):
-            return opened
-
-        try:
-            import time
-            time.sleep(load_wait_s)  # WhatsApp has to be up and focused first
-            pyautogui.press("enter")
-        except Exception as e:
-            log_action("send_whatsapp", number, 2, "error", self.name, {"error": str(e)})
-            return {
-                "success": False,
+                "success": True,
                 "phone": number,
-                "error": str(e),
-                "message": f"Opened the chat but couldn't press Enter: {e}",
+                "text": text,
+                "message_sent": False,
+                "message": (
+                    f'✓ Typed "{text}" into the chat for +{number}. '
+                    f"Press Enter there to send."
+                ),
+                "speech": "It's typed in the chat. Press Enter to send.",
             }
-
-        log_action("send_whatsapp", number, 2, "enter_sent", self.name)
         return {
             "success": True,
             "phone": number,
-            "text": text,
-            "enter_sent": True,
-            # Deliberately not "message sent" — see the docstring.
-            "delivery_confirmed": False,
-            # Tightened, not weakened. The caveat is load-bearing — nothing here
-            # can read WhatsApp back, so this must never say "delivered" — but it
-            # was three lines of prose that the voice then read out in full.
-            "message": (
-                f"✓ Opened the chat for +{number} and pressed Enter. "
-                f"Can't confirm delivery — check the chat."
-            ),
-            "speech": "Sent it. I can't confirm delivery, so check the chat.",
+            "text": "",
+            "message_sent": False,
+            "message": f"✓ Opened the WhatsApp chat for +{number}.",
+            "speech": "Opened the chat.",
         }
 
     def send_desktop_notification(self, title: str, message: str) -> Dict[str, Any]:

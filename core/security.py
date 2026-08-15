@@ -89,9 +89,16 @@ TIER_2_ACTIONS = {
 
 # Subset of TIER_2_ACTIONS that has a real implementation behind it. Kept
 # explicit so the report and the demo can state exactly what is enforced.
+# `send_whatsapp` was here until 2026-08-13. It gated a `pyautogui.press("enter")`
+# that fired blind into whatever window held focus after a fixed sleep, so an
+# approved send routinely sent nothing while reporting "pressed Enter". A gate in
+# front of an action that does not happen is worse than no gate: it asks the user
+# to authorise something and then tells them it was done. WhatsApp now prepares
+# the message and stops (Tier 1 — nothing leaves the machine), so there is
+# nothing left to approve. `send_whatsapp` stays in TIER_2_ACTIONS above, where
+# the default-deny policy keeps it gated if it is ever implemented for real.
 TIER_2_IMPLEMENTED = {
     "send_email",
-    "send_whatsapp",
     "terminate_process",
 }
 

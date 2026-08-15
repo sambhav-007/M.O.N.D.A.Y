@@ -92,7 +92,15 @@ class BrowserAgent:
 
     @staticmethod
     def _parse_ddg_html(html: str, num_results: int) -> List[Dict[str, str]]:
-        """Parses the `html.duckduckgo.com` result layout."""
+        """Parses the `html.duckduckgo.com` result layout.
+
+        Every `get_text` here passes an explicit `" "` separator. Without it
+        BeautifulSoup joins the text of each child element with nothing between,
+        and DuckDuckGo wraps every matched search term in `<b>` — so
+        "the distance in kilometres between Los-angeles and France" came back as
+        "thedistancein kilometres betweenLos-angelesandFrance". Unreadable on
+        screen, and worse read aloud.
+        """
         soup = BeautifulSoup(html, "html.parser")
         results: List[Dict[str, str]] = []
         for a in soup.select(".result__body")[:num_results]:
@@ -100,9 +108,9 @@ class BrowserAgent:
             snippet_elem = a.select_one(".result__snippet")
             link_elem = a.select_one(".result__url")
 
-            title = title_elem.get_text(strip=True) if title_elem else "No title"
-            snippet = snippet_elem.get_text(strip=True) if snippet_elem else ""
-            link = link_elem.get_text(strip=True) if link_elem else ""
+            title = title_elem.get_text(" ", strip=True) if title_elem else "No title"
+            snippet = snippet_elem.get_text(" ", strip=True) if snippet_elem else ""
+            link = link_elem.get_text(" ", strip=True) if link_elem else ""
 
             if title and snippet:
                 results.append({"title": title, "snippet": snippet, "url": link})
@@ -134,7 +142,7 @@ class BrowserAgent:
         soup = BeautifulSoup(html, "html.parser")
         results: List[Dict[str, str]] = []
         for link in soup.select("a.result-link")[:num_results]:
-            title = link.get_text(strip=True)
+            title = link.get_text(" ", strip=True)
             url = BrowserAgent._unwrap_ddg_redirect(link.get("href", ""))
 
             snippet = ""
@@ -143,7 +151,7 @@ class BrowserAgent:
             if snippet_row:
                 snippet_cell = snippet_row.select_one(".result-snippet")
                 if snippet_cell:
-                    snippet = snippet_cell.get_text(strip=True)
+                    snippet = snippet_cell.get_text(" ", strip=True)
 
             if title and snippet:
                 results.append({"title": title, "snippet": snippet, "url": url})

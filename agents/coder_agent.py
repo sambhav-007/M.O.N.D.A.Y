@@ -208,15 +208,20 @@ if __name__ == "__main__":
         SUPPORTED_DOMAINS = {"system_volume", "desktop_folder", "web_scraper"}
         if domain not in SUPPORTED_DOMAINS:
             log_action("execute_dynamic_script", user_prompt, 1, "unsupported", self.name)
+            # The capability list stays on screen — it is genuinely useful the
+            # first time. It is not spoken: hearing "I can currently open apps,
+            # search the web, work with documents, save slash recall memories…"
+            # after every unrecognised command is punishing, and this is the
+            # single most-hit failure message in the app.
             return AgentResult.failed(
                 (
                     f"I'm not sure how to do that yet: \"{user_prompt}\". "
-                    "I can currently open apps, search the web, work with documents, "
-                    "save/recall memories, adjust system volume, and create desktop "
-                    "folders. Try rephrasing or a more specific command."
+                    "I can open apps, search the web, work with documents, "
+                    "save/recall memories, set the volume and create folders — "
+                    "type /help for examples."
                 ),
                 error="NOT_IMPLEMENTED",
-                data={"domain": domain},
+                data={"domain": domain, "speech": "I'm not sure how to do that yet."},
             ).as_dict()
 
         while attempt < max_retries:
