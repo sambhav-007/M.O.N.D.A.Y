@@ -31,11 +31,11 @@ health,system_health,system_health,pattern,True,
 system health,system_health,system_health,pattern,True,
 computer stats,system_health,system_health,pattern,True,
 how is my pc doing,system_health,system_health,pattern,True,
-how much do you charge for consulting,(fallback),(fallback),fallback,True,
+how much do you charge for consulting,answer_question,answer_question,pattern,True,{'topic': 'do you charge for consulting'}
 what did i say about the method,recall_memory,recall_memory,pattern,True,{'query': 'the method'}
-tell me something about whether it rains,(fallback),(fallback),fallback,True,
-what is the capital of france,(fallback),(fallback),fallback,True,
-send mail to a@b.com,(fallback),(fallback),fallback,True,
+tell me something about whether it rains,answer_question,answer_question,pattern,True,{'topic': 'whether it rains'}
+what is the capital of france,answer_question,answer_question,pattern,True,{'topic': 'the capital of france'}
+send mail to a@b.com,send_email,send_email,pattern,True,{'rest': 'a@b.com'}
 open notepad,open_app_or_website,open_app_or_website,pattern,True,{'target': 'notepad'}
 determination is important,(fallback),(fallback),fallback,True,
 i need to book a flight,(fallback),(fallback),fallback,True,
@@ -71,5 +71,54 @@ search the internet for rust tutorials,web_search,web_search,pattern,True,{'quer
 google weather in delhi,web_search,web_search,pattern,True,{'query': 'weather in delhi'}
 search current AI news,web_search,web_search,pattern,True,{'query': 'current AI news'}
 research quantum computing,research_topic,research_topic,pattern,True,{'topic': 'quantum computing'}
-open whatsapp and message papa saying hi,(fallback),(fallback),fallback,True,
-start meeting recording,(fallback),(fallback),fallback,True,
+open whatsapp and message papa saying hi,whatsapp_message,whatsapp_message,pattern,True,{'rest': 'message papa saying hi'}
+start meeting recording,start_meeting_recording,start_meeting_recording,pattern,True,
+bitcoin price,crypto_price,crypto_price,pattern,True,{'coin': 'bitcoin'}
+what is the price of ethereum,crypto_price,crypto_price,pattern,True,{'coin': 'ethereum'}
+eth price,crypto_price,crypto_price,pattern,True,{'coin': 'eth'}
+crypto prices,crypto_price,crypto_price,pattern,True,
+weather in delhi,weather,weather,pattern,True,{'location': 'delhi'}
+what is the weather,weather,weather,pattern,True,
+what's the weather in tokyo,weather,weather,pattern,True,{'location': 'tokyo'}
+iss location,iss_location,iss_location,pattern,True,
+where is the space station,iss_location,iss_location,pattern,True,
+tell me a joke,tell_joke,tell_joke,pattern,True,
+my ip,network_info,network_info,pattern,True,
+what is my local ip address,network_info,network_info,pattern,True,
+where am i,geolocation,geolocation,pattern,True,
+what is my city,geolocation,geolocation,pattern,True,
+calculate 2^3,calculate,calculate,pattern,True,{'expression': '2^3'}
+what is 12 * 8,calculate,calculate,pattern,True,{'expression': '12 * 8'}
+compute 100 / 4,calculate,calculate,pattern,True,{'expression': '100 / 4'}
+who is ada lovelace,answer_question,answer_question,pattern,True,{'topic': 'ada lovelace'}
+tell me about the eiffel tower,answer_question,answer_question,pattern,True,{'topic': 'the eiffel tower'}
+hello monday,chitchat,chitchat,pattern,True,
+how are you,chitchat,chitchat,pattern,True,
+who are you,chitchat,chitchat,pattern,True,
+what is on my screen,analyze_screen,analyze_screen,pattern,True,
+read my screen,analyze_screen,analyze_screen,pattern,True,
+turn on the living room light,toggle_smart_light,toggle_smart_light,pattern,True,{'device': 'living room'}
+turn off the lights,toggle_smart_light,toggle_smart_light,pattern,True,
+history,audit_history,audit_history,pattern,True,
+proactive,proactive_suggestions,proactive_suggestions,pattern,True,
+list processes,list_processes,list_processes,pattern,True,
+say hello world,speak_text,speak_text,pattern,True,{'phrase': 'hello world'}
+organize C:/Downloads,organize_folder,organize_folder,pattern,True,{'path': 'C:/Downloads'}
+read my latest email,read_latest_email,read_latest_email,pattern,True,
+convert data.csv to json,convert_csv_to_json,convert_csv_to_json,pattern,True,{'path': 'data.csv'}
+schedule standup at tomorrow 10am,schedule_event,schedule_event,pattern,True,"{'title': 'standup', 'when': 'tomorrow 10am'}"
+notify me the build finished,desktop_notification,desktop_notification,pattern,True,{'text': 'the build finished'}
+create a folder on my desktop,create_desktop_folder,create_desktop_folder,pattern,True,
+"send mail to a@b.com subject ""Hi"" body ""Hello""",send_email,send_email,pattern,True,"{'rest': 'a@b.com subject ""Hi"" body ""Hello""'}"
+draft email to john@example.com hello,compose_email,compose_email,pattern,True,{'rest': 'john@example.com hello'}
+draft a gmail to bob@example.com,compose_email,compose_email,pattern,True,{'rest': 'bob@example.com'}
+message +919876543210 saying hello,whatsapp_message,whatsapp_message,pattern,True,"{'phone': '+919876543210', 'rest': 'saying hello'}"
+whatsapp +919876543210,whatsapp_message,whatsapp_message,pattern,True,{'rest': '+919876543210'}
+send whatsapp to bhumi saying hi,whatsapp_message,whatsapp_message,pattern,True,{'rest': 'bhumi saying hi'}
+papa on WhatsApp hello,whatsapp_message,whatsapp_message,pattern,True,"{'who': 'papa', 'text': 'hello'}"
+message papa saying good morning,message_contact,message_contact,pattern,True,{'rest': 'papa saying good morning'}
+i need to book a flight,(fallback),(fallback),fallback,True,
+that was a delightful evening,(fallback),(fallback),fallback,True,
+draft a report on q3 revenue,(fallback),(fallback),fallback,True,
+what did i say about the budget,recall_memory,recall_memory,pattern,True,{'query': 'the budget'}
+what is 42,answer_question,answer_question,pattern,True,{'topic': '42'}

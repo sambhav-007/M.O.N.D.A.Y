@@ -76,6 +76,27 @@ MAX_APP_TOKENS = 3
 # and belongs to a handler that can parse it.
 simplematch.register_type("app", r"\S+(?: \S+){0,%d}" % (MAX_APP_TOKENS - 1))
 
+# An arithmetic expression, and nothing else. Digits and operators only, with at
+# least one operator so a bare number is not mistaken for a sum — "what is 42"
+# is a question about 42, not a calculation of it.
+#
+# This is what lets `what is {expression:math}` and `what is {topic}` coexist:
+# they carry identical literal text, so the typed slot is what separates them
+# (see `typed_slots`).
+simplematch.register_type(
+    "math", r"[\d.()\s]*\d[\d.()\s]*(?:[-+*/^%][\d.()\s]*\d[\d.()\s]*)+"
+)
+
+# A literal phone number. Loose on formatting (people type +91 98765 43210,
+# (555) 123-4567 and 9876543210) and strict on content: digits and separators
+# only, never letters. `CommunicationAgent.normalise_phone` is what decides
+# whether it is a *valid* number; this only decides whether the user typed one.
+#
+# It exists so "message +919876543210 saying hi" and "message the team about
+# friday" can be told apart by the pattern rather than by a handler that has
+# already committed to messaging someone.
+simplematch.register_type("phone", r"\+?\d[\d\-().]*(?:[ ][\d\-().]+)*\d")
+
 
 def expand_pattern(pattern: str) -> List[str]:
     """Expands ``(a|b)`` and ``[optional]`` into concrete simplematch patterns.
@@ -117,6 +138,27 @@ def specificity(pattern: str) -> int:
     win regardless of the order intents were registered in.
     """
     return len(_SLOT.sub("", pattern).replace(" ", ""))
+
+
+_TYPED_SLOT = re.compile(r"\{[^{}]*:[^{}]*\}")
+
+
+def typed_slots(pattern: str) -> int:
+    """How many of a pattern's slots are constrained to a type.
+
+    The tie-breaker under `specificity`, and it exists because literal text alone
+    cannot separate two equally-worded readings of the same command.
+    `what is {topic}` and `what is {expression:math}` carry identical literal
+    text, so ranking on that alone left "what is 12 * 8" decided by which skill
+    happened to be registered first — the invisible ordering dependency this
+    module was written to remove.
+
+    A typed slot matches strictly less than a free one, so preferring it is the
+    same principle as preferring literal text: **the more constrained reading of
+    a command is the more likely one to be meant.** `{expression:math}` only
+    accepts arithmetic, so when it matches at all, arithmetic is what was typed.
+    """
+    return len(_TYPED_SLOT.findall(pattern))
 
 
 #: When a pattern does not begin with a literal word, this much literal text is
@@ -162,6 +204,12 @@ class Match:
     slots: Dict[str, Any]
     pattern: str
     specificity: int = field(default=0)
+    typed_slots: int = field(default=0)
+
+    @property
+    def rank(self) -> tuple:
+        """Literal text first, then constraint. See `typed_slots`."""
+        return (self.specificity, self.typed_slots)
 
 
 class IntentContainer:
@@ -195,6 +243,7 @@ class IntentContainer:
                     simplematch.Matcher(concrete, case_sensitive=False),
                     concrete,
                     specificity(concrete),
+                    typed_slots(concrete),
                 ))
 
     def calc_intent(self, text: str) -> Optional[Match]:
@@ -210,16 +259,17 @@ class IntentContainer:
 
         best: Optional[Match] = None
         for intent, entries in self._intents.items():
-            for matcher, pattern, score in entries:
+            for matcher, pattern, score, typed in entries:
                 captured = matcher.match(cleaned)
                 if captured is None:
                     continue
-                if best is None or score > best.specificity:
+                if best is None or (score, typed) > best.rank:
                     best = Match(
                         intent=intent,
                         slots={k: _tidy(v) for k, v in captured.items()},
                         pattern=pattern,
                         specificity=score,
+                        typed_slots=typed,
                     )
         return best
 

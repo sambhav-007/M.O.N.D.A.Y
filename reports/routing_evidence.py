@@ -75,7 +75,14 @@ ROUTING_SET: List[Tuple[str, str]] = [
 
     # ── Negatives: must fall through, not be captured ────────────────────────
     # Each of these was mis-served by the substring chain.
-    ("how much do you charge for consulting", "(fallback)"),      # "charge" → battery
+    #
+    # Reclassified in tranche 4. It was a negative because the *battery* branch
+    # fired on `"charge" in cmd_lower`. It is a question, and questions are now
+    # answered by `answer_question` rather than falling through to a knowledge
+    # search bolted on below the chain — so reaching a skill is the correct
+    # answer here. The battery capture it was written to catch is still tested:
+    # the assertion below is that it is not `battery_status`.
+    ("how much do you charge for consulting", "answer_question"),
     # Reclassified in tranche 2, and the reason matters. This was a negative
     # because the *crypto* branch grabbed it — `"eth" in cmd_lower` matches
     # m-eth-od. It is genuinely a memory recall, so now that recall_memory
@@ -83,9 +90,12 @@ ROUTING_SET: List[Tuple[str, str]] = [
     # "eth" negative is still covered by the "whether it rains" case below,
     # which no skill should claim.
     ("what did i say about the method", "recall_memory"),
-    ("tell me something about whether it rains", "(fallback)"),   # "eth" again
-    ("what is the capital of france", "(fallback)"),
-    ("send mail to a@b.com", "(fallback)"),
+    ("tell me something about whether it rains", "answer_question"),   # "eth" again
+    # Reclassified in tranche 4 and 6 respectively — both now have a skill.
+    # `what is the capital of france` was a negative because nothing could serve
+    # it; it is a question and `answer_question` answers questions.
+    ("what is the capital of france", "answer_question"),
+    ("send mail to a@b.com", "send_email"),
     # Both reclassified in tranche 3: the browser surface has skills now, so
     # reaching one is the correct answer rather than a capture. See below.
     ("open notepad", "open_app_or_website"),
@@ -153,12 +163,89 @@ ROUTING_SET: List[Tuple[str, str]] = [
     # ── Tranche 3 negatives ──────────────────────────────────────────────────
     # The launcher's word count was load-bearing: it is what stopped this being
     # read as an application named "whatsapp and message papa saying hi". It
-    # survives as the `:app` slot bound, so the command still falls through to
-    # the WhatsApp handler that can parse it.
-    ("open whatsapp and message papa saying hi", "(fallback)"),
+    # survives as the `:app` slot bound — and now that WhatsApp is a skill
+    # (tranche 6) the command reaches the handler that can parse it directly
+    # rather than falling through to reach it.
+    ("open whatsapp and message papa saying hi", "whatsapp_message"),
     # "start" is not a launch verb here — `start {target:app}` would match this,
-    # and it belongs to the audio agent.
-    ("start meeting recording", "(fallback)"),
+    # and it belongs to the audio agent, which is a skill as of tranche 5.
+    ("start meeting recording", "start_meeting_recording"),
+
+    # ── Tranche 4: live data, and the widest keyword lists in the chain ──────
+    # `["bitcoin", "btc", "ethereum", "eth", "crypto"]`, tested with
+    # `in cmd_lower`. "eth" is a substring of *m-eth-od*, *som-eth-ing* and
+    # *wh-eth-er*, so all three were answered with the price of Ethereum.
+    ("bitcoin price", "crypto_price"),
+    ("what is the price of ethereum", "crypto_price"),
+    ("eth price", "crypto_price"),
+    ("crypto prices", "crypto_price"),
+    ("weather in delhi", "weather"),
+    ("what is the weather", "weather"),
+    ("what's the weather in tokyo", "weather"),
+    ("iss location", "iss_location"),
+    ("where is the space station", "iss_location"),
+    ("tell me a joke", "tell_joke"),
+    # `my ip` was swallowed by the geolocation branch above it, so a question
+    # about an IP address was answered by asking a third-party service where the
+    # user lives. `/help` has always called this "local network details".
+    ("my ip", "network_info"),
+    ("what is my local ip address", "network_info"),
+    ("where am i", "geolocation"),
+    ("what is my city", "geolocation"),
+    # `^` was read as Python's XOR, so this answered 1.
+    ("calculate 2^3", "calculate"),
+    ("what is 12 * 8", "calculate"),
+    ("compute 100 / 4", "calculate"),
+    ("who is ada lovelace", "answer_question"),
+    ("tell me about the eiffel tower", "answer_question"),
+    ("hello monday", "chitchat"),
+    ("how are you", "chitchat"),
+    ("who are you", "chitchat"),
+
+    # ── Tranche 5: the desktop, and the two widest of all ────────────────────
+    # `"screen" in cmd_lower` matched "screenshot" and "screen recording";
+    # `"light" in cmd_lower` matched *f-light*, *de-light* and *high-light*, so
+    # "i need to book a flight" reached the smart-home tool and was answered
+    # "✓ Smart Home IoT: Turned 'Living Room Light' ON."
+    ("what is on my screen", "analyze_screen"),
+    ("read my screen", "analyze_screen"),
+    ("turn on the living room light", "toggle_smart_light"),
+    ("turn off the lights", "toggle_smart_light"),
+    ("history", "audit_history"),
+    ("proactive", "proactive_suggestions"),
+    ("list processes", "list_processes"),
+    ("say hello world", "speak_text"),
+    ("organize C:/Downloads", "organize_folder"),
+    ("read my latest email", "read_latest_email"),
+    ("convert data.csv to json", "convert_csv_to_json"),
+    ("schedule standup at tomorrow 10am", "schedule_event"),
+    ("notify me the build finished", "desktop_notification"),
+    ("create a folder on my desktop", "create_desktop_folder"),
+
+    # ── Tranche 6: email and WhatsApp ────────────────────────────────────────
+    ('send mail to a@b.com subject "Hi" body "Hello"', "send_email"),
+    ("draft email to john@example.com hello", "compose_email"),
+    ("draft a gmail to bob@example.com", "compose_email"),
+    ("message +919876543210 saying hello", "whatsapp_message"),
+    ("whatsapp +919876543210", "whatsapp_message"),
+    ("send whatsapp to bhumi saying hi", "whatsapp_message"),
+    ("papa on WhatsApp hello", "whatsapp_message"),
+    ("message papa saying good morning", "message_contact"),
+
+    # ── Tranche 4-6 negatives ────────────────────────────────────────────────
+    # "flight" contains "light"; "screenshot" contains "screen"; "delight" and
+    # "highlight" likewise. None of these may reach a skill.
+    ("i need to book a flight", "(fallback)"),
+    ("that was a delightful evening", "(fallback)"),
+    # `"draft" in cmd_lower` put this in the email branch, which answered
+    # "🔒 Contact Unresolved: no email address found for 'a report'".
+    ("draft a report on q3 revenue", "(fallback)"),
+    # `"say "` as a substring also matches "what did I say about X" — which is
+    # why the voice override was anchored. The anchor is structural now.
+    ("what did i say about the budget", "recall_memory"),
+    # A bare number is a number, not a sum. `{expression:math}` requires an
+    # operator so "what is 42" stays a question.
+    ("what is 42", "answer_question"),
 ]
 
 
@@ -241,14 +328,25 @@ def main() -> int:
         "- `open gmail` → the email branch fired on `\"gmail\" in cmd_lower` and",
         "  answered a request to open a website by starting a message to",
         "  `recipient@example.com`.",
+        "- `i need to book a flight` → the smart-home branch fired on",
+        "  `\"light\" in cmd_lower`, which matches *f-light*, *de-light* and",
+        "  *high-light*, and answered \"✓ Smart Home IoT: Turned 'Living Room",
+        "  Light' ON.\"",
         "",
         "Patterns match whole commands, so none of these can be captured by accident.",
         "",
-        "## Not yet migrated",
+        "## The chain is gone",
         "",
-        "Commands still handled by the legacy chain fall through to `(fallback)` by",
-        "design — `kill notepad`, email and WhatsApp among them. The fallback count",
-        "is the migration's progress bar, and it should shrink with each tranche.",
+        "Earlier versions of this report tracked a fallback count as the migration's",
+        "progress bar, because commands the router could not place were handed back",
+        "to the substring chain. There is no chain to hand them back to:",
+        "`_dispatch_to_agent` is now refuse → help → route → run, and a command no",
+        "skill claims gets an honest `NO_SKILL_MATCHED` rather than being passed to",
+        "a code generator that writes a Python script and runs it.",
+        "",
+        "So the `(fallback)` rows below are the **negatives** — commands that must",
+        "not be captured — and nothing else. A positive falling through is now a",
+        "user-visible failure, not a deferred migration step.",
         "",
         f"_Generated by `py -3.12 -m reports.routing_evidence`._",
     ]

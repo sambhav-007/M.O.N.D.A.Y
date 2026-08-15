@@ -1,14 +1,18 @@
 """
 M.O.N.D.A.Y. — the migrated skills.
 
-First tranche: the offline utility commands. They are the ones the demo leans on
-and the ones with the least to go wrong, which is why they move first — the
-riskiest paths (email, WhatsApp) migrate last, behind their existing tests.
+Tranches 1–3 live here: the offline utility commands, memory and identity, and
+the browser surface. They moved first because they are what the demo leans on
+and have the least to go wrong; the riskiest paths (email, WhatsApp) migrated
+last, behind their existing tests, and are in `core/skills_comms.py`.
 
-Each entry replaces a branch of the substring chain in
+Each entry replaces a branch of the substring chain that used to be
 `MasterPlanner._dispatch_to_agent`, and the comment on it records what that
 branch got wrong, so the same mistake is not reintroduced by someone widening a
 pattern later.
+
+`build_builtin_registry` is the single entry point and assembles all six
+tranches. The chain it replaced is gone — see `core/planner.py`.
 """
 
 from __future__ import annotations
@@ -20,6 +24,9 @@ from typing import Any, Dict
 from agents.memory_agent import is_machine_written
 from core.contracts import AgentResult, RecordStored, SystemQuery
 from core.skills import Skill, SkillRegistry
+from core.skills_comms import register_comms_skills
+from core.skills_live import register_live_skills
+from core.skills_system import register_system_skills
 
 
 def build_builtin_registry(planner: Any) -> SkillRegistry:
@@ -286,6 +293,14 @@ def build_builtin_registry(planner: Any) -> SkillRegistry:
             "remember [that] {name} number is {phone}",
             "[remember [that]] {name}'s number is {phone}",
             "{name} number is {phone}",
+            "{name} (phone|mobile|cell|whatsapp|contact) number is {phone}",
+            # People say it without the "is": "save didi contact number
+            # 9812345678". The typed `{phone:phone}` slot is what makes these
+            # safe without one — without a type, "add rahul number two" would
+            # match and try to save "two" as a phone number.
+            "(save|remember|store|add|set) {name} number {phone:phone}",
+            "(save|remember|store|add|set) {name} (phone|mobile|cell|whatsapp|contact) number {phone:phone}",
+            "(save|remember|store|add|set) {name} number (as|is|=) {phone:phone}",
             "save {name} number as {phone}",
         ],
         handler=save_contact_number,
@@ -400,8 +415,12 @@ def build_builtin_registry(planner: Any) -> SkillRegistry:
         offline=True,
     ))
 
-    def recall(query: str = "", **_: Any) -> Dict[str, Any]:
-        return planner.memory_agent.recall(query.strip() or "")
+    def recall(query: str = "", _command: str = "", **_: Any) -> Dict[str, Any]:
+        # Falls back to the whole command because this skill is reachable from
+        # stage 2, which supplies no slots — a `memory_query` the patterns did
+        # not recognise is still best served by searching memory for what the
+        # user typed, rather than by a web search for their own notes.
+        return planner.memory_agent.recall(query.strip() or _command.strip())
 
     registry.register(Skill(
         name="recall_memory",
@@ -413,6 +432,11 @@ def build_builtin_registry(planner: Any) -> SkillRegistry:
             "(look up|lookup) {query} in [my] memory",
         ],
         handler=recall,
+        # Stage 2. `memory_query` is one of the three families where a
+        # classification alone is enough to pick a handler: reading memory is
+        # reversible, needs no target, and has exactly one skill that serves it.
+        intents=["memory_query"],
+        runs_without_slots=True,
         tier=1,
         offline=True,
     ))
@@ -425,7 +449,9 @@ def build_builtin_registry(planner: Any) -> SkillRegistry:
         target = path.strip().strip("\"'")
         if not target:
             return AgentResult.failed(
-                "Which file should I summarise?", error="NO_DOCUMENT"
+                "Which file should I summarise? Give me a path, e.g. "
+                "summarize notes.pdf",
+                error="NO_DOCUMENT",
             ).as_dict()
         return planner.document_agent.summarize_document(target)
 
@@ -438,7 +464,12 @@ def build_builtin_registry(planner: Any) -> SkillRegistry:
             "give me a summary of {path}",
         ],
         handler=summarize,
-        # No `intents`, same reason: without a path there is nothing to summarise.
+        # Stage 2 with no slots asks which file, which is the right answer to a
+        # `document_intel` command that named none. The legacy branch defaulted
+        # the path to **README.md**, so "summarize this" confidently summarised
+        # the project's own readme and reported success.
+        intents=["document_intel"],
+        runs_without_slots=True,
         tier=1,
         offline=True,
     ))
@@ -467,6 +498,43 @@ def build_builtin_registry(planner: Any) -> SkillRegistry:
             "confirm", "do it", "no", "nope", "cancel", "nevermind", "never mind",
         ],
         handler=stray_confirmation,
+        tier=1,
+        offline=True,
+    ))
+
+    # ── Greetings ────────────────────────────────────────────────────────────
+    # The only skill reached from the classifier as well as from patterns, and
+    # the only family where that is safe without slots: a greeting has no
+    # target, no side effect and nothing to get wrong.
+    #
+    # The legacy branch was `if intent == "chitchat" or cmd_lower in [...]`, and
+    # it sat *above* the memory, document and communication branches — so any
+    # command the classifier called chitchat was answered with a greeting no
+    # matter what it said. "how do i summarise a pdf" scored chitchat at 0.31
+    # and got "Hello! I am M.O.N.D.A.Y. …". Stage 1 now runs first, so a command
+    # only reaches this if no pattern in the entire registry recognised it.
+    def chitchat(**_: Any) -> Dict[str, Any]:
+        return AgentResult.ok(
+            "Hello! I am M.O.N.D.A.Y., your Modular Operational Neural Desktop "
+            "Assistant. How can I help you today?",
+            evidence=SystemQuery(source="planner", detail="chitchat"),
+            data={"intent": "chitchat", "speech": "Hello! How can I help?"},
+        ).as_dict()
+
+    registry.register(Skill(
+        name="chitchat",
+        description="Greetings and small talk",
+        patterns=[
+            "hello", "hi", "hey", "yo", "hello monday", "hi monday", "hey monday",
+            "good (morning|afternoon|evening|day)",
+            "how are you", "how are you doing", "how's it going",
+            "who are you", "what are you", "what is your name", "your name",
+            "(thanks|thank you|cheers|ta)",
+            "(bye|goodbye|see you|good night)",
+        ],
+        handler=chitchat,
+        intents=["chitchat"],
+        runs_without_slots=True,
         tier=1,
         offline=True,
     ))
@@ -735,5 +803,12 @@ def build_builtin_registry(planner: Any) -> SkillRegistry:
         tier=1,
         offline=False,
     ))
+
+    # ── The remaining tranches ───────────────────────────────────────────────
+    # Split by file rather than piled in here, in the order they were migrated,
+    # because each tranche's header records what its branches got wrong.
+    register_live_skills(registry, planner)      # tranche 4 — live data
+    register_system_skills(registry, planner)    # tranche 5 — desktop, tools
+    register_comms_skills(registry, planner)     # tranche 6 — email, WhatsApp
 
     return registry

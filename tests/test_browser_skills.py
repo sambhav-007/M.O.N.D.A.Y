@@ -172,10 +172,16 @@ def test_a_sentence_is_not_an_app_name(planner):
     """
     The old guard's one good instinct: without a length bound, "open whatsapp
     and message papa saying hi" is an application called "whatsapp and message
-    papa saying hi". The bound survives as the `:app` slot type, so this still
-    falls through to the handler that can parse it.
+    papa saying hi". The bound survives as the `:app` slot type.
+
+    Updated in tranche 6: the assertion was `== "(fallback)"` while WhatsApp was
+    still served by the legacy chain, so falling through *was* reaching the
+    handler that could parse it. WhatsApp is a skill now, so the same command
+    reaches it directly. What is being tested is unchanged — the launcher must
+    not claim this — and that is what the assertion says.
     """
-    assert _route(planner, "open whatsapp and message papa saying hi")[0] == "(fallback)"
+    assert _route(planner, "open whatsapp and message papa saying hi")[0] != "open_app_or_website"
+    assert _route(planner, "open whatsapp and message papa saying hi")[0] == "whatsapp_message"
 
 
 def test_the_app_slot_bound_is_where_it_says_it_is(planner):
@@ -190,10 +196,15 @@ def test_the_app_slot_bound_is_where_it_says_it_is(planner):
 def test_start_is_not_a_launch_verb(planner):
     """
     `start {target:app}` would match "start meeting recording", which belongs to
-    the audio agent. The legacy chain still serves "start <app>", and it runs
-    after that intercept — which is the only reason the verb can be left out.
+    the audio agent.
+
+    Updated in tranche 5: the audio agent is a skill now, so this asserts
+    against the skill it must reach rather than against the fallback it used to
+    take on the way there. The claim is the same one — "start" must not be a
+    launch verb — and it is now checkable in both directions.
     """
-    assert _route(planner, "start meeting recording")[0] == "(fallback)"
+    assert _route(planner, "start meeting recording")[0] == "start_meeting_recording"
+    assert _route(planner, "start notepad")[0] != "open_app_or_website"
 
 
 # ── search ───────────────────────────────────────────────────────────────────
