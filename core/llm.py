@@ -1,0 +1,353 @@
+"""
+M.O.N.D.A.Y. — stage 3, the local language model.
+
+Stages 1 and 2 answer what was anticipated: 51 skills, 2,271 patterns, and a
+seven-class classifier. Everything else got "I'm not sure how to do that yet",
+which is honest and useless. This is the stage that answers the rest.
+
+It does **not** replace the stages above it. It runs only when both have
+declined, so the demo script, the Tier-2 gate and every offline guarantee are
+untouched by it — and when no model is available it declines too, leaving
+today's refusal exactly as it was.
+
+Two things it may return
+------------------------
+1. **A tool call** — a skill name and its arguments, validated before anything
+   runs. This is how "book me a flight to Delhi on Tuesday" becomes a real
+   dispatch rather than a pattern miss.
+2. **Text** — when no skill fits, the model may simply answer. That answer
+   carries `ModelAnswered` evidence and nothing stronger: a model replied, which
+   is not the same as a fact being checked or an action being taken.
+
+Why a schema generated from the registry
+----------------------------------------
+`core/skills.py` already declares, for every skill: a name, a description, a
+risk tier, whether it runs without arguments, and — via `Skill.slots`, derived
+from its patterns — the arguments it accepts. That is a function-calling
+manifest. Writing a second one by hand would create exactly the drift this
+repository keeps finding in its own reports: two descriptions of one thing, one
+of them quietly stale. So the schema is generated, and a pattern that gains a
+slot gains an argument in the same commit.
+
+What the model is not allowed to do
+-----------------------------------
+* **Reach a Tier-2 skill.** `Skill.__post_init__` forces `llm_reachable=False`
+  for Tier 2, and `registry.llm_reachable_skills()` is the model's entire world.
+  A name outside it is refused here even if the model emits it.
+* **Reach generated-code execution.** `create_desktop_folder` opts out by hand.
+  A guess must not run a Python script under `subprocess` (UPGRADE_PLAN §1.2),
+  and that is a statement about the implementation, not about the tier.
+* **Execute free text.** The model returns a *name and arguments*, checked
+  against the registry. It never returns something that is run.
+"""
+
+from __future__ import annotations
+
+import os
+from dataclasses import dataclass
+from typing import Any, Dict, List, Optional
+
+from core.skills import Skill, SkillRegistry
+
+#: The model to ask. A 3B at Q4 is ~2 GB of weights and this machine has ~4 GB
+#: free (ROADMAP §0), so this is the ceiling, not a starting point. `llama3.2:1b`
+#: is the fallback if memory is tight; anything 7B or larger will not load.
+DEFAULT_MODEL = os.environ.get("MONDAY_LLM_MODEL", "llama3.2:3b")
+
+#: Where Ollama listens. Local by default, and that is most of why Ollama was
+#: chosen over a hosted API: the command text never leaves the machine.
+DEFAULT_HOST = os.environ.get("MONDAY_LLM_HOST", "http://127.0.0.1:11434")
+
+#: Seconds to wait when checking whether a server is there at all. Short on
+#: purpose — this runs before a command can be answered, and a user waiting on a
+#: connection timeout for a feature they do not have is worse than not having it.
+PROBE_TIMEOUT = 1.5
+
+#: Seconds to wait for the model to choose. A 3B on CPU answers a short
+#: tool-selection prompt in a few seconds; beyond this it is not worth the wait
+#: when an honest refusal is one line away.
+CHOOSE_TIMEOUT = 30.0
+
+_SLOT_JSON_TYPES = {"int": "integer", "float": "number", "": "string"}
+
+
+@dataclass(frozen=True)
+class LlmChoice:
+    """What the model decided. Exactly one of `skill` or `text` is set."""
+
+    skill: Optional[str] = None
+    arguments: Dict[str, Any] = None          # type: ignore[assignment]
+    text: str = ""
+    model: str = ""
+    #: Arguments the model invented that the skill does not declare. Recorded
+    #: rather than silently dropped — see `_validate`.
+    dropped: List[str] = None                 # type: ignore[assignment]
+
+    def __post_init__(self) -> None:
+        if self.arguments is None:
+            object.__setattr__(self, "arguments", {})
+        if self.dropped is None:
+            object.__setattr__(self, "dropped", [])
+
+
+def build_tool_schema(registry: SkillRegistry) -> List[Dict[str, Any]]:
+    """Turns the skill registry into OpenAI-style tool definitions.
+
+    Only `llm_reachable_skills()` are included, so the exclusions are structural
+    rather than a prompt instruction the model may ignore.
+    """
+    tools: List[Dict[str, Any]] = []
+    for skill in registry.llm_reachable_skills():
+        properties: Dict[str, Any] = {}
+        for slot, slot_type in sorted(skill.slots.items()):
+            properties[slot] = {
+                "type": _SLOT_JSON_TYPES.get(slot_type, "string"),
+                "description": f"the {slot} for this command, taken from the user's words",
+            }
+        tools.append({
+            "type": "function",
+            "function": {
+                "name": skill.name,
+                "description": skill.description or skill.name.replace("_", " "),
+                "parameters": {
+                    "type": "object",
+                    "properties": properties,
+                    # Nothing is required. A 3B model that cannot fill a slot
+                    # should still be able to select the right skill and let the
+                    # handler ask for what is missing — every handler already
+                    # answers "which file?" or "who should I message?" when
+                    # called with nothing, because stage 2 needed that too.
+                    "required": [],
+                },
+            },
+        })
+    return tools
+
+
+SYSTEM_PROMPT = (
+    "You are the routing stage of M.O.N.D.A.Y., a desktop assistant. "
+    "Decide which of the available tools answers the user's command, and call "
+    "it with arguments taken from their words. "
+    "If no tool fits, reply in one or two short sentences instead — you are "
+    "talking to someone at their computer, not writing an essay. "
+    "Never claim to have done something; you select tools, you do not perform "
+    "actions."
+)
+
+
+class LlmStage:
+    """Stage 3. Optional, local, and silent when unavailable."""
+
+    def __init__(
+        self,
+        registry: SkillRegistry,
+        model: str = DEFAULT_MODEL,
+        host: str = DEFAULT_HOST,
+    ) -> None:
+        self.registry = registry
+        self.model = model
+        self.host = host
+        self._tools = build_tool_schema(registry)
+        self._available: Optional[bool] = None
+        self._unavailable_reason = ""
+
+    # ── Availability ─────────────────────────────────────────────────────────
+    def available(self) -> bool:
+        """Whether a server is reachable and the model is present.
+
+        Cached after the first call. Probing on every command would put a socket
+        connection in front of every answer, including the offline ones that are
+        the whole point of stage 1.
+
+        Turn the stage off entirely with `MONDAY_LLM=off` — a switch that exists
+        so a demo can guarantee the deterministic path is what is being shown.
+        """
+        if os.environ.get("MONDAY_LLM", "").strip().lower() in {"off", "0", "false", "no"}:
+            self._available, self._unavailable_reason = False, "disabled by MONDAY_LLM"
+            return False
+        if self._available is not None:
+            return self._available
+
+        try:
+            import ollama
+        except ImportError:
+            self._available, self._unavailable_reason = False, "the ollama package is not installed"
+            return False
+
+        try:
+            client = ollama.Client(host=self.host, timeout=PROBE_TIMEOUT)
+            names = _model_names(client.list())
+        except Exception as exc:  # noqa: BLE001 — any failure means "not available"
+            self._available = False
+            self._unavailable_reason = f"no Ollama server at {self.host} ({type(exc).__name__})"
+            return False
+
+        # Ollama reports "llama3.2:3b"; a bare "llama3.2" should still match.
+        wanted = self.model.split(":")[0]
+        if not any(n.split(":")[0] == wanted for n in names):
+            self._available = False
+            self._unavailable_reason = (
+                f"model '{self.model}' is not pulled (have: {', '.join(sorted(names)) or 'none'})"
+            )
+            return False
+
+        self._available, self._unavailable_reason = True, ""
+        return True
+
+    @property
+    def unavailable_reason(self) -> str:
+        """Why the stage declined, for the routing decision to carry.
+
+        The old chain gave no way to tell why something fell through. An
+        unrouted command should be diagnosable without re-running it.
+        """
+        if self._available is None:
+            self.available()
+        return self._unavailable_reason
+
+    # ── Choosing ─────────────────────────────────────────────────────────────
+    def choose(self, command: str) -> Optional[LlmChoice]:
+        """Asks the model to pick a skill, or to answer. None if it cannot.
+
+        Returns None rather than raising: stage 3 is the last stage, and its
+        failure must degrade to the honest refusal rather than to a traceback in
+        front of a user.
+        """
+        if not self.available():
+            return None
+
+        try:
+            import ollama
+
+            client = ollama.Client(host=self.host, timeout=CHOOSE_TIMEOUT)
+            response = client.chat(
+                model=self.model,
+                messages=[
+                    {"role": "system", "content": SYSTEM_PROMPT},
+                    {"role": "user", "content": command},
+                ],
+                tools=self._tools,
+                # Deterministic-ish: this is a routing decision, not prose.
+                options={"temperature": 0.0},
+            )
+        except Exception:  # noqa: BLE001
+            return None
+
+        return self._read(response)
+
+    def _read(self, response: Any) -> Optional[LlmChoice]:
+        """Reads a choice out of whatever shape the client handed back.
+
+        Everything goes through `_field` rather than attribute access, because
+        ollama-python returns pydantic models in 0.6 and dicts before it, and
+        mixing the two access styles is how `available()` acquired a bug that
+        made the whole stage silently unavailable.
+        """
+        message = _field(response, "message") or {}
+
+        calls = _field(message, "tool_calls")
+        if calls:
+            fn = _field(calls[0], "function") or {}
+            name = str(_field(fn, "name") or "").strip()
+            arguments = _field(fn, "arguments") or {}
+            try:
+                arguments = dict(arguments)
+            except (TypeError, ValueError):
+                arguments = {}
+            return self._validate(name, arguments)
+
+        text = str(_field(message, "content") or "").strip()
+        if text:
+            return LlmChoice(text=text, model=self.model)
+        return None
+
+    def _validate(self, name: str, arguments: Dict[str, Any]) -> Optional[LlmChoice]:
+        """Checks the model's choice against the registry before anything runs.
+
+        Three rules, in order of severity:
+
+        1. **The skill must be one we offered.** A name outside
+           `llm_reachable_skills()` is refused outright — that is what keeps
+           Tier-2 actions and generated-code execution unreachable even if the
+           model emits their names, which small models do.
+        2. **Unknown arguments are dropped, and recorded.** Every handler takes
+           `**_`, so an invented key is inert; the real risk is a wrong *value*
+           in a known key, which no amount of key-checking would catch. Dropping
+           and naming them in the routing decision is proportionate, where
+           refusing the whole call would make a 3B model useless.
+        3. **Typed slots are coerced, and a failure to coerce drops the
+           argument** rather than the call. `set volume to "loud"` should reach
+           the volume skill and be told what is wrong by the handler, not vanish.
+        """
+        allowed = {s.name: s for s in self.registry.llm_reachable_skills()}
+        skill = allowed.get(name)
+        if skill is None:
+            return None
+
+        declared = skill.slots
+        clean: Dict[str, Any] = {}
+        dropped: List[str] = []
+        for key, value in arguments.items():
+            if key not in declared:
+                dropped.append(key)
+                continue
+            coerced = _coerce(value, declared[key])
+            if coerced is None:
+                dropped.append(key)
+                continue
+            clean[key] = coerced
+
+        return LlmChoice(
+            skill=skill.name, arguments=clean, model=self.model, dropped=dropped
+        )
+
+
+def _field(obj: Any, name: str) -> Any:
+    """Reads `name` off a pydantic model or a mapping, whichever this is.
+
+    ollama-python returns pydantic models in 0.6 and plain dicts before it. One
+    accessor for both keeps the parsing readable and stops half of it being
+    written for one shape and half for the other.
+    """
+    if obj is None:
+        return None
+    value = getattr(obj, name, None)
+    if value is None and isinstance(obj, dict):
+        value = obj.get(name)
+    return value
+
+
+def _model_names(listing: Any) -> set:
+    """The model names in an Ollama listing, whatever shape the client returns.
+
+    `Client.list()` returns a pydantic `ListResponse` in ollama-python 0.6, and
+    a plain dict in older versions. Reading it as a dict against 0.6 raises
+    `AttributeError`, which the caller catches — so the stage would have
+    reported itself permanently unavailable, on every machine, with a message
+    blaming the server. Handling both shapes is three lines; debugging that
+    would not have been.
+    """
+    names = set()
+    for entry in _field(listing, "models") or []:
+        name = _field(entry, "model") or _field(entry, "name")
+        if name:
+            names.add(str(name))
+    return names
+
+
+def _coerce(value: Any, slot_type: str) -> Any:
+    """Best-effort conversion to a slot's declared type. None means 'unusable'."""
+    if value is None:
+        return None
+    if slot_type == "int":
+        try:
+            return int(str(value).strip())
+        except (TypeError, ValueError):
+            return None
+    if slot_type == "float":
+        try:
+            return float(str(value).strip())
+        except (TypeError, ValueError):
+            return None
+    text = str(value).strip()
+    return text or None

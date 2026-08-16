@@ -141,6 +141,33 @@ def specificity(pattern: str) -> int:
 
 
 _TYPED_SLOT = re.compile(r"\{[^{}]*:[^{}]*\}")
+#: `{name}` or `{name:type}` — captures both halves.
+_SLOT_PARTS = re.compile(r"\{([^{}:]+)(?::([^{}]+))?\}")
+
+
+def slot_spec(patterns: Iterable[str]) -> Dict[str, str]:
+    """The slots a set of patterns can capture, as ``name -> type``.
+
+    Type is ``""`` for an untyped ``{slot}``. Where the same name appears both
+    typed and untyped, the type wins — a name that is ever constrained is better
+    described by the constraint.
+
+    This exists so a skill's arguments can be **derived** rather than declared
+    twice. `core/llm.py` builds the tool schema the language model is offered
+    straight from here, so a pattern gaining a slot gains an argument, and a
+    schema cannot drift away from the patterns it claims to describe. The
+    alternative — a hand-written JSON schema beside the patterns — is the exact
+    shape of the stale-artefact problem this repository keeps finding.
+    """
+    found: Dict[str, str] = {}
+    for pattern in patterns:
+        for name, slot_type in _SLOT_PARTS.findall(pattern):
+            key = name.strip()
+            if not key:
+                continue
+            existing = found.get(key, "")
+            found[key] = (slot_type or "").strip() or existing
+    return found
 
 
 def typed_slots(pattern: str) -> int:

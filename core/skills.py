@@ -29,7 +29,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any, Callable, Dict, List, Optional
 
-from core.intent_patterns import IntentContainer, Match
+from core.intent_patterns import IntentContainer, Match, slot_spec
 
 # A handler takes the captured slots and the original command, and returns the
 # usual result dict (built via core.contracts.AgentResult).
@@ -64,6 +64,27 @@ class Skill:
     #: the condition for being reachable from stage 2.
     runs_without_slots: bool = False
 
+    #: Whether stage 3 — the language model — may select this skill.
+    #:
+    #: Defaults to True and is forced False for Tier 2 in `__post_init__`, so the
+    #: rule that irreversible actions need an exact pattern covers the model
+    #: without being restated. Set it False by hand for the narrower case: a
+    #: Tier-1 skill whose *implementation* is dangerous to reach on a guess.
+    #: `create_desktop_folder` is the only one — it runs generated Python under
+    #: `subprocess`, and "a low-confidence guess must not reach code execution"
+    #: (UPGRADE_PLAN §1.2) is not a claim about tiers.
+    llm_reachable: bool = True
+
+    @property
+    def slots(self) -> Dict[str, str]:
+        """The arguments this skill's patterns can capture, as ``name -> type``.
+
+        Derived from the patterns, never declared separately — see
+        `core.intent_patterns.slot_spec`. This is what makes the skill registry
+        usable as a function-calling manifest without a second source of truth.
+        """
+        return slot_spec(self.patterns)
+
     def __post_init__(self) -> None:
         if self.tier not in (1, 2):
             raise ValueError(f"{self.name}: tier must be 1 or 2, got {self.tier}")
@@ -86,6 +107,12 @@ class Skill:
                 f"classifier. Irreversible actions need the exactness of a "
                 f"pattern, not a family guess."
             )
+        if self.tier == 2 and self.llm_reachable:
+            # Forced rather than raised: the default is True because most skills
+            # are fine, and a Tier-2 skill declaring nothing should get the safe
+            # answer rather than an error someone silences by setting the flag.
+            # A frozen dataclass needs object.__setattr__ to do it.
+            object.__setattr__(self, "llm_reachable", False)
 
 
 class SkillRegistry:
@@ -126,3 +153,13 @@ class SkillRegistry:
 
     def tier2_names(self) -> List[str]:
         return sorted(s.name for s in self._skills.values() if s.tier == 2)
+
+    def llm_reachable_skills(self) -> List[Skill]:
+        """The skills stage 3 is allowed to offer the model.
+
+        Everything Tier 2 is excluded automatically, plus anything that opted
+        out. This list is the model's entire world: a skill absent from it
+        cannot be selected by the model no matter what the model emits, because
+        `core/llm.py` validates the returned name against exactly this set.
+        """
+        return [s for s in self.skills if s.llm_reachable]

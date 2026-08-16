@@ -113,6 +113,15 @@ def register_system_skills(registry: SkillRegistry, planner: Any) -> None:
         handler=create_desktop_folder,
         tier=1,
         offline=True,
+        # The only skill that opts out of stage 3, and the reason is the
+        # docstring above: it reaches `CoderAgent`, which writes Python and runs
+        # it under `subprocess`. "A guess must not reach code execution"
+        # (UPGRADE_PLAN §1.2) was the finding that removed the substring chain's
+        # final `else`; a language model is a better guesser than that chain
+        # was, but it is still guessing. Tier 1 is about reversibility, and this
+        # exclusion is about what the implementation *does* — two different
+        # questions, so it needs its own flag rather than a tier bump.
+        llm_reachable=False,
     ))
 
     # ── Processes ────────────────────────────────────────────────────────────

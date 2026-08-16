@@ -43,7 +43,7 @@ from core.task_dag_engine import TaskDAGEngine
 
 from core.cognitive import CognitiveResponseDict, TriModelCognitiveEngine
 from core.contacts import ContactMixin
-from core.contracts import AgentResult
+from core.contracts import AgentResult, ModelAnswered
 from core.email_flow import EmailMixin
 from core.help import (
     HELP_TRIGGERS,
@@ -51,6 +51,7 @@ from core.help import (
     build_help_text,
     is_help_request,
 )
+from core.llm import LlmStage
 from core.router import Router
 from core.skills_builtin import build_builtin_registry
 from core.tier2 import Tier2Mixin, parse_confirmation
@@ -191,7 +192,11 @@ class MasterPlanner(EmailMixin, ContactMixin, Tier2Mixin):
         # the tests can see *how* a command was routed, not just what came back —
         # the old chain gave no way to tell whether the classifier had been
         # involved at all.
-        self.router = Router(build_builtin_registry(self))
+        # Stage 3 is constructed unconditionally and *probes* lazily, so a
+        # machine with no Ollama pays nothing for it beyond one refused socket
+        # connection on the first unrouted command.
+        registry = build_builtin_registry(self)
+        self.router = Router(registry, llm=LlmStage(registry))
         self.last_routing_decision = None
         self.autonomy_daemon = AutonomyDaemon()
         self.autonomy_daemon.start()
@@ -500,6 +505,35 @@ class MasterPlanner(EmailMixin, ContactMixin, Tier2Mixin):
             },
         ).as_dict()
 
+    def _answer_from_model(self, decision: Any) -> Dict[str, Any]:
+        """Presents a stage-3 text answer, at exactly its real strength.
+
+        The evidence is `ModelAnswered` and nothing stronger: a local model
+        replied. That is not a lookup, not a check, and not an action — and the
+        distinction is the whole reason the variant exists.
+
+        `CognitiveResponseDict.__bool__` is the cautionary tale. It returned
+        `True` unconditionally, so every failed dispatch was overwritten with a
+        fabricated "🤖 Cognitive Response" success, including when no key was
+        configured and no model had been asked anything at all. The prefix here
+        is deliberate: a reader can tell a generated answer from an observed one
+        without inspecting the evidence, and a reader who does inspect it finds
+        the same claim.
+        """
+        return AgentResult.ok(
+            f"💭 {decision.answer}",
+            evidence=ModelAnswered(model=decision.model, host="local"),
+            data={
+                "intent": "llm_answer",
+                "generated": True,
+                "model": decision.model,
+                "routing_reason": decision.reason,
+                # The tick-mark stripping in `core/speech.py` would otherwise
+                # read the 💭 out as decoration; the answer is already short.
+                "speech": decision.answer,
+            },
+        ).as_dict()
+
     def _dispatch_to_agent(
         self,
         command: str,
@@ -551,6 +585,10 @@ class MasterPlanner(EmailMixin, ContactMixin, Tier2Mixin):
         self.last_routing_decision = decision
 
         if not decision.routed:
+            # Stage 3 may answer instead of choosing a skill. Presented as
+            # generated text with `ModelAnswered` evidence — never as work done.
+            if decision.stage == "llm_answer" and decision.answer:
+                return self._answer_from_model(decision)
             return self._answer_unrouted(command, intent, decision)
 
         # `_command` carries the original text alongside the captured slots.

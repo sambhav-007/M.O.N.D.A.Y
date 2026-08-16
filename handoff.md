@@ -499,6 +499,75 @@ written 2026-08-07, before the corpus was rebuilt on 2026-08-13, so it described
 a model trained on data that no longer existed. The finding survived the
 regeneration — the top attributions are still function words.
 
+### 2026-08-16 — stage 3: the local LLM (ROADMAP Phase 4)
+
+The router's third stage has been an empty slot since Phase 3. It is filled:
+`core/llm.py`, wired into `core/router.py`, 27 tests + 3 live ones.
+
+**What it changes.** A command no pattern and no classifier can place used to get
+"I'm not sure how to do that yet". Now it goes to a local model, which either
+picks one of the 49 skills it is offered — with arguments — or answers directly.
+Nothing typed leaves the machine: Ollama is local, which is most of why it was
+chosen over an API key.
+
+**The schema is generated from the registry.** `core/skills.py` already declared
+a name, description, tier and `offline` flag for every skill; `Skill.slots` now
+derives the *arguments* from the patterns (`core.intent_patterns.slot_spec`). So
+the tool manifest is computed, and a pattern gaining a slot gains an argument in
+the same commit. Hand-writing a second schema beside the patterns is the exact
+shape of the stale-artefact problem this repo keeps finding in its own reports.
+
+**Containment, which is most of the code.** The model is offered
+`registry.llm_reachable_skills()` and nothing else, and the name it returns is
+validated against that same set — so a name it invents is refused rather than
+run. Two skills are excluded:
+
+- **`terminate_process`** — Tier 2. `Skill.__post_init__` forces
+  `llm_reachable=False` for Tier 2 rather than raising, so a skill that declares
+  nothing gets the safe answer instead of an error someone silences.
+- **`create_desktop_folder`** — Tier *1*, and excluded by hand, because it
+  reaches `CoderAgent`, which writes Python and runs it under `subprocess`. Tier
+  is about reversibility; this is about what the implementation does. Two
+  different questions, so it needs its own flag.
+
+**A generated answer says it is generated.** New evidence variant
+`ModelAnswered` — it witnesses that a named model replied, and explicitly
+nothing more: not that the answer is true, not that anything was looked up.
+Replies are prefixed 💭. `CognitiveResponseDict.__bool__` is why: it returned
+`True` unconditionally and overwrote every failed dispatch with a fabricated
+"🤖 Cognitive Response" success.
+
+**Four things worth knowing:**
+
+1. **The Ollama GUI installer does not work here.** `OllamaSetup.exe
+   /VERYSILENT` exits **1**, writes no log, logs no CodeIntegrity event, and
+   installs nothing — with a valid EV signature and SAC not objecting. **Use the
+   standalone ZIP**: extract to `%LOCALAPPDATA%\Ollama`, run
+   `ollama.exe serve`. No installer, no service, no admin, and uninstalling is
+   deleting a folder. `ollama.exe` itself runs unimpeded.
+2. **Stage 3 is off in the test suite, and had to be.** `pytest.ini` allows
+   `127.0.0.1` through `--block-network` because the API tests need it — and
+   Ollama listens there. On a machine with a model running, the suite would have
+   consulted it, and `xyzzyspoon12345` (in `DEMO.md`'s honest-failure act, which
+   must fail) gets answered cheerfully by a language model. The suite would then
+   pass or fail depending on whether a developer had a server up. `conftest.py`
+   sets `MONDAY_LLM=off` for every test that is not marked `@pytest.mark.llm`.
+3. **`reports/routing_evidence.py` sets `router.llm = None`, deliberately.** The
+   published 1.000 is a claim about the *deterministic* stages. Leaving stage 3
+   in would make it depend on whether a server was running when the report was
+   generated — and the negatives would stop meaning anything, because a model
+   will happily find a plausible skill for "determination is important".
+4. **`Client.list()` changed shape and the bug was silent.** ollama-python 0.6
+   returns a pydantic `ListResponse`; reading it as a dict raises
+   `AttributeError`, which `available()` catches as "no server". The stage would
+   have reported itself permanently unavailable on every machine, blaming Ollama.
+   `_model_names` handles both shapes and a test asserts both.
+
+**Still there, still inert:** `TriModelCognitiveEngine` is a second LLM path,
+reached after a failed dispatch. Without `GEMINI_API_KEY` it is falsy and
+changes nothing, so it was left alone — but two LLM paths is one too many, and
+unifying them belongs with ROADMAP Phase 6.
+
 ## 9. WhatsApp (added 2026-08-08)
 
 WhatsApp has **no API a desktop script may send through**. The deep link

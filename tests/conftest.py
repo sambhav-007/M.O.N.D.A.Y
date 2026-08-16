@@ -138,6 +138,35 @@ def _scrub_response(response):
     return response
 
 
+@pytest.fixture(autouse=True)
+def _stage_three_is_off_unless_asked_for(request, monkeypatch):
+    """Switches the language model out of the router for the whole suite.
+
+    `--block-network` deliberately allows `127.0.0.1` — FastAPI's TestClient and
+    the in-process API tests need it — and Ollama listens on exactly that
+    address. So on a machine where a model happens to be running, stage 3 would
+    join the routing cascade during the test run, and a suite that passes on one
+    developer's laptop would fail on another's for a reason unrelated to any
+    change. Concretely: `xyzzyspoon12345` is in `DEMO.md`'s honest-failure act
+    and must fail; a language model will answer it cheerfully.
+
+    That would undo the property Phase 1 was fought for — *a red suite means a
+    regression*. So the default run is deterministic, and the tests that want a
+    live model ask for it with `@pytest.mark.llm` (deselected by default, like
+    `network`).
+
+    Setting the environment variable rather than patching the router covers
+    every construction path, including planners built inside a test.
+    `LlmStage.available()` reads it before consulting its own cache, so this
+    works even on a stage that already probed.
+    """
+    if request.node.get_closest_marker("llm") is None:
+        monkeypatch.setenv("MONDAY_LLM", "off")
+    else:
+        monkeypatch.delenv("MONDAY_LLM", raising=False)
+    yield
+
+
 @pytest.fixture(scope="session", autouse=True)
 def _isolate_memory_db(tmp_path_factory):
     """Points the memory store at a throwaway database for the whole session.

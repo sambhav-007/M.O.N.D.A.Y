@@ -189,6 +189,37 @@ class RecordStored(_EvidenceBase):
         return f"stored '{self.key}' in {self.store}"
 
 
+class ModelAnswered(_EvidenceBase):
+    """A named language model produced this text, and nothing further is claimed.
+
+    The narrowest variant after `TaskQueued`, and the one that needs the most
+    care, because a fluent answer *reads* like a verified one.
+
+    It witnesses exactly this: a model was asked, and it replied. It does not
+    witness that the reply is true, that anything was looked up, or that any
+    action was taken. A message paired with this evidence must not describe work
+    the assistant did — if the assistant did work, use the evidence that
+    describes the work.
+
+    It exists because the alternative was worse. `CognitiveResponseDict.__bool__`
+    once returned `True` unconditionally, so *every* failed dispatch was
+    overwritten with a fabricated "🤖 Cognitive Response" success — including
+    when no key was configured and nothing had been asked of any model. This
+    variant makes the honest version expressible: the model answered, that is
+    all, and callers can tell a generated answer from an observed one by looking
+    at the evidence rather than at the prose.
+    """
+
+    kind: Literal["model_answered"] = "model_answered"
+    model: str
+    #: Where the model ran. "local" for Ollama on this machine; anything else
+    #: means the text left the box, which a user is entitled to know.
+    host: str = "local"
+
+    def describe(self) -> str:
+        return f"{self.model} ({self.host}) generated this text"
+
+
 Evidence = Annotated[
     Union[
         ProcessExit,
@@ -200,6 +231,7 @@ Evidence = Annotated[
         KeypressSent,
         TaskQueued,
         RecordStored,
+        ModelAnswered,
     ],
     Field(discriminator="kind"),
 ]

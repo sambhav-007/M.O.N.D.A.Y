@@ -54,19 +54,25 @@ MIN_INTENT_CONFIDENCE = 0.50
 class RoutingDecision:
     """How a command was routed, and by what."""
 
-    stage: str                      # "pattern" | "classifier" | "fallback"
+    # "pattern" | "classifier" | "llm" | "llm_answer" | "fallback"
+    stage: str
     skill: Optional[Skill] = None
     slots: Dict[str, Any] = field(default_factory=dict)
     intent: str = ""
     confidence: float = 0.0
     reason: str = ""
+    #: Set only for stage "llm_answer": the model answered instead of choosing a
+    #: skill. Text, never something that gets executed.
+    answer: str = ""
+    #: Which model produced `answer`, so the reply can say so.
+    model: str = ""
 
     @property
     def routed(self) -> bool:
         return self.skill is not None
 
     def as_dict(self) -> Dict[str, Any]:
-        return {
+        out = {
             "stage": self.stage,
             "skill": self.skill.name if self.skill else None,
             "slots": self.slots,
@@ -74,13 +80,20 @@ class RoutingDecision:
             "confidence": round(self.confidence, 4),
             "reason": self.reason,
         }
+        if self.answer:
+            out["model"] = self.model
+        return out
 
 
 class Router:
     """Chooses a skill for a command. Chooses only — running it is the caller's."""
 
-    def __init__(self, registry: SkillRegistry) -> None:
+    def __init__(self, registry: SkillRegistry, llm: Optional[Any] = None) -> None:
         self.registry = registry
+        #: Stage 3. Optional by construction: `None` means the cascade ends at
+        #: stage 2 exactly as it did before, which is also what happens when no
+        #: Ollama server is running.
+        self.llm = llm
 
     def route(
         self,
@@ -136,13 +149,50 @@ class Router:
                     ),
                 )
 
-        # ── Stage 3: hand back to the legacy handler ─────────────────────────
+        # ── Why the deterministic stages declined ────────────────────────────
         if intent and confidence < MIN_INTENT_CONFIDENCE:
             reason = f"intent '{intent}' at {confidence:.2f} is below the {MIN_INTENT_CONFIDENCE} floor"
         elif intent:
             reason = f"no skill serves intent '{intent}'"
         else:
             reason = "no pattern matched and no intent supplied"
+
+        # ── Stage 3: the language model ──────────────────────────────────────
+        # Last, and only when both stages above have declined — so nothing here
+        # can change what a pattern already decided, and the offline guarantees
+        # of stage 1 are untouched by whether a model happens to be running.
+        if self.llm is not None:
+            choice = self.llm.choose(command)
+            if choice is not None and choice.skill:
+                skill = self.registry.get(choice.skill)
+                if skill is not None:
+                    note = ""
+                    if choice.dropped:
+                        note = f", dropped {', '.join(sorted(choice.dropped))}"
+                    return RoutingDecision(
+                        stage="llm",
+                        skill=skill,
+                        slots=choice.arguments,
+                        intent=intent,
+                        confidence=confidence,
+                        reason=f"{reason}; {choice.model} chose '{skill.name}'{note}",
+                    )
+            if choice is not None and choice.text:
+                # No skill fits and the model answered instead. Carried on the
+                # decision rather than executed: the planner decides how to
+                # present generated text, and it is the only path that produces
+                # `ModelAnswered` evidence.
+                return RoutingDecision(
+                    stage="llm_answer",
+                    intent=intent,
+                    confidence=confidence,
+                    reason=f"{reason}; {choice.model} answered directly",
+                    answer=choice.text,
+                    model=choice.model,
+                )
+            if choice is None:
+                detail = getattr(self.llm, "unavailable_reason", "")
+                reason = f"{reason}; stage 3 declined" + (f" ({detail})" if detail else "")
 
         return RoutingDecision(
             stage="fallback", intent=intent, confidence=confidence, reason=reason

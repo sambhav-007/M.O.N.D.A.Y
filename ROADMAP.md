@@ -86,7 +86,39 @@ taking it means a dependency or just a design.
 Each phase is independently shippable, ends with the suite green offline, and
 is useful on its own if the next one never happens.
 
-### Phase 4 — Stage 3: the local LLM (≈1 day) ← **start here**
+### Phase 4 — Stage 3: the local LLM ✅ **DONE 2026-08-16**
+
+Implemented in `core/llm.py`, wired as the router's third stage, 28 tests.
+Details below are the plan as written; what shipped matched it, with one
+environment surprise worth recording:
+
+> **The Ollama GUI installer does not work in this environment.**
+> `OllamaSetup.exe /VERYSILENT` exits **1** with no log written, no
+> CodeIntegrity event, and nothing installed — despite a valid EV signature from
+> Ollama Inc. and Smart App Control being in enforce mode without objecting.
+> Do not spend time on it.
+>
+> **Use the standalone ZIP instead**, which needs no installation at all:
+>
+> ```bash
+> curl -L -o ollama.zip https://ollama.com/download/ollama-windows-amd64.zip
+> # extract to %LOCALAPPDATA%\Ollama, then:
+> %LOCALAPPDATA%\Ollama\ollama.exe serve
+> ```
+>
+> Strictly better here anyway: no installer, no service, no admin, and removing
+> it is deleting a folder. `ollama.exe` runs unimpeded — SAC does not block it.
+
+**One thing the plan did not anticipate.** `pytest.ini` allows `127.0.0.1`
+through `--block-network`, because the API tests need it — and Ollama listens on
+exactly that address. So a machine with a model running would have pulled stage 3
+into the test suite, and `xyzzyspoon12345` (in `DEMO.md`'s honest-failure act,
+which must fail) would have been answered cheerfully by the model. The suite
+would then pass or fail depending on whether a developer happened to have a
+server up, which is precisely the property Phase 1 was fought for. Stage 3 is now
+off for the whole suite unless a test asks for it with `@pytest.mark.llm`.
+
+### Phase 4 — as planned
 
 The router was built with a Stage 3 slot and it has been empty since Phase 3.
 This fills it, and it is the highest-value day of work available: it converts
@@ -165,14 +197,15 @@ The honest resolution of the parked XTTS work. Take it in three steps and stop
 as soon as the quality is good enough — the first step needs no ML binaries at
 all and is thirty minutes of work.
 
-1. **TTS, first choice: `pyttsx3`** (SAPI5 over COM). Four packages, none of
-   them an ML runtime, no model download, no licence question, and Windows 11's
-   built-in *Natural* voices are markedly better than the browser's
-   `speechSynthesis`. This is the cheapest possible win and it is already the
-   documented fallback in `UPGRADE_PLAN.md` §3.
-2. **TTS, if that is not good enough: `piper-tts`.** Genuinely better quality,
-   and a surprisingly clean tree (§4) — but GPL-3.0, so adopting it is a licence
-   decision to make deliberately, not a `pip install`.
+1. **TTS: `piper-tts`.** Five packages, embedded espeak-ng, and `onnxruntime` is
+   confirmed to load here (§5). GPL-3.0, so adopting it is a licence decision to
+   make deliberately rather than a `pip install` — but it is the only candidate
+   that is both installable here and actually pleasant to listen to.
+2. **TTS fallback: `pyttsx3`.** Four packages, no ML runtime, always available.
+   Measured on this machine it offers only *David* and *Zira* — the legacy SAPI5
+   voices, not Windows 11's Natural ones — so treat it as the guaranteed-offline
+   floor, not as the quality answer. `§4.1` originally had this the other way
+   round; the probe corrected it.
 3. **STT: `vosk`.** ~50 MB model, CPU-only, two packages, accepts raw PCM from
    the `sounddevice` already installed — **no FFmpeg**, which is what killed
    XTTS. Removes the Google Web Speech round-trip, so "voice works offline"
@@ -242,17 +275,26 @@ FFmpeg (killed XTTS), and pandas 3.0.5 (killed the engine at import for a day).
 | `onnxruntime` | `onnxruntime-1.28.0`, `flatbuffers`, `protobuf` |
 | `pyttsx3` | `pyttsx3-2.99`, `comtypes`, `pywin32`, `pypiwin32` |
 
-Resolving is not loading. What remains is the import test, in a throwaway venv
-so `requirements.txt` is untouched until something is proven:
+Resolving is not loading. **The load test was run on 2026-08-16, in a throwaway
+venv, and everything passed:**
 
-```bash
-py -3.12 -m pip install onnxruntime && py -3.12 -c "import onnxruntime; print(onnxruntime.__version__)"
-```
+| | result |
+|---|---|
+| `onnxruntime` 1.28.0 | **loads** — Smart App Control does not block it |
+| `vosk` 0.3.45 | **loads** |
+| `pyttsx3` 2.99 | **loads**, SAPI5 initialises |
 
-`onnxruntime` gates **only** the optional second TTS step. **If it is blocked,
-every phase in this document still stands** — that is the point of ordering the
-LLM work first and taking `pyttsx3` before Piper. `ollama` carries no binaries at
-all, so Phase 4 is the lowest-risk work here as well as the highest-value.
+So the SAC risk that has killed three dependencies in this repo does not apply
+to any of them. Phase 7 is unblocked in full, including Piper.
+
+**One finding reverses part of §4.1.** `pyttsx3` enumerates exactly **two**
+voices on this machine — *Microsoft David Desktop* and *Microsoft Zira
+Desktop*. Those are the legacy SAPI5 voices, not Windows 11's newer *Natural*
+ones, and they are the definition of robotic. `pyttsx3` therefore is **not** the
+quality win §4.1 assumed; it is a dependable offline fallback and nothing more.
+Since `onnxruntime` loads, **Piper moves back to first choice for Phase 7** and
+the GPL-3.0 decision has to be made on its merits rather than avoided. Kokoro
+stays rejected — the 22-package tree is unchanged by any of this.
 
 SAC blocks lift with reputation. A block observed once is worth re-testing in a
 week rather than treated as permanent — pandas 3.0.5 was blocked on 2026-08-06

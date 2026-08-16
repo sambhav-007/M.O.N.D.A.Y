@@ -256,6 +256,14 @@ def main() -> int:
     planner.enable_voice = False
     router = planner.router
 
+    # Stage 3 off. This report is a claim about the deterministic stages, and it
+    # has to reproduce on a machine with no model as well as on one with a model
+    # running — otherwise the same command routes two ways in two runs and the
+    # figure stops being evidence. It matters most for the negatives: a language
+    # model will happily find a plausible skill for "determination is
+    # important", which is exactly what the negatives exist to catch.
+    router.llm = None
+
     rows = []
     correct = 0
     stages: Counter = Counter()

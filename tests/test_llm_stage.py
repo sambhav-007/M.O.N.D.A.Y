@@ -1,0 +1,464 @@
+"""
+Stage 3 — the language model, and the things it is not allowed to do.
+
+The router's third stage answers what stages 1 and 2 could not. That makes it
+the only part of the routing cascade whose behaviour is not fully determined by
+code in this repository, so the tests here are mostly about **containment**:
+what the model is offered, what happens when it emits something it was not
+offered, and what a generated answer is allowed to claim.
+
+Nothing here needs a running model. The stage is driven with a stub, because
+what is being tested is the validation around the model rather than the model
+itself — and a suite that needed a 2 GB download to run would not be run.
+`@pytest.mark.llm` marks the handful of cases that want a live one; they are
+deselected by default, like `network`.
+"""
+
+from __future__ import annotations
+
+from typing import Any, Dict, List, Optional
+
+import pytest
+
+from core.contracts import ModelAnswered
+from core.intent_patterns import slot_spec
+from core.llm import LlmChoice, LlmStage, build_tool_schema
+from core.planner import MasterPlanner
+from core.router import Router
+from core.skills import Skill, SkillRegistry
+
+
+@pytest.fixture(scope="module")
+def planner():
+    p = MasterPlanner()
+    p.enable_voice = False
+    return p
+
+
+@pytest.fixture
+def registry(planner):
+    return planner.router.registry
+
+
+class StubLlm:
+    """Stands in for `LlmStage`, recording whether it was consulted at all."""
+
+    def __init__(self, choice: Optional[LlmChoice] = None) -> None:
+        self.choice = choice
+        self.calls: List[str] = []
+        self.unavailable_reason = "stub"
+
+    def choose(self, command: str) -> Optional[LlmChoice]:
+        self.calls.append(command)
+        return self.choice
+
+
+# ── Slots are derived, not declared twice ────────────────────────────────────
+def test_slot_spec_reads_names_and_types_out_of_patterns():
+    spec = slot_spec([
+        "set volume to {level:int}",
+        "open {target:app}",
+        "remember {key} is {value}",
+    ])
+    assert spec == {"level": "int", "target": "app", "key": "", "value": ""}
+
+
+def test_a_slot_typed_anywhere_is_reported_as_typed():
+    """`{phone}` and `{phone:phone}` both appear in the WhatsApp patterns.
+
+    The constrained reading is the more informative one, so it wins — otherwise
+    the schema would describe a typed slot as a free string purely because of
+    which pattern happened to be listed last.
+    """
+    assert slot_spec(["message {phone}", "message {phone:phone} {rest}"])["phone"] == "phone"
+
+
+def test_skill_slots_come_from_its_own_patterns(registry):
+    assert registry.get("set_volume").slots == {"level": "int"}
+    assert "path" in registry.get("summarize_document").slots
+
+
+# ── What the model is offered ────────────────────────────────────────────────
+def test_the_schema_is_generated_from_the_registry(registry):
+    tools = build_tool_schema(registry)
+    assert len(tools) == len(registry.llm_reachable_skills())
+    names = {t["function"]["name"] for t in tools}
+    assert names == {s.name for s in registry.llm_reachable_skills()}
+    for tool in tools:
+        assert tool["function"]["description"], f"{tool['function']['name']} has no description"
+
+
+def test_the_schema_arguments_match_the_patterns(registry):
+    """A schema that drifts from the patterns is the stale-artefact bug again."""
+    tools = {t["function"]["name"]: t for t in build_tool_schema(registry)}
+    volume = tools["set_volume"]["function"]["parameters"]["properties"]
+    assert set(volume) == {"level"}
+    assert volume["level"]["type"] == "integer"
+
+
+# ── What the model is NOT offered ────────────────────────────────────────────
+def test_no_tier2_skill_is_ever_offered_to_the_model(registry):
+    """The rule that irreversible actions need an exact pattern, extended.
+
+    Stage 2 is already forbidden from reaching Tier 2 (`Skill.__post_init__`
+    raises on it). A language model is a better guesser than a seven-class
+    classifier, but it is still guessing, and `terminate_process` loses unsaved
+    work either way.
+    """
+    offered = {s.name for s in registry.llm_reachable_skills()}
+    for name in registry.tier2_names():
+        assert name not in offered, f"Tier-2 skill {name} is reachable from the model"
+
+
+def test_tier2_forces_llm_reachable_off_even_when_asked_for_it():
+    skill = Skill(
+        name="dangerous", patterns=["do the thing"], handler=lambda **_: {},
+        tier=2, llm_reachable=True,
+    )
+    assert skill.llm_reachable is False
+
+
+def test_generated_code_execution_is_not_reachable_from_the_model(registry):
+    """`create_desktop_folder` runs Python under `subprocess`.
+
+    Tier 1 is a statement about reversibility; this is a statement about what
+    the implementation does. They are different questions, which is why the flag
+    exists separately from the tier.
+    """
+    offered = {s.name for s in registry.llm_reachable_skills()}
+    assert "create_desktop_folder" not in offered
+
+
+# ── Validating what comes back ───────────────────────────────────────────────
+def test_a_skill_name_we_never_offered_is_refused(registry):
+    stage = LlmStage(registry)
+    assert stage._validate("no_such_skill", {}) is None
+
+
+def test_a_tier2_name_emitted_by_the_model_is_refused(registry):
+    """Small models emit names they were not given. This is the backstop."""
+    stage = LlmStage(registry)
+    assert stage._validate("terminate_process", {"process": "explorer"}) is None
+
+
+def test_the_code_execution_skill_is_refused_even_if_named(registry):
+    stage = LlmStage(registry)
+    assert stage._validate("create_desktop_folder", {}) is None
+
+
+def test_unknown_arguments_are_dropped_and_recorded(registry):
+    """Dropped rather than fatal, and never silent.
+
+    Every handler takes `**_`, so an invented key is inert — the real risk is a
+    wrong *value* in a known key, which rejecting unknown keys would not catch.
+    Refusing the whole call would make a 3B model useless; dropping without
+    saying so would hide what the model did.
+    """
+    stage = LlmStage(registry)
+    choice = stage._validate("set_volume", {"level": 40, "colour": "blue"})
+    assert choice is not None
+    assert choice.arguments == {"level": 40}
+    assert choice.dropped == ["colour"]
+
+
+def test_typed_slots_are_coerced(registry):
+    stage = LlmStage(registry)
+    choice = stage._validate("set_volume", {"level": "40"})
+    assert choice.arguments == {"level": 40}
+
+
+def test_an_uncoercible_value_drops_the_argument_not_the_call(registry):
+    """`set volume to "loud"` should reach the volume skill and be told what is
+    wrong by the handler, rather than vanishing into a refusal."""
+    stage = LlmStage(registry)
+    choice = stage._validate("set_volume", {"level": "loud"})
+    assert choice is not None and choice.skill == "set_volume"
+    assert choice.arguments == {}
+    assert choice.dropped == ["level"]
+
+
+# ── The cascade order ────────────────────────────────────────────────────────
+def test_a_pattern_match_never_consults_the_model(registry):
+    """Stage 3 must not be able to change what stage 1 already decided.
+
+    This is the property that keeps `DEMO.md` offline and the Tier-2 gate exact,
+    and it is worth asserting on the *call*, not on the outcome: a stage 3 that
+    ran and was ignored would still cost a user seconds and a socket.
+    """
+    stub = StubLlm(LlmChoice(skill="chitchat", model="stub"))
+    router = Router(registry, llm=stub)
+    decision = router.route("what time is it")
+    assert decision.stage == "pattern"
+    assert decision.skill.name == "tell_time"
+    assert stub.calls == [], "stage 3 was consulted despite a pattern match"
+
+
+def test_the_model_is_consulted_only_when_the_other_stages_decline(registry):
+    stub = StubLlm(LlmChoice(skill="system_health", model="stub"))
+    router = Router(registry, llm=stub)
+    decision = router.route("give me a rundown of this machine")
+    assert stub.calls == ["give me a rundown of this machine"]
+    assert decision.stage == "llm"
+    assert decision.skill.name == "system_health"
+
+
+def test_the_routing_decision_records_what_the_model_did(registry):
+    stub = StubLlm(LlmChoice(skill="system_health", model="llama3.2:3b", dropped=["mood"]))
+    router = Router(registry, llm=stub)
+    decision = router.route("xyzzy plugh")
+    assert "llama3.2:3b" in decision.reason
+    assert "dropped mood" in decision.reason
+
+
+def test_a_refused_model_choice_falls_through_to_the_honest_refusal(registry):
+    """The model named something it was not offered, so nothing routes."""
+    stub = StubLlm(LlmChoice(skill=None, model="stub"))
+    router = Router(registry, llm=stub)
+    decision = router.route("xyzzy plugh")
+    assert decision.stage == "fallback"
+    assert decision.routed is False
+
+
+def test_no_llm_leaves_the_cascade_exactly_as_it_was(registry):
+    router = Router(registry, llm=None)
+    assert router.route("xyzzy plugh").stage == "fallback"
+    assert router.route("what time is it").stage == "pattern"
+
+
+# ── A generated answer claims only what it is ────────────────────────────────
+def test_a_model_answer_carries_model_answered_evidence_and_nothing_stronger(planner):
+    stub = StubLlm(LlmChoice(text="Paris is the capital of France.", model="llama3.2:3b"))
+    original = planner.router.llm
+    planner.router.llm = stub
+    try:
+        result = planner._dispatch_to_agent("tell me something", "unclear", False, 0.1)
+    finally:
+        planner.router.llm = original
+
+    assert result["success"] is True
+    assert result["generated"] is True
+    assert result["evidence"]["kind"] == "model_answered"
+    assert result["evidence"]["model"] == "llama3.2:3b"
+    assert result["evidence"]["host"] == "local"
+
+
+def test_a_model_answer_is_visibly_generated(planner):
+    """A reader must be able to tell a generated answer from an observed one
+    without inspecting the evidence dict."""
+    stub = StubLlm(LlmChoice(text="I think so.", model="stub"))
+    original = planner.router.llm
+    planner.router.llm = stub
+    try:
+        result = planner._dispatch_to_agent("do you reckon", "chitchat", False, 0.1)
+    finally:
+        planner.router.llm = original
+    assert result["message"].startswith("💭")
+
+
+def test_model_answered_evidence_refuses_to_claim_more_than_it_can():
+    e = ModelAnswered(model="llama3.2:3b")
+    assert "generated this text" in e.describe()
+    assert e.host == "local"
+
+
+# ── Availability, and the cost of not having it ──────────────────────────────
+def test_the_stage_can_be_switched_off_outright(registry, monkeypatch):
+    """`MONDAY_LLM=off` exists so a demo can guarantee the deterministic path."""
+    monkeypatch.setenv("MONDAY_LLM", "off")
+    stage = LlmStage(registry)
+    assert stage.available() is False
+    assert "disabled" in stage.unavailable_reason
+    assert stage.choose("anything") is None
+
+
+def test_the_model_listing_is_read_in_both_client_shapes(registry, monkeypatch):
+    """`Client.list()` returns a pydantic object in ollama-python 0.6, a dict
+    before it.
+
+    Reading it as a dict against 0.6 raises `AttributeError`, which
+    `available()` catches as "no server" — so the stage would have reported
+    itself permanently unavailable on every machine, with a message blaming the
+    server. Silent, total, and indistinguishable from Ollama not being
+    installed. Both shapes are asserted because that is what makes the failure
+    impossible to reintroduce.
+    """
+    monkeypatch.delenv("MONDAY_LLM", raising=False)
+    ollama = pytest.importorskip("ollama")
+
+    class _Obj:
+        def __init__(self, name: str) -> None:
+            self.model = name
+
+    class _Listing:
+        def __init__(self, names: List[str]) -> None:
+            self.models = [_Obj(n) for n in names]
+
+    for listing in (_Listing(["llama3.2:3b"]), {"models": [{"model": "llama3.2:3b"}]}):
+        class _Client:
+            def __init__(self, *a: Any, **kw: Any) -> None:
+                pass
+
+            def list(self, _l: Any = listing) -> Any:
+                return _l
+
+        monkeypatch.setattr(ollama, "Client", _Client)
+        stage = LlmStage(registry, model="llama3.2:3b")
+        assert stage.available() is True, f"listing shape not understood: {type(listing)}"
+        assert stage.unavailable_reason == ""
+
+
+def test_a_tool_call_is_read_in_both_response_shapes(registry):
+    """Same hazard as the listing: pydantic in 0.6, dicts before it."""
+    stage = LlmStage(registry)
+
+    class _Fn:
+        name = "set_volume"
+        arguments = {"level": 30}
+
+    class _Call:
+        function = _Fn()
+
+    class _Msg:
+        tool_calls = [_Call()]
+        content = ""
+
+    class _Resp:
+        message = _Msg()
+
+    as_dict = {"message": {"tool_calls": [
+        {"function": {"name": "set_volume", "arguments": {"level": 30}}}
+    ]}}
+
+    for response in (_Resp(), as_dict):
+        choice = stage._read(response)
+        assert choice is not None, f"tool call not read from {type(response)}"
+        assert choice.skill == "set_volume"
+        assert choice.arguments == {"level": 30}
+
+
+def test_a_plain_text_reply_is_read_in_both_response_shapes(registry):
+    stage = LlmStage(registry)
+
+    class _Msg:
+        tool_calls = None
+        content = "  Two and a half.  "
+
+    class _Resp:
+        message = _Msg()
+
+    for response in (_Resp(), {"message": {"content": "  Two and a half.  "}}):
+        choice = stage._read(response)
+        assert choice is not None and choice.skill is None
+        assert choice.text == "Two and a half."
+
+
+def test_an_empty_reply_routes_nowhere(registry):
+    """A model that returns neither a call nor text must not become a success."""
+    stage = LlmStage(registry)
+    assert stage._read({"message": {"content": "   "}}) is None
+
+
+def test_a_model_that_is_not_pulled_is_reported_as_such(registry, monkeypatch):
+    """A running server with the wrong model is a different problem from no
+    server, and the message has to say which."""
+    monkeypatch.delenv("MONDAY_LLM", raising=False)
+    ollama = pytest.importorskip("ollama")
+
+    class _Client:
+        def __init__(self, *a: Any, **kw: Any) -> None:
+            pass
+
+        def list(self) -> Dict[str, Any]:
+            return {"models": [{"model": "qwen3:8b"}]}
+
+    monkeypatch.setattr(ollama, "Client", _Client)
+    stage = LlmStage(registry, model="llama3.2:3b")
+    assert stage.available() is False
+    assert "not pulled" in stage.unavailable_reason
+    assert "qwen3:8b" in stage.unavailable_reason
+
+
+def test_an_absent_server_is_a_reason_not_an_exception(registry, monkeypatch):
+    monkeypatch.delenv("MONDAY_LLM", raising=False)
+    stage = LlmStage(registry, host="http://127.0.0.1:1")  # nothing listens here
+    assert stage.available() is False
+    assert stage.unavailable_reason
+    assert stage.choose("anything") is None
+
+
+# ── Against a real model ─────────────────────────────────────────────────────
+# Deselected by default (`-m "not llm"` in pytest.ini), because they need an
+# Ollama server and a ~2 GB model. Run them deliberately:
+#
+#     py -3.12 -m pytest -m llm
+#
+# They assert *containment and shape*, not wording. A 3B model is not
+# deterministic enough to assert on a sentence, and a test that pins one would
+# fail on the next model version for no useful reason.
+@pytest.mark.llm
+def test_a_live_model_selects_a_real_skill(registry):
+    stage = LlmStage(registry)
+    if not stage.available():
+        pytest.skip(stage.unavailable_reason)
+
+    choice = stage.choose("could you tell me how much battery is left")
+    assert choice is not None
+    assert choice.skill in {s.name for s in registry.llm_reachable_skills()}
+
+
+@pytest.mark.llm
+def test_a_live_model_cannot_reach_a_tier2_skill(registry):
+    """The containment property, against the real thing.
+
+    Asked directly to do the one gated thing, the model must not be able to
+    select it — the skill is not in the schema it was given, and the validator
+    refuses the name even if it invents it.
+    """
+    stage = LlmStage(registry)
+    if not stage.available():
+        pytest.skip(stage.unavailable_reason)
+
+    for command in ["kill every chrome process right now",
+                    "force quit notepad immediately"]:
+        choice = stage.choose(command)
+        if choice is not None and choice.skill:
+            assert choice.skill not in registry.tier2_names(), (
+                f"the model reached a Tier-2 skill via {command!r}"
+            )
+            assert choice.skill != "create_desktop_folder"
+
+
+@pytest.mark.llm
+def test_a_live_model_answers_when_no_skill_fits(registry):
+    stage = LlmStage(registry)
+    if not stage.available():
+        pytest.skip(stage.unavailable_reason)
+
+    choice = stage.choose("what is the difference between a list and a tuple")
+    assert choice is not None
+    # Either it answers, or it picks a skill — both are legitimate. What it may
+    # not do is return something that is neither.
+    assert choice.text or choice.skill
+
+
+def test_availability_is_probed_once_not_per_command(registry, monkeypatch):
+    """A socket connection in front of every answer would tax the offline path
+    that stage 1 exists to protect, so the probe result is cached."""
+    monkeypatch.delenv("MONDAY_LLM", raising=False)
+    ollama = pytest.importorskip("ollama")
+
+    probes: List[str] = []
+
+    class _CountingClient:
+        def __init__(self, *a: Any, **kw: Any) -> None:
+            probes.append("constructed")
+
+        def list(self) -> Dict[str, Any]:
+            raise ConnectionError("nothing listening")
+
+    monkeypatch.setattr(ollama, "Client", _CountingClient)
+
+    stage = LlmStage(registry, host="http://127.0.0.1:1")
+    for _ in range(6):
+        assert stage.available() is False
+    assert len(probes) == 1, f"probed {len(probes)} times; the result must be cached"

@@ -171,11 +171,25 @@ def test_published_routing_accuracy_holds(command, expected, real_router):
 
 @pytest.fixture(scope="module")
 def real_router():
-    """The actual built-in registry, not the fixtures above."""
+    """The actual built-in registry, not the fixtures above.
+
+    **Stage 3 is switched off here, deliberately.** The published figure is a
+    claim about the *deterministic* stages: which handler a command reaches by
+    pattern or by classifier. Leaving the language model in would make the
+    number depend on whether an Ollama server happened to be running on the
+    machine that produced it — so the same command could route two ways in two
+    runs, and the negatives (commands that must **not** be captured) would stop
+    meaning anything, because a model will happily find a plausible skill for
+    "determination is important".
+
+    What stage 3 adds is measured separately, and honestly, in
+    `tests/test_llm_stage.py`.
+    """
     from core.planner import MasterPlanner
 
     planner = MasterPlanner()
     planner.enable_voice = False
+    planner.router.llm = None
     return planner.router
 
 

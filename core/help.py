@@ -127,6 +127,13 @@ Type these in plain English. Every example below works as written.
    2.5 RL router            learns which route works
    2.6 XAI                  explains 2.1 and 2.2
 
+🧩  IF A LOCAL MODEL IS RUNNING (optional)
+   Anything I don't recognise goes to a local LLM, which either
+   picks one of the commands above or just answers. It runs on
+   this machine — nothing you type is sent anywhere. Replies it
+   writes are marked 💭, because a generated answer is not a
+   checked one. Off entirely with MONDAY_LLM=off.
+
 ⚙️  NEEDS SETUP (inactive right now)
    Sending email needs SMTP_USER / SMTP_PASSWORD in .env
    (for Gmail, an App Password).

@@ -374,11 +374,12 @@ Written down deliberately, so nothing in this README claims more than the code d
 | Tier-2 approval gate | Enforced for `send_email` and `terminate_process` — `core.security.TIER_2_IMPLEMENTED`. See [`reports/CLO01_ethics_and_safety.md`](reports/CLO01_ethics_and_safety.md) |
 | WhatsApp | Opens a chat with the message pre-typed; auto-send is Tier-2 gated (see below) |
 | Audit log | Append-only JSON Lines (`data/action_history.jsonl`). Lossless across processes; records the full Tier-2 lifecycle |
-| Test suite | 687 passing, offline and deterministic (`py -3.12 -m pytest`) in ~75s |
+| Test suite | 717 passing, offline and deterministic (`py -3.12 -m pytest`) in ~50s |
 | Offline start | The UI has no external dependency. Tailwind, three.js and its six add-ons, and both font families are vendored in `ui/vendor/` and served from `/vendor`; re-fetch with `py -3.12 -m ui.vendor.fetch_vendor --write` |
 | Voice | Wake word, always-on listening and barge-in, all browser-side. Backend TTS is unavailable here (gTTS and pyttsx3 absent), so `speechSynthesis` is the only voice — which is what finally collapsed the long-standing double-speak |
 | Result contract | `core/contracts.py` — a handler may only claim success if it carries evidence of what it did. All 11 agents route through it |
 | Skill router | `core/router.py` — patterns → classifier → honest refusal. **The substring chain is gone**: `_dispatch_to_agent` was ~520 lines and is now four steps. Routing accuracy 1.000 (123/123), 51 skills, 2,271 patterns — [`reports/routing_evidence.md`](reports/routing_evidence.md) |
+| Local LLM (optional) | `core/llm.py` — the router's third stage. A command no pattern or classifier can place goes to a local model via Ollama, which picks one of the 49 skills it is offered or answers directly. Nothing typed leaves the machine. Generated replies carry `ModelAnswered` evidence and a 💭 prefix; Tier-2 skills and generated-code execution are unreachable from it. Off with `MONDAY_LLM=off` |
 | Demo | [`DEMO.md`](DEMO.md) is a rehearsed ten-minute script that runs with the Wi-Fi off, and `tests/test_demo_script.py` parses and executes it with sockets blocked |
 | Evidence | [`reports/EVIDENCE_INDEX.md`](reports/EVIDENCE_INDEX.md) maps every claim to its artefact and the command that regenerates it; `tests/test_evidence_index.py` checks the paths resolve |
 
