@@ -814,18 +814,9 @@
           document.getElementById('presence-caption').innerText = `🗣️ "${msg}"`;
           speakText(spoken);
 
-          let gmailBtnHtml = '';
-          if (exec.gmail_compose_url) {
-            gmailBtnHtml = `<div class="pt-2"><a href="${exec.gmail_compose_url}" target="_blank" class="inline-flex items-center gap-2 bg-amber-500 hover:bg-amber-400 text-black font-bold px-3 py-1.5 rounded-lg text-xs transition-all shadow-md shadow-amber-500/20">📧 Open Pre-Filled Gmail Web Composer Window</a></div>`;
-          }
-
-          box.innerHTML += `
-            <div class="bg-zinc-900/80 p-3 rounded-lg border border-zinc-800 space-y-1">
-              <div><span class="text-cyan-400 font-bold">Intent:</span> ${ic.predicted_intent || 'multi-turn'}</div>
-              <div><span class="text-emerald-400 font-bold">Result:</span> ${msg}</div>
-              ${gmailBtnHtml}
-            </div>
-          `;
+          const card = document.createElement('div');
+          box.appendChild(card);
+          renderResult(card, ic, exec, msg);
           box.scrollTop = box.scrollHeight;
           return;
         } catch (bridgeErr) {
@@ -833,41 +824,108 @@
         }
       }
 
-      const baseUrl = (window.location.origin && window.location.origin.startsWith('http')) 
-        ? window.location.origin 
+      const baseUrl = (window.location.origin && window.location.origin.startsWith('http'))
+        ? window.location.origin
         : 'http://127.0.0.1:8000';
+
+      // ── Streaming ──────────────────────────────────────────────────────────
+      // `/agent/stream` reports the same pipeline as `/agent/execute` while it
+      // runs. This matters for one measured reason: loading the local model
+      // takes a minute or more on a cold start, and the old code aborted after
+      // **15 seconds** — so every first LLM-routed command was cancelled before
+      // it could answer, and the user saw "Execution request timed out".
+      //
+      // There is no fixed deadline now. The stream is abandoned only if it goes
+      // quiet, and the server sends a heartbeat every 10s precisely so that
+      // "slow" and "dead" stay distinguishable.
+      const IDLE_LIMIT_MS = 45000;
+
+      let live = null;      // the in-progress result card
+      let streamed = '';    // model-written text accumulated from `token` events
+
+      const ensureCard = () => {
+        if (live) return live;
+        const card = document.createElement('div');
+        card.className = 'bg-zinc-900/80 p-3 rounded-lg border border-zinc-800 space-y-1';
+        card.innerHTML = `<div class="text-zinc-500 text-[11px] font-mono" data-role="status">…</div>`;
+        box.appendChild(card);
+        box.scrollTop = box.scrollHeight;
+        live = card;
+        return card;
+      };
+      const setStatus = (text) => {
+        const el = ensureCard().querySelector('[data-role="status"]');
+        if (el) el.innerText = text;
+        box.scrollTop = box.scrollHeight;
+      };
 
       try {
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 15000);
+        let idleTimer = setTimeout(() => controller.abort(), IDLE_LIMIT_MS);
+        const keepAlive = () => {
+          clearTimeout(idleTimer);
+          idleTimer = setTimeout(() => controller.abort(), IDLE_LIMIT_MS);
+        };
 
-        let res;
-        for (let attempt = 1; attempt <= 3; attempt++) {
-          try {
-            res = await fetch(`${baseUrl}/agent/execute`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              // No user_approved flag. A Tier-2 action (PRD §9) is approved by
-              // the user replying to the confirmation prompt in its own turn —
-              // never by a flag the client sets on every request. This used to
-              // send user_approved:true unconditionally, which answered a
-              // question the user was never asked.
-              body: JSON.stringify({ command: cmd }),
-              signal: controller.signal
-            });
-            if (res.ok) break;
-          } catch (e) {
-            if (attempt === 3) throw e;
-            await new Promise(r => setTimeout(r, 400));
+        const res = await fetch(`${baseUrl}/agent/stream`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          // No user_approved flag. A Tier-2 action (PRD §9) is approved by the
+          // user replying to the confirmation prompt in its own turn — never by
+          // a flag the client sets on every request. This used to send
+          // user_approved:true unconditionally, which answered a question the
+          // user was never asked.
+          body: JSON.stringify({ command: cmd }),
+          signal: controller.signal
+        });
+        if (!res.ok || !res.body) throw new Error(`Server returned status ${res.status}`);
+
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
+        let data = null;
+
+        while (true) {
+          const { value, done } = await reader.read();
+          if (done) break;
+          keepAlive();
+          buffer += decoder.decode(value, { stream: true });
+
+          // SSE frames are separated by a blank line.
+          let split;
+          while ((split = buffer.indexOf('\n\n')) !== -1) {
+            const frame = buffer.slice(0, split);
+            buffer = buffer.slice(split + 2);
+
+            let name = 'message', payload = '';
+            for (const line of frame.split('\n')) {
+              if (line.startsWith('event:')) name = line.slice(6).trim();
+              else if (line.startsWith('data:')) payload += line.slice(5).trim();
+            }
+            let body = {};
+            try { body = payload ? JSON.parse(payload) : {}; } catch (e) { /* keep {} */ }
+
+            if (name === 'classified') {
+              document.getElementById('intent-tag').innerText =
+                `Intent: ${body.intent} (${Math.round((body.confidence || 0) * 100)}%)`;
+              setStatus(`classified as ${body.intent}…`);
+            } else if (name === 'consulting_model') {
+              setStatus(`asking the local model (${body.model || 'llm'})… first run loads it, which is slow`);
+            } else if (name === 'token') {
+              streamed += body.text || '';
+              setStatus(streamed);
+            } else if (name === 'heartbeat') {
+              keepAlive();
+            } else if (name === 'result') {
+              data = body;
+            } else if (name === 'error') {
+              throw new Error(body.message || body.error || 'stream failed');
+            }
           }
         }
-        clearTimeout(timeoutId);
+        clearTimeout(idleTimer);
+        if (!data) throw new Error('The stream ended without a result.');
 
-        if (!res || !res.ok) {
-          throw new Error(`Server returned status ${res ? res.status : 'offline'}`);
-        }
-
-        const data = await res.json();
         const ic = data.intent_classification || {};
         const exec = data.execution_result || {};
         const msg = exec.message || 'Action completed.';
@@ -877,28 +935,42 @@
         document.getElementById('presence-caption').innerText = `🗣️ "${msg}"`;
         speakText(spoken);
 
-        let gmailBtnHtml = '';
-        if (exec.gmail_compose_url) {
-          gmailBtnHtml = `<div class="pt-2"><a href="${exec.gmail_compose_url}" target="_blank" class="inline-flex items-center gap-2 bg-amber-500 hover:bg-amber-400 text-black font-bold px-3 py-1.5 rounded-lg text-xs transition-all shadow-md shadow-amber-500/20">📧 Open Pre-Filled Gmail Web Composer Window</a></div>`;
-        }
-
-        box.innerHTML += `
-          <div class="bg-zinc-900/80 p-3 rounded-lg border border-zinc-800 space-y-1">
-            <div><span class="text-cyan-400 font-bold">Intent:</span> ${ic.predicted_intent || 'multi-turn'}</div>
-            <div><span class="text-emerald-400 font-bold">Result:</span> ${msg}</div>
-            ${gmailBtnHtml}
-          </div>
-        `;
+        renderResult(ensureCard(), ic, exec, msg);
         box.scrollTop = box.scrollHeight;
       } catch (err) {
         setEntityMode('idle');
+        const note = err.name === 'AbortError'
+          ? `No response for ${IDLE_LIMIT_MS / 1000}s — the engine may be busy or stopped.`
+          : (err.message || err);
         box.innerHTML += `
           <div class="bg-red-950/40 p-3 rounded-lg border border-red-800 text-red-300">
-            ❌ Notice: ${err.name === 'AbortError' ? 'Execution request timed out after 15s.' : err.message || err}
+            ❌ Notice: ${note}
           </div>
         `;
         box.scrollTop = box.scrollHeight;
       }
+    }
+
+    // One renderer for both transports. The pywebview bridge and the HTTP path
+    // used to each build this markup themselves, ~40 lines apart, which is how
+    // one of them quietly kept a field the other had dropped.
+    function renderResult(card, ic, exec, msg) {
+      const gmailBtnHtml = exec.gmail_compose_url
+        ? `<div class="pt-2"><a href="${exec.gmail_compose_url}" target="_blank" class="inline-flex items-center gap-2 bg-amber-500 hover:bg-amber-400 text-black font-bold px-3 py-1.5 rounded-lg text-xs transition-all shadow-md shadow-amber-500/20">📧 Open Pre-Filled Gmail Web Composer Window</a></div>`
+        : '';
+      // `generated` marks an answer a language model wrote rather than one the
+      // assistant observed. The distinction is the whole point of the
+      // ModelAnswered evidence variant, so it has to survive to the screen.
+      const generatedHtml = exec.generated
+        ? `<div class="text-[11px] text-zinc-500 font-mono">💭 written by ${exec.model || 'a local model'} — not a looked-up fact</div>`
+        : '';
+      card.className = 'bg-zinc-900/80 p-3 rounded-lg border border-zinc-800 space-y-1';
+      card.innerHTML = `
+        <div><span class="text-cyan-400 font-bold">Intent:</span> ${ic.predicted_intent || 'multi-turn'}</div>
+        <div><span class="text-emerald-400 font-bold">Result:</span> ${msg}</div>
+        ${generatedHtml}
+        ${gmailBtnHtml}
+      `;
     }
 
     window.onload = function() {

@@ -157,7 +157,34 @@ command
 honest refusal — not a pattern miss — and `reports/routing_evidence.md` gains a
 Stage-3 column.
 
-### Phase 5 — Streaming replies (≈half a day)
+### Phase 5 — Streaming replies ✅ **DONE 2026-08-16**
+
+`POST /agent/stream` emits `classified` → `consulting_model` → `token`* →
+`result`, plus a `heartbeat` every 10 s. `process_command` gained an optional
+`on_event` sink and is otherwise untouched, so **streaming observes the same
+pipeline that answers `/agent/execute`** — including the Tier-2 gate, the
+clarification state machine and the RL credit. Verified in a real browser.
+
+**The plan's stated benefit did not materialise, and something better did.**
+The premise was "first token in ~1 s beats a complete answer in ~8 s". Measured:
+with a 49-tool schema, `llama3.2:3b` selects a tool for essentially *every*
+command and writes free text almost never — so there are usually no tokens to
+stream, and a warm tool selection takes **0.8–1.7 s** anyway. The token plumbing
+is built, correct and tested; it just rarely fires.
+
+What actually mattered was the **progress events**, for a reason the plan did
+not anticipate: `ui/index.html` aborted every request after **15 seconds**. A
+cold model load takes a minute or more, so the first LLM-routed command a user
+ever typed was cancelled before it could answer, and they saw "Execution request
+timed out". The UI now has no fixed deadline — it abandons the stream only after
+45 s of *silence*, and the server heartbeats every 10 s so that "slow" and
+"dead" stay distinguishable.
+
+One thing folded in on the way: the pywebview bridge and the HTTP path each
+built the result markup themselves, ~40 lines apart. They share `renderResult`
+now, which is also where the 💭 "written by a local model" note lives.
+
+### Phase 5 — as planned
 
 Makes MONDAY feel like ChatGPT rather than a form submission, and it is
 *required* to make a 3B model on a CPU tolerable: first token in ~1 s beats a

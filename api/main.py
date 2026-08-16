@@ -39,9 +39,15 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from pathlib import Path
 
+import json
+import queue
+import threading
+import time
+
 import numpy as np
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
 from core.planner import MasterPlanner
@@ -202,6 +208,102 @@ def execute_command(req: ExecuteRequest) -> Dict[str, Any]:
     """
     planner = get_planner()
     return planner.process_command(req.command, user_approved=req.user_approved)
+
+
+#: Sent when the pipeline has produced nothing for this long, so a proxy or a
+#: browser does not decide a slow answer is a dead connection. A cold model load
+#: is minutes, and silence for minutes is indistinguishable from a hang.
+_HEARTBEAT_SECONDS = 10.0
+
+#: How long to wait for the pipeline thread after the queue goes quiet. Bounded
+#: so a wedged handler cannot pin a request open indefinitely.
+_STREAM_TIMEOUT_SECONDS = 600.0
+
+
+def _sse(event: str, data: Dict[str, Any]) -> str:
+    """One Server-Sent Event frame."""
+    return f"event: {event}\ndata: {json.dumps(data, default=str)}\n\n"
+
+
+@app.post("/agent/stream", tags=["Master Planner"])
+def stream_command(req: ExecuteRequest) -> StreamingResponse:
+    """
+    **The same pipeline as `/agent/execute`, reported as it happens.**
+
+    `/agent/execute` answers once, at the end. That is fine for a `psutil`
+    reading and wrong for anything slow: loading a 2 GB model takes a minute or
+    more on this machine, during which a client that is waiting on a single
+    response has nothing to show and no way to tell a slow answer from a hung
+    one. The UI's own 15-second abort made that concrete — it cancelled every
+    cold-start command before it could finish.
+
+    Emits, as they occur:
+
+    | event | when |
+    |---|---|
+    | `classified` | component 2.1 has named an intent |
+    | `consulting_model` | stage 3 is being asked — the only slow step |
+    | `token` | a fragment of a model-written answer |
+    | `heartbeat` | nothing has happened for a while; the connection is alive |
+    | `result` | the final payload, identical to `/agent/execute`'s |
+    | `error` | the pipeline raised; the message says what |
+
+    **The pipeline is not reimplemented here.** `process_command` takes an
+    optional sink and is otherwise untouched, so streaming observes the same
+    code that answers `/agent/execute` — including the Tier-2 gate, the
+    clarification state machine and the RL credit. A parallel streaming
+    implementation would have to agree with that one about all three, and two
+    implementations that must agree is the defect this repository has found in
+    its own code repeatedly.
+    """
+    planner = get_planner()
+    events: "queue.Queue[Any]" = queue.Queue()
+    _DONE = object()
+
+    def run() -> None:
+        try:
+            result = planner.process_command(
+                req.command,
+                user_approved=req.user_approved,
+                on_event=lambda kind, payload: events.put((kind, payload)),
+            )
+            events.put(("result", result))
+        except Exception as exc:  # noqa: BLE001
+            events.put(("error", {"error": type(exc).__name__, "message": str(exc)}))
+        finally:
+            events.put(_DONE)
+
+    worker = threading.Thread(target=run, daemon=True, name="monday-stream")
+    worker.start()
+
+    def frames():
+        deadline = time.time() + _STREAM_TIMEOUT_SECONDS
+        while True:
+            if time.time() > deadline:
+                yield _sse("error", {"error": "STREAM_TIMEOUT",
+                                     "message": "The command did not finish in time."})
+                return
+            try:
+                item = events.get(timeout=_HEARTBEAT_SECONDS)
+            except queue.Empty:
+                # Still working. Saying so is the difference between "slow" and
+                # "dead" for anything between the client and this process.
+                yield _sse("heartbeat", {})
+                continue
+            if item is _DONE:
+                return
+            kind, payload = item
+            yield _sse(kind, payload if isinstance(payload, dict) else {"value": payload})
+
+    return StreamingResponse(
+        frames(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            # Proxies that buffer would defeat the entire point.
+            "X-Accel-Buffering": "no",
+        },
+    )
 
 
 @app.post("/intent/classify", tags=["2.1 Intent Classifier (CLO04)"])

@@ -47,16 +47,43 @@ def registry(planner):
 
 
 class StubLlm:
-    """Stands in for `LlmStage`, recording whether it was consulted at all."""
+    """Stands in for `LlmStage`, recording whether it was consulted at all.
+
+    The signature must track `LlmStage.choose`, including `on_token`. When
+    streaming was added this double silently stopped matching the thing it
+    doubles, and seven tests failed with `unexpected keyword argument` — which
+    is the useful failure. A stub that swallowed `**kwargs` would have kept
+    passing while testing a call the real router no longer makes.
+    """
 
     def __init__(self, choice: Optional[LlmChoice] = None) -> None:
         self.choice = choice
         self.calls: List[str] = []
+        self.model = "stub"
         self.unavailable_reason = "stub"
 
-    def choose(self, command: str) -> Optional[LlmChoice]:
+    def choose(self, command: str, on_token: Optional[Any] = None) -> Optional[LlmChoice]:
         self.calls.append(command)
+        if on_token is not None and self.choice is not None and self.choice.text:
+            on_token(self.choice.text)
         return self.choice
+
+
+def test_the_stub_still_matches_the_thing_it_stands_in_for(registry):
+    """A double that has drifted from its subject tests nothing.
+
+    Asserted mechanically because the drift is invisible otherwise: the stub
+    keeps passing its own tests while the real router calls a signature it no
+    longer has.
+    """
+    import inspect
+
+    real = inspect.signature(LlmStage.choose).parameters
+    stub = inspect.signature(StubLlm.choose).parameters
+    assert set(real) == set(stub), (
+        f"StubLlm.choose{tuple(stub)} no longer matches "
+        f"LlmStage.choose{tuple(real)}"
+    )
 
 
 # ── Slots are derived, not declared twice ────────────────────────────────────

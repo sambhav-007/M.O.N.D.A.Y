@@ -219,12 +219,27 @@ class LlmStage:
         return self._unavailable_reason
 
     # ── Choosing ─────────────────────────────────────────────────────────────
-    def choose(self, command: str) -> Optional[LlmChoice]:
+    def choose(
+        self,
+        command: str,
+        on_token: Optional[Any] = None,
+    ) -> Optional[LlmChoice]:
         """Asks the model to pick a skill, or to answer. None if it cannot.
 
         Returns None rather than raising: stage 3 is the last stage, and its
         failure must degrade to the honest refusal rather than to a traceback in
         front of a user.
+
+        `on_token` turns this into a streaming call: it is invoked with each
+        fragment of text as the model produces it. **One method either way** —
+        the alternative was a second `stream_answer` beside this one, and two
+        functions that must agree about tool validation is exactly the shape of
+        bug this repository keeps finding (the email wizard existed twice, ~130
+        lines apart, with different behaviour in each copy).
+
+        Tool calls do not stream; Ollama delivers them whole, on one chunk. So a
+        command that reaches a skill produces no tokens, which is correct — there
+        is nothing to show progressively about a `psutil` reading.
         """
         if not self.available():
             return None
@@ -238,7 +253,7 @@ class LlmStage:
             import ollama
 
             client = ollama.Client(host=self.host, timeout=timeout)
-            response = client.chat(
+            call = dict(
                 model=self.model,
                 messages=[
                     {"role": "system", "content": SYSTEM_PROMPT},
@@ -248,6 +263,10 @@ class LlmStage:
                 # Deterministic-ish: this is a routing decision, not prose.
                 options={"temperature": 0.0},
             )
+            if on_token is None:
+                response = client.chat(**call)
+            else:
+                response = self._collect(client.chat(stream=True, **call), on_token)
         except Exception:  # noqa: BLE001
             return None
 
@@ -256,6 +275,33 @@ class LlmStage:
         # shortened every later timeout.
         self._model_is_warm = True
         return self._read(response)
+
+    @staticmethod
+    def _collect(chunks: Any, on_token: Any) -> Dict[str, Any]:
+        """Drains a streamed response into the shape `_read` already understands.
+
+        Emitting each fragment as it arrives and *also* assembling the whole
+        thing means the streaming and non-streaming paths converge before any
+        decision is made — `_read` and `_validate` see identical input either
+        way, so streaming cannot become a second set of routing rules.
+        """
+        text: List[str] = []
+        tool_calls: Any = None
+        for chunk in chunks:
+            message = _field(chunk, "message") or {}
+            calls = _field(message, "tool_calls")
+            if calls:
+                tool_calls = calls
+            fragment = _field(message, "content") or ""
+            if fragment:
+                text.append(str(fragment))
+                try:
+                    on_token(str(fragment))
+                except Exception:  # noqa: BLE001
+                    # A consumer that has gone away — a closed SSE connection —
+                    # must not turn into a failed routing decision.
+                    pass
+        return {"message": {"content": "".join(text), "tool_calls": tool_calls}}
 
     def _read(self, response: Any) -> Optional[LlmChoice]:
         """Reads a choice out of whatever shape the client handed back.

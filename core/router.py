@@ -100,6 +100,7 @@ class Router:
         command: str,
         intent: str = "",
         confidence: float = 0.0,
+        emit: Optional[Any] = None,
     ) -> RoutingDecision:
         """Returns the routing decision without executing anything.
 
@@ -162,7 +163,19 @@ class Router:
         # can change what a pattern already decided, and the offline guarantees
         # of stage 1 are untouched by whether a model happens to be running.
         if self.llm is not None:
-            choice = self.llm.choose(command)
+            # The only slow step in the cascade, and the only one worth
+            # announcing: stages 1 and 2 answer in under a millisecond, while a
+            # cold model can take a minute or more to load. A caller that says
+            # nothing here looks hung.
+            if emit is not None:
+                emit("consulting_model", {"model": getattr(self.llm, "model", "")})
+            choice = self.llm.choose(
+                command,
+                # Fragments of a written answer, as they are produced. With a
+                # large tool schema most commands produce none — the model
+                # selects a tool instead, which is one chunk, not a stream.
+                on_token=(lambda f: emit("token", {"text": f})) if emit else None,
+            )
             if choice is not None and choice.skill:
                 skill = self.registry.get(choice.skill)
                 if skill is not None:

@@ -134,6 +134,26 @@ def spoken_form(result: Dict[str, Any]) -> str:
     return headline
 
 
+def _event_sink(on_event: Optional[Any]) -> Any:
+    """Wraps a progress callback so callers never have to check for None.
+
+    Also swallows anything the sink raises. A consumer that has gone away — a
+    browser that closed the connection mid-answer — must not turn into a failed
+    command on the server, and must certainly not lose a Tier-2 gate that was
+    about to be armed.
+    """
+    if on_event is None:
+        return lambda kind, payload=None: None
+
+    def emit(kind: str, payload: Optional[Dict[str, Any]] = None) -> None:
+        try:
+            on_event(kind, payload or {})
+        except Exception:  # noqa: BLE001
+            pass
+
+    return emit
+
+
 def _prepend_notice(result: Dict[str, Any], notice: str) -> Dict[str, Any]:
     """Puts `notice` in front of a result's message without disturbing the rest.
 
@@ -279,11 +299,25 @@ class MasterPlanner(EmailMixin, ContactMixin, Tier2Mixin):
         self,
         command: str,
         user_approved: bool = False,
+        on_event: Optional[Any] = None,
     ) -> Dict[str, Any]:
         """
         Main execution pipeline for a user command:
           Multi-Turn Check → Command → Intent Classification (2.1) → RL Routing (2.5) → Security Tier Check → Agent Execution
+
+        `on_event(kind, payload)` reports progress as it happens, for the
+        streaming endpoint. It defaults to None, and when it is None this method
+        behaves exactly as it did — the streaming surface is the *same* pipeline
+        observed, not a second one implemented. A parallel streaming path would
+        have to agree with this one about the Tier-2 gate, the clarification
+        state machine and the RL credit, and two implementations that must agree
+        is the defect this repository has found in its own code five times.
+
+        Kinds emitted: `classified` (2.1's verdict), `routing` (which stage and
+        which skill), `token` (a fragment of a model-written answer, as it is
+        produced). The final result is the return value, not an event.
         """
+        emit = _event_sink(on_event)
         cmd = command.strip()
         if not cmd:
             return {"success": False, "error": "Command is empty."}
@@ -353,6 +387,10 @@ class MasterPlanner(EmailMixin, ContactMixin, Tier2Mixin):
 
         # Step 1: Component 2.1 Intent Classifier
         intent, confidence, fallback = predict_intent(self.classifier, cmd)
+        emit("classified", {
+            "intent": intent, "confidence": round(float(confidence), 4),
+            "llm_fallback": bool(fallback),
+        })
 
         # Step 2: Component 2.5 RL Bandit Routing Decision if confidence is low
         # `routed_arm` is the arm that must be credited in step 4. When the
@@ -366,7 +404,9 @@ class MasterPlanner(EmailMixin, ContactMixin, Tier2Mixin):
             routing_strategy = ROUTING_ACTIONS[routed_arm]
 
         # Step 3: Match intent to target agent tool execution
-        tool_result = self._dispatch_to_agent(cmd, intent, user_approved, confidence)
+        tool_result = self._dispatch_to_agent(
+            cmd, intent, user_approved, confidence, emit=emit
+        )
 
         # If standard dispatch requires generative reasoning, query Cognitive Engine
         if fallback or (isinstance(tool_result, dict) and not tool_result.get("success") and not tool_result.get("refusal")):
@@ -635,6 +675,7 @@ class MasterPlanner(EmailMixin, ContactMixin, Tier2Mixin):
         intent: str,
         user_approved: bool,
         confidence: float = 0.0,
+        emit: Optional[Any] = None,
     ) -> Dict[str, Any]:
         """Chooses a skill for the command and runs it.
 
@@ -676,8 +717,12 @@ class MasterPlanner(EmailMixin, ContactMixin, Tier2Mixin):
             }
 
         # ── 3. The router ────────────────────────────────────────────────────
-        decision = self.router.route(command, intent=intent, confidence=confidence)
+        emit = _event_sink(emit)
+        decision = self.router.route(
+            command, intent=intent, confidence=confidence, emit=emit
+        )
         self.last_routing_decision = decision
+        emit("routing", decision.as_dict())
 
         if not decision.routed:
             # Stage 3 may answer instead of choosing a skill. Presented as

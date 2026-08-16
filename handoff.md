@@ -626,6 +626,52 @@ The ZIP works and needs no install:
 The pull failed twice at ~88% with `no such host` on Cloudflare R2 — transient,
 DNS resolved fine when tested directly, and a re-run resumes from the partial.
 
+### 2026-08-16 (later still) — streaming (ROADMAP Phase 5)
+
+`POST /agent/stream` reports the pipeline as it runs: `classified` →
+`consulting_model` → `token`* → `result`, with a `heartbeat` every 10 s.
+
+**It is the same pipeline, observed.** `process_command` took an optional
+`on_event` sink and is otherwise unchanged; the endpoint runs it on a thread and
+drains a queue. A parallel streaming implementation would have had to agree with
+this one about the Tier-2 gate, the clarification state machine and the RL
+credit — and two implementations that must agree is the defect this repo has
+found in its own code repeatedly. `test_streaming.py` asserts the streamed and
+executed results are identical, and that the Tier-2 gate still arms through the
+stream.
+
+**The planned benefit did not materialise; a better one did.** The premise was
+"first token in ~1 s beats a complete answer in ~8 s". Measured: with a 49-tool
+schema, `llama3.2:3b` picks a tool for essentially every command and writes free
+text almost never, and a warm selection takes 0.8–1.7 s regardless. The token
+path is built and tested but rarely fires.
+
+What mattered instead: **`ui/index.html` aborted every request after 15
+seconds.** A cold model load is a minute or more, so the first LLM-routed
+command a user ever typed was cancelled before it could answer — they saw
+"Execution request timed out" and no explanation. There is no fixed deadline
+now; the UI gives up only after 45 s of *silence*, and the heartbeat keeps
+"slow" distinguishable from "dead".
+
+**Two things worth knowing:**
+
+1. **A test double drifted and it was worth catching loudly.** `StubLlm.choose`
+   did not accept the new `on_token`, so seven tests failed with `unexpected
+   keyword argument`. That is the useful failure — a stub swallowing `**kwargs`
+   would have kept passing while testing a call the router no longer makes.
+   `test_the_stub_still_matches_the_thing_it_stands_in_for` now compares the
+   signatures directly.
+2. **Two of my own tests were wrong before the code was.** A command that
+   reaches stage 3 has to clear *both* earlier stages: "say something about
+   mondays" matches the `say {phrase}` voice pattern, and "determination is
+   important" clears the 0.50 floor as `memory_query`. Only the third attempt —
+   "i need to book a flight" — actually reached the model.
+
+Verified in a real browser at `/app`: the status line shows "asking the local
+model (llama3.2:3b)… first run loads it, which is slow", is replaced by the
+result, and the proposal flow (`shut down chrome` → decline) works end to end
+with no console errors.
+
 **Still there, still inert:** `TriModelCognitiveEngine` is a second LLM path,
 reached after a failed dispatch. Without `GEMINI_API_KEY` it is falsy and
 changes nothing, so it was left alone — but two LLM paths is one too many, and
