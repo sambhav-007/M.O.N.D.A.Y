@@ -95,7 +95,7 @@ _NEW_TOPIC_MARKERS = (
 # a health check spoke three lines of percentages, and a web result spoke an
 # entire article. The screen keeps the full answer; the voice gets the gist.
 _SPEECH_MAX_CHARS = 180
-_DECORATION = re.compile(r"[✓✅⚠️❌🤖📧🎙️📝🌍🌤️🛸💰📚🔍💡🧠⚡🖥️📊🗣️🔒🎓⚙️📁🌐↩️•·►]")
+_DECORATION = re.compile(r"[✓✅⚠️❌🤖📧🎙️📝🌍🌤️🛸💰📚🔍💡🧠⚡🖥️📊🗣️🔒🎓⚙️📁🌐↩️💭•·►]")
 _BULLET_LINE = re.compile(r"^\s*[•\-*]\s*")
 
 

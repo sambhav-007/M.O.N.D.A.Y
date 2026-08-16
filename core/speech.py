@@ -41,7 +41,10 @@ MAX_SPEECH_CHARS = 240
 #: Status glyphs, box drawing and markdown that mean nothing aloud. `✓` read as
 #: "check mark" and `⚠️` as "warning sign" at the start of every single reply.
 _DECORATION = re.compile(
-    r"[✓✗❌⚠️🔒🤖🗣️🎙️🖥️📧📁🌐🧠📊💰⚡💡🔍►•·—–\[\]*`_#|]+"
+    # 💭 marks a generated answer on screen (see `_answer_from_model`). It is a
+    # visual signal only — spoken, it becomes "thought balloon" in front of
+    # every LLM reply, which is exactly what this pattern exists to prevent.
+    r"[✓✗❌⚠️🔒🤖🗣️🎙️🖥️📧📁🌐🧠📊💰⚡💡🔍💭►•·—–\[\]*`_#|]+"
 )
 _WHITESPACE = re.compile(r"\s+")
 #: A sentence end followed by a space and a capital, or the end of the string.
