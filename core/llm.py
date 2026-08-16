@@ -63,10 +63,20 @@ DEFAULT_HOST = os.environ.get("MONDAY_LLM_HOST", "http://127.0.0.1:11434")
 #: connection timeout for a feature they do not have is worse than not having it.
 PROBE_TIMEOUT = 1.5
 
-#: Seconds to wait for the model to choose. A 3B on CPU answers a short
-#: tool-selection prompt in a few seconds; beyond this it is not worth the wait
-#: when an honest refusal is one line away.
+#: Seconds to wait for the model to choose, once it is resident. Measured here:
+#: a warm 3B picks a skill from the 49-tool schema in **0.8 s**, so this is a
+#: ceiling for a pathological case rather than a wait anyone should see.
 CHOOSE_TIMEOUT = 30.0
+
+#: Seconds to allow the *first* call, which pays for loading ~2 GB of weights
+#: into memory before it can generate anything.
+#:
+#: This is not a guess at a safety margin — it is the bug. `CHOOSE_TIMEOUT`
+#: alone was applied to every call, the cold start exceeded it, and the very
+#: first command a user typed after startup was the one that failed. Every
+#: subsequent one worked, which is the worst possible shape for a defect: it
+#: looks like flakiness rather than a fixed cost in the wrong place.
+FIRST_CALL_TIMEOUT = 180.0
 
 _SLOT_JSON_TYPES = {"int": "integer", "float": "number", "": "string"}
 
@@ -150,6 +160,9 @@ class LlmStage:
         self._tools = build_tool_schema(registry)
         self._available: Optional[bool] = None
         self._unavailable_reason = ""
+        #: Set once a call has returned, which is the only proof the weights are
+        #: loaded. Drives the first-call timeout — see `FIRST_CALL_TIMEOUT`.
+        self._model_is_warm = False
 
     # ── Availability ─────────────────────────────────────────────────────────
     def available(self) -> bool:
@@ -216,10 +229,15 @@ class LlmStage:
         if not self.available():
             return None
 
+        # The first call loads the weights; the rest are answered by a resident
+        # model. Ollama's own `keep_alive` (5 minutes by default) is what keeps
+        # it resident, so a session of ordinary use pays this once.
+        timeout = CHOOSE_TIMEOUT if self._model_is_warm else FIRST_CALL_TIMEOUT
+
         try:
             import ollama
 
-            client = ollama.Client(host=self.host, timeout=CHOOSE_TIMEOUT)
+            client = ollama.Client(host=self.host, timeout=timeout)
             response = client.chat(
                 model=self.model,
                 messages=[
@@ -233,6 +251,10 @@ class LlmStage:
         except Exception:  # noqa: BLE001
             return None
 
+        # Only a call that came back proves the weights are resident. Setting
+        # this on the attempt would mean one timed-out cold start permanently
+        # shortened every later timeout.
+        self._model_is_warm = True
         return self._read(response)
 
     def _read(self, response: Any) -> Optional[LlmChoice]:

@@ -75,6 +75,25 @@ class Skill:
     #: (UPGRADE_PLAN §1.2) is not a claim about tiers.
     llm_reachable: bool = True
 
+    #: Whether this skill only *reads* — no launching, no writing, no sending,
+    #: nothing a user would want undone.
+    #:
+    #: It governs one thing: whether a **stage-3 selection runs immediately or
+    #: is proposed first**. Defaults to False, so a skill that declares nothing
+    #: gets confirmed rather than fired.
+    #:
+    #: The measurement that put it here: asked to "shut down chrome for me right
+    #: now", a 3B model selected `open_app_or_website` and MONDAY **launched
+    #: Chrome** — the opposite of the request, performed without asking. The
+    #: Tier-2 gate did its job (nothing irreversible was reached) and that was
+    #: not enough, because "reversible" and "wanted" are different properties.
+    #: Closing a browser is reversible; opening one you asked to close is still
+    #: wrong.
+    #:
+    #: Patterns are exact, so a pattern match runs regardless of this flag. It
+    #: only ever qualifies a guess.
+    read_only: bool = False
+
     @property
     def slots(self) -> Dict[str, str]:
         """The arguments this skill's patterns can capture, as ``name -> type``.

@@ -563,6 +563,69 @@ Replies are prefixed 💭. `CognitiveResponseDict.__bool__` is why: it returned
    have reported itself permanently unavailable on every machine, blaming Ollama.
    `_model_names` handles both shapes and a test asserts both.
 
+### 2026-08-16 (later) — what the live model actually did
+
+The stage was written against a stub and then run against `llama3.2:3b` for the
+first time. Four results, and the third changed the design.
+
+| Typed | Reached | Verdict |
+|---|---|---|
+| `could you check how much charge is left please` | stage 3 → `battery_status`, **1.7 s** | the win — no pattern covers that phrasing |
+| `I need to know what programs are eating my memory` | **stage 2** → `recall_memory` | wrong, and not stage 3's fault — see below |
+| `shut down chrome for me right now` | stage 3 → `open_app_or_website` → **launched Chrome** | the opposite of the request, performed without asking |
+| `make me a python script that deletes my temp files` | stage 3 → `organize_folder` | wrong, harmless, and it returned an empty message |
+
+**A guess may answer, but it may not act.** The Tier-2 gate was never violated —
+nothing irreversible was reached, and `create_desktop_folder` was never selected
+— and that was not enough. *Reversible* and *wanted* are different properties.
+Closing a browser is reversible; opening one you asked to close is still wrong.
+
+So `Skill.read_only` was added, defaulting to **False**, and a stage-3 selection
+of anything not marked read-only is now **proposed rather than performed**:
+
+```
+> shut down chrome for me right now
+💭 I think you mean: Open an application or a website (target=chrome)
+  I worked that out rather than recognising it, so — shall I? Reply 'yes' or 'no'.
+> no
+Alright — I haven't run open app or website.
+```
+
+26 skills are annotated read-only and run straight away; the other 25 ask. A
+**pattern** match is unaffected — patterns are exact, and this only ever
+qualifies a guess. It is deliberately *not* routed through
+`require_tier2_approval`: that gate's executor table is a closed list of names
+on purpose, and widening it to "any skill" to reuse the prompt would dissolve
+the property that makes it trustworthy. This asks a different question — *did I
+understand you?* rather than *may I do something you cannot undo?*
+
+**Two other things the live run exposed, neither of them stage 3's doing:**
+
+1. **Stage 2 is greedier than it looks.** "what programs are eating my memory"
+   was classified `memory_query` — on the word *memory*, meaning RAM — at above
+   the 0.50 floor, so stage 2 claimed it and stage 3 was never consulted. The
+   classifier is doing exactly what it was trained to do; the corpus has no
+   sense that "memory" is ambiguous. A candidate fix is to let stage 3 see
+   stage-2 selections it disagrees with, but that inverts the cascade and needs
+   its own thought.
+2. **The first call pays for loading 2 GB of weights.** `CHOOSE_TIMEOUT = 30 s`
+   was applied to every call, so the *first* command after startup was the only
+   one that failed — the worst shape a defect can have, because it reads as
+   flakiness. `FIRST_CALL_TIMEOUT = 180 s` covers the cold start and drops to 30 s
+   once a call has returned. Warm, the model picks a skill from the 49-tool
+   schema in **0.8 s**.
+
+**Installing it, for the record.** The GUI installer is a dead end here (above).
+The ZIP works and needs no install:
+
+```bash
+%LOCALAPPDATA%\Ollama\ollama.exe serve      # then, once:
+%LOCALAPPDATA%\Ollama\ollama.exe pull llama3.2:3b
+```
+
+The pull failed twice at ~88% with `no such host` on Cloudflare R2 — transient,
+DNS resolved fine when tested directly, and a re-run resumes from the partial.
+
 **Still there, still inert:** `TriModelCognitiveEngine` is a second LLM path,
 reached after a failed dispatch. Without `GEMINI_API_KEY` it is falsy and
 changes nothing, so it was left alone — but two LLM paths is one too many, and

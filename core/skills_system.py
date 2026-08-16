@@ -39,6 +39,7 @@ def register_system_skills(registry: SkillRegistry, planner: Any) -> None:
 
     registry.register(Skill(
         name="analyze_screen",
+        read_only=True,
         description="Describe what is on screen (needs a Gemini key)",
         patterns=[
             "[(what is|whats|what's)] on my screen",
@@ -130,6 +131,7 @@ def register_system_skills(registry: SkillRegistry, planner: Any) -> None:
 
     registry.register(Skill(
         name="list_processes",
+        read_only=True,
         description="What is running right now",
         patterns=[
             "(list|show) [(the|my)] [running] (processes|programs|apps|tasks)",
@@ -191,6 +193,7 @@ def register_system_skills(registry: SkillRegistry, planner: Any) -> None:
 
     registry.register(Skill(
         name="audit_history",
+        read_only=True,
         description="The action audit log",
         patterns=[
             "history", "log", "audit", "audit log", "action history",
@@ -228,6 +231,7 @@ def register_system_skills(registry: SkillRegistry, planner: Any) -> None:
 
     registry.register(Skill(
         name="proactive_suggestions",
+        read_only=True,
         description="Suggestions from the clustering and association models",
         patterns=[
             "proactive", "suggestions", "proactive suggestions",
@@ -287,6 +291,7 @@ def register_system_skills(registry: SkillRegistry, planner: Any) -> None:
 
     registry.register(Skill(
         name="read_latest_email",
+        read_only=True,
         description="Read the most recent inbox message (needs Gmail OAuth)",
         patterns=[
             "read [(my|the)] [(latest|last|newest)] email",
@@ -392,6 +397,7 @@ def register_system_skills(registry: SkillRegistry, planner: Any) -> None:
 
     registry.register(Skill(
         name="upcoming_events",
+        read_only=True,
         description="What is coming up in the calendar",
         patterns=[
             "[(what is|whats|what's)] [(on|in)] my calendar",

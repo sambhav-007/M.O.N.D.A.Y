@@ -44,6 +44,7 @@ def build_builtin_registry(planner: Any) -> SkillRegistry:
 
     registry.register(Skill(
         name="tell_time",
+        read_only=True,
         description="What time is it",
         patterns=[
             "[(what|whats|what's)] [is] [the] time [is it]",
@@ -67,6 +68,7 @@ def build_builtin_registry(planner: Any) -> SkillRegistry:
 
     registry.register(Skill(
         name="tell_date",
+        read_only=True,
         description="What is today's date",
         patterns=[
             "[(what|whats|what's)] [is] [the] date [today]",
@@ -88,6 +90,7 @@ def build_builtin_registry(planner: Any) -> SkillRegistry:
 
     registry.register(Skill(
         name="battery_status",
+        read_only=True,
         description="Battery level and charging state",
         patterns=[
             "battery",
@@ -171,6 +174,7 @@ def build_builtin_registry(planner: Any) -> SkillRegistry:
 
     registry.register(Skill(
         name="read_volume",
+        read_only=True,
         description="Report the current volume",
         patterns=[
             "[(what is|whats|what's)] [the] [current] volume",
@@ -187,6 +191,7 @@ def build_builtin_registry(planner: Any) -> SkillRegistry:
 
     registry.register(Skill(
         name="system_health",
+        read_only=True,
         description="CPU, memory and disk usage",
         patterns=[
             "health",
@@ -337,6 +342,7 @@ def build_builtin_registry(planner: Any) -> SkillRegistry:
 
     registry.register(Skill(
         name="lookup_contact_number",
+        read_only=True,
         description="Look up a saved phone number",
         patterns=[
             "[(what is|whats|what's)] {name}'s (whatsapp|phone|mobile|contact) number",
@@ -383,6 +389,7 @@ def build_builtin_registry(planner: Any) -> SkillRegistry:
 
     registry.register(Skill(
         name="desktop_contents",
+        read_only=True,
         description="What is on the desktop, and how much",
         patterns=[
             "how many (files|items|things) [are] [there] on [my] desktop",
@@ -424,6 +431,7 @@ def build_builtin_registry(planner: Any) -> SkillRegistry:
 
     registry.register(Skill(
         name="recall_memory",
+        read_only=True,
         description="Look something up in memory",
         patterns=[
             "recall {query}",
@@ -465,6 +473,7 @@ def build_builtin_registry(planner: Any) -> SkillRegistry:
 
     registry.register(Skill(
         name="summarize_document",
+        read_only=True,
         description="Summarise a document",
         patterns=[
             "(summarize|summarise) {path}",
@@ -500,6 +509,7 @@ def build_builtin_registry(planner: Any) -> SkillRegistry:
 
     registry.register(Skill(
         name="stray_confirmation",
+        read_only=True,
         description="A yes/no with no question outstanding",
         patterns=[
             "yes", "yeah", "yep", "yup", "sure", "ok", "okay", "go ahead",
@@ -531,6 +541,7 @@ def build_builtin_registry(planner: Any) -> SkillRegistry:
 
     registry.register(Skill(
         name="chitchat",
+        read_only=True,
         description="Greetings and small talk",
         patterns=[
             "hello", "hi", "hey", "yo", "hello monday", "hi monday", "hey monday",
@@ -673,6 +684,7 @@ def build_builtin_registry(planner: Any) -> SkillRegistry:
 
     registry.register(Skill(
         name="get_user_name",
+        read_only=True,
         description="What MONDAY has saved as your name",
         patterns=[
             "[(what is|whats|what's)] my name",

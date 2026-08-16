@@ -22,7 +22,13 @@ import pytest
 
 from core.contracts import ModelAnswered
 from core.intent_patterns import slot_spec
-from core.llm import LlmChoice, LlmStage, build_tool_schema
+from core.llm import (
+    CHOOSE_TIMEOUT,
+    FIRST_CALL_TIMEOUT,
+    LlmChoice,
+    LlmStage,
+    build_tool_schema,
+)
 from core.planner import MasterPlanner
 from core.router import Router
 from core.skills import Skill, SkillRegistry
@@ -261,6 +267,119 @@ def test_model_answered_evidence_refuses_to_claim_more_than_it_can():
     assert e.host == "local"
 
 
+# ── A guess may answer, but it may not act ───────────────────────────────────
+# The measurement behind this section: asked to "shut down chrome for me right
+# now", a live 3B selected `open_app_or_website` and MONDAY **launched Chrome**.
+# The Tier-2 gate was not violated — nothing irreversible was reached — and that
+# was not enough. "Reversible" and "wanted" are different properties.
+def _route_via_llm(planner, skill_name, slots=None, command="some vague thing"):
+    stub = StubLlm(LlmChoice(skill=skill_name, arguments=slots or {}, model="stub"))
+    original = planner.router.llm
+    planner.router.llm = stub
+    try:
+        return planner._dispatch_to_agent(command, "unclear", False, 0.1)
+    finally:
+        planner.router.llm = original
+
+
+def test_a_guessed_read_only_skill_runs_immediately(planner):
+    """Reading changes nothing, so asking first is friction with no safety."""
+    planner.pending_clarification = None
+    result = _route_via_llm(planner, "battery_status")
+    assert result.get("awaiting_llm_confirmation") is not True
+    assert planner.pending_clarification is None
+
+
+def test_a_guessed_acting_skill_is_proposed_not_performed(planner):
+    planner.pending_clarification = None
+    result = _route_via_llm(planner, "open_app_or_website", {"target": "chrome"})
+
+    assert result["success"] is False
+    assert result["error"] == "AWAITING_LLM_CONFIRMATION"
+    assert result["proposed_skill"] == "open_app_or_website"
+    assert planner.pending_clarification is not None
+    # The reading it arrived at has to be visible, or the user cannot tell it
+    # is about to do the opposite of what they asked.
+    assert "chrome" in result["message"]
+
+
+def test_declining_a_proposal_runs_nothing(planner):
+    planner.pending_clarification = None
+    _route_via_llm(planner, "open_app_or_website", {"target": "chrome"})
+    result = planner.process_command("no")["execution_result"]
+
+    assert result.get("cancelled") is True
+    assert result.get("executed") is not True
+    assert planner.pending_clarification is None
+
+
+def test_an_unclear_reply_to_a_proposal_re_asks(planner):
+    """Same rule as every other gate: never infer consent from ambiguity."""
+    planner.pending_clarification = None
+    _route_via_llm(planner, "open_app_or_website", {"target": "chrome"})
+    result = planner.process_command("hmm maybe")["execution_result"]
+
+    assert result.get("awaiting_llm_confirmation") is True
+    assert planner.pending_clarification is not None
+    planner.pending_clarification = None
+
+
+def test_accepting_a_proposal_runs_the_skill_with_its_slots(planner, monkeypatch):
+    planner.pending_clarification = None
+    launched = []
+    monkeypatch.setattr(
+        planner.browser_agent, "open_app_or_website",
+        lambda target: launched.append(target) or {
+            "success": True, "message": f"opened {target}",
+            "evidence": {"kind": "system_query", "source": "test"},
+        },
+    )
+    _route_via_llm(planner, "open_app_or_website", {"target": "notepad"})
+    result = planner.process_command("yes")["execution_result"]
+
+    assert launched == ["notepad"]
+    assert result.get("routed_by") == "llm_confirmed"
+
+
+def test_a_proposal_is_revalidated_when_it_resumes(planner):
+    """The pending state is plain data and a resume is a second entry point.
+
+    A skill the model may not reach must not become reachable by parking its
+    name in the clarification and answering yes.
+    """
+    planner.pending_clarification = {
+        "type": "llm_proposal",
+        "step": "confirm_llm_skill",
+        "skill": "terminate_process",   # Tier 2 — never llm_reachable
+        "slots": {"process": "explorer"},
+        "original_command": "kill explorer",
+    }
+    result = planner.process_command("yes")["execution_result"]
+    assert result["success"] is False
+    assert result["error"] == "SKILL_NOT_RUNNABLE"
+    planner.pending_clarification = None
+
+
+def test_a_pattern_match_is_never_proposed(planner):
+    """Patterns are exact. Only a guess is qualified by `read_only`."""
+    planner.pending_clarification = None
+    result = planner._dispatch_to_agent("open notepad", "browser", False, 0.9)
+    assert result.get("awaiting_llm_confirmation") is not True
+
+
+def test_every_skill_that_acts_is_marked_as_such(registry):
+    """A skill added later defaults to needing confirmation, not to acting.
+
+    `read_only` defaults to False so the unsafe direction requires a deliberate
+    annotation — the same shape as `classify_action_risk` defaulting to Tier 2.
+    """
+    assert Skill(name="x", patterns=["do x"], handler=lambda **_: {}).read_only is False
+    # And the ones that obviously only read are annotated, or the confirmation
+    # prompt would appear in front of "what time is it".
+    for name in ("tell_time", "battery_status", "system_health", "answer_question"):
+        assert registry.get(name).read_only is True, f"{name} should be read-only"
+
+
 # ── Availability, and the cost of not having it ──────────────────────────────
 def test_the_stage_can_be_switched_off_outright(registry, monkeypatch):
     """`MONDAY_LLM=off` exists so a demo can guarantee the deterministic path."""
@@ -350,6 +469,65 @@ def test_a_plain_text_reply_is_read_in_both_response_shapes(registry):
         choice = stage._read(response)
         assert choice is not None and choice.skill is None
         assert choice.text == "Two and a half."
+
+
+def test_the_first_call_is_given_longer_than_the_rest(registry, monkeypatch):
+    """The cold start loads ~2 GB of weights; the calls after it do not.
+
+    Applying one timeout to both made the *first* command after startup the only
+    one that failed, which is the worst shape a defect can have — it reads as
+    flakiness rather than as a fixed cost in the wrong place. It is how the live
+    tests failed, and only the test that happened to run first.
+    """
+    monkeypatch.delenv("MONDAY_LLM", raising=False)
+    ollama = pytest.importorskip("ollama")
+    timeouts: List[float] = []
+
+    class _Client:
+        def __init__(self, *a: Any, timeout: float = 0, **kw: Any) -> None:
+            timeouts.append(timeout)
+
+        def list(self) -> Dict[str, Any]:
+            return {"models": [{"model": "llama3.2:3b"}]}
+
+        def chat(self, **kw: Any) -> Dict[str, Any]:
+            return {"message": {"content": "hello"}}
+
+    monkeypatch.setattr(ollama, "Client", _Client)
+    stage = LlmStage(registry, model="llama3.2:3b")
+
+    stage.choose("first")
+    stage.choose("second")
+
+    # [probe, first call, second call]
+    assert timeouts[1] == FIRST_CALL_TIMEOUT
+    assert timeouts[2] == CHOOSE_TIMEOUT
+    assert FIRST_CALL_TIMEOUT > CHOOSE_TIMEOUT
+
+
+def test_a_failed_cold_start_does_not_shorten_later_timeouts(registry, monkeypatch):
+    """Warmth is proven by a call returning, not by one being attempted."""
+    monkeypatch.delenv("MONDAY_LLM", raising=False)
+    ollama = pytest.importorskip("ollama")
+    timeouts: List[float] = []
+
+    class _Client:
+        def __init__(self, *a: Any, timeout: float = 0, **kw: Any) -> None:
+            timeouts.append(timeout)
+
+        def list(self) -> Dict[str, Any]:
+            return {"models": [{"model": "llama3.2:3b"}]}
+
+        def chat(self, **kw: Any) -> Dict[str, Any]:
+            raise TimeoutError("cold start took too long")
+
+    monkeypatch.setattr(ollama, "Client", _Client)
+    stage = LlmStage(registry, model="llama3.2:3b")
+
+    assert stage.choose("first") is None
+    assert stage.choose("second") is None
+    assert timeouts[1] == FIRST_CALL_TIMEOUT
+    assert timeouts[2] == FIRST_CALL_TIMEOUT, "a timed-out cold start marked the model warm"
 
 
 def test_an_empty_reply_routes_nowhere(registry):

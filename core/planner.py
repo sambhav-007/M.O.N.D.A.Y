@@ -468,6 +468,8 @@ class MasterPlanner(EmailMixin, ContactMixin, Tier2Mixin):
 
         if c_step == "confirm_action":
             return self._resolve_tier2_approval(clarification, raw_ans)
+        if c_step == "confirm_llm_skill":
+            return self._resolve_llm_proposal(clarification, raw_ans)
         if c_step == "get_contact_number":
             return self._resolve_contact_number(clarification, raw_ans)
         return self._resolve_email_clarification(clarification, user_response)
@@ -504,6 +506,99 @@ class MasterPlanner(EmailMixin, ContactMixin, Tier2Mixin):
                 "speech": "I'm not sure how to do that yet.",
             },
         ).as_dict()
+
+    def _propose_llm_skill(self, command: str, decision: Any) -> Dict[str, Any]:
+        """Asks before running a skill the language model guessed at.
+
+        Deliberately *not* routed through `require_tier2_approval`: that gate
+        exists for irreversible actions, its executor table is a closed list of
+        names on purpose, and widening it to "any skill" to reuse the prompt
+        would dissolve the property that makes it trustworthy. This is a
+        different question with a different answer — *did I understand you?*
+        rather than *may I do something you cannot undo?*
+        """
+        slots = {k: v for k, v in (decision.slots or {}).items() if v not in (None, "")}
+        detail = ", ".join(f"{k}={v}" for k, v in sorted(slots.items()))
+        described = decision.skill.description or decision.skill.name.replace("_", " ")
+
+        self.pending_clarification = {
+            "type": "llm_proposal",
+            "step": "confirm_llm_skill",
+            "skill": decision.skill.name,
+            "slots": slots,
+            "original_command": command,
+        }
+        return AgentResult.failed(
+            f"💭 I think you mean: **{described}**"
+            + (f" ({detail})" if detail else "")
+            + "\n  I worked that out rather than recognising it, so — shall I? "
+              "Reply 'yes' or 'no'.",
+            error="AWAITING_LLM_CONFIRMATION",
+            data={
+                "intent": "llm_proposal",
+                "awaiting_llm_confirmation": True,
+                "pending_clarification": True,
+                "proposed_skill": decision.skill.name,
+                "slots": slots,
+                "routing_reason": decision.reason,
+                "speech": f"Did you mean {described}?",
+            },
+        ).as_dict()
+
+    def _resolve_llm_proposal(
+        self, clarification: Dict[str, Any], reply: str
+    ) -> Dict[str, Any]:
+        """Runs, cancels, or re-asks a skill stage 3 proposed."""
+        name = clarification.get("skill", "")
+        verdict = parse_confirmation(reply)
+
+        if verdict == "no":
+            result = {
+                "success": True,
+                "executed": False,
+                "cancelled": True,
+                "proposed_skill": name,
+                "message": f"Alright — I haven't run {name.replace('_', ' ')}.",
+            }
+        elif verdict == "yes":
+            skill = self.router.registry.get(name)
+            # Re-checked at resume, not only at proposal. The pending state is
+            # plain data and a resume is a second entry point; the registry is
+            # the authority both times.
+            if skill is None or not skill.llm_reachable:
+                result = AgentResult.failed(
+                    f"I can't run '{name}' that way.", error="SKILL_NOT_RUNNABLE"
+                ).as_dict()
+            else:
+                result = skill.handler(
+                    _command=clarification.get("original_command", ""),
+                    **clarification.get("slots", {}),
+                )
+                if isinstance(result, dict):
+                    result.setdefault("routed_by", "llm_confirmed")
+                    result.setdefault("skill", skill.name)
+        else:
+            self.pending_clarification = clarification  # re-arm, never infer
+            result = {
+                "success": False,
+                "pending_clarification": True,
+                "awaiting_llm_confirmation": True,
+                "message": (
+                    f"I didn't catch that. Reply 'yes' to run "
+                    f"{name.replace('_', ' ')}, or 'no' to drop it."
+                ),
+            }
+
+        return {
+            "user_command": reply,
+            "clarification_resumed": True,
+            "intent_classification": {
+                "predicted_intent": "llm_proposal", "confidence": 1.0,
+                "llm_fallback": True, "clo": "CLO04",
+            },
+            "rl_routing": {"strategy": "llm_confirmation", "clo": "CLO05"},
+            "execution_result": result,
+        }
 
     def _answer_from_model(self, decision: Any) -> Dict[str, Any]:
         """Presents a stage-3 text answer, at exactly its real strength.
@@ -590,6 +685,20 @@ class MasterPlanner(EmailMixin, ContactMixin, Tier2Mixin):
             if decision.stage == "llm_answer" and decision.answer:
                 return self._answer_from_model(decision)
             return self._answer_unrouted(command, intent, decision)
+
+        # A guess may answer, but it may not act. Stage 3 selected this skill
+        # from a language model's reading of the command, and a model that picks
+        # wrongly picks *plausibly* wrongly: asked to "shut down chrome for me
+        # right now", a 3B selected `open_app_or_website` and MONDAY launched
+        # Chrome — the opposite of the request, done without asking. The Tier-2
+        # gate was not violated (nothing irreversible was reached) and that was
+        # not enough, because "reversible" and "wanted" are different
+        # properties.
+        #
+        # So a stage-3 selection of a skill that does anything but read is
+        # proposed rather than performed. Patterns are exact and are unaffected.
+        if decision.stage == "llm" and not decision.skill.read_only:
+            return self._propose_llm_skill(command, decision)
 
         # `_command` carries the original text alongside the captured slots.
         # Several handlers need it to delegate to logic that parses the whole

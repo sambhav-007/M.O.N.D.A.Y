@@ -57,6 +57,7 @@ def register_live_skills(registry: SkillRegistry, planner: Any) -> None:
 
     registry.register(Skill(
         name="geolocation",
+        read_only=True,
         description="Approximate location from the public IP",
         patterns=[
             "where am i",
@@ -78,6 +79,7 @@ def register_live_skills(registry: SkillRegistry, planner: Any) -> None:
 
     registry.register(Skill(
         name="network_info",
+        read_only=True,
         description="Local IP address and network adapters",
         patterns=[
             "my ip",
@@ -100,6 +102,7 @@ def register_live_skills(registry: SkillRegistry, planner: Any) -> None:
 
     registry.register(Skill(
         name="weather",
+        read_only=True,
         description="Current weather, here or in a named place",
         patterns=[
             "[(what is|whats|what's)] [the] weather",
@@ -123,6 +126,7 @@ def register_live_skills(registry: SkillRegistry, planner: Any) -> None:
 
     registry.register(Skill(
         name="crypto_price",
+        read_only=True,
         description="Live cryptocurrency prices",
         patterns=[
             "[(what is|whats|what's)] [the] {coin:coin} (price|rate|value)",
@@ -143,6 +147,7 @@ def register_live_skills(registry: SkillRegistry, planner: Any) -> None:
 
     registry.register(Skill(
         name="iss_location",
+        read_only=True,
         description="Where the ISS is right now",
         patterns=[
             "iss location",
@@ -180,6 +185,7 @@ def register_live_skills(registry: SkillRegistry, planner: Any) -> None:
 
     registry.register(Skill(
         name="tell_joke",
+        read_only=True,
         description="Fetch a joke from a public API",
         patterns=[
             "joke",
@@ -214,6 +220,7 @@ def register_live_skills(registry: SkillRegistry, planner: Any) -> None:
 
     registry.register(Skill(
         name="calculate",
+        read_only=True,
         description="Evaluate an arithmetic expression",
         patterns=[
             # Every one of these keeps a mandatory verb, for the reason
@@ -283,6 +290,7 @@ def register_live_skills(registry: SkillRegistry, planner: Any) -> None:
 
     registry.register(Skill(
         name="answer_question",
+        read_only=True,
         description="Answer a general-knowledge question from Wikipedia or the web",
         patterns=[
             "(who is|who was|who are|who were) {topic}",
