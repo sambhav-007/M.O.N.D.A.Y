@@ -230,6 +230,11 @@ class MasterPlanner(EmailMixin, ContactMixin, Tier2Mixin):
         # Multi-Turn Conversation State Machine
         self.pending_clarification: Optional[Dict[str, Any]] = None
 
+        # Off unless a surface with no other voice turns it on — see the note
+        # at the end of `process_command`. `cli.py` does; the UI does not,
+        # because the browser speaks for it.
+        self.enable_voice: bool = False
+
         # Recent turns, for stage 3 only. `auto_store_conversation_turn` already
         # persists every exchange, but that store is a TF-IDF corpus searched by
         # similarity — useful for "what did I say about the demo", useless for
@@ -474,9 +479,21 @@ class MasterPlanner(EmailMixin, ContactMixin, Tier2Mixin):
             "execution_result": tool_result,
         }
 
-        # Trigger voice output in background thread so UI thread does not freeze.
-        # Speaks a short form, not the whole reply — see `spoken_form`.
-        if getattr(self, "enable_voice", True) and isinstance(tool_result, dict) and tool_result.get("message"):
+        # ── Who speaks, decided once ─────────────────────────────────────────
+        # `enable_voice` defaults to **False**, and that default is the whole
+        # point. The desktop UI speaks in the browser — it has the reply, and it
+        # has barge-in, echo suppression and a wake word that were verified on
+        # the real machine (handoff.md, 2026-08-14). If the backend also spoke,
+        # every reply would be said twice, which is the exact defect that took
+        # three attempts to kill and was only "fixed" the last time by accident:
+        # gTTS and pyttsx3 were both absent, so the backend had no voice to
+        # double with.
+        #
+        # Phase 7 gives the backend a real voice, so the accident is over and
+        # the rule has to be explicit. `cli.py` sets `enable_voice = True`
+        # because a terminal has no browser to speak for it; the API and the app
+        # leave it off and let the UI talk.
+        if getattr(self, "enable_voice", False) and isinstance(tool_result, dict) and tool_result.get("message"):
             speech = spoken_form(tool_result)
             if speech:
                 import threading

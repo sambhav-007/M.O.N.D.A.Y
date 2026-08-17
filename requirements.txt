@@ -77,3 +77,24 @@ pytest>=8.0.0         # Test runner for tests/ (pytest.ini lives at the root)
 pytest-recording>=0.13 # Replays tests/cassettes/ so the suite runs offline; also
                        # provides the --block-network that keeps it that way
 PyYAML>=6.0           # Reads cassettes back in tests/test_cassette_hygiene.py
+
+# ── Voice, optional (ROADMAP Phase 7) ────────────────────────────────────────
+# Both degrade honestly when absent: `voice/tts.py` reports TTS_UNAVAILABLE and
+# `voice/stt.py` reports VOSK_UNAVAILABLE, naming what to install. Neither is
+# needed for the demo, which the browser speaks for.
+#
+# NOTE: pyttsx3 pulls in pywin32, and that has a side effect worth knowing —
+# `agents/comms_agent.scan_outlook_com_contacts` becomes importable, so a code
+# path that was inert on a machine without pywin32 starts running. It now
+# attaches to a *running* Outlook rather than launching one, which is what made
+# a single contact lookup take 181 seconds when this was first installed.
+pyttsx3>=2.99         # Windows SAPI5 voices — the dependable floor, not the good one
+vosk>=0.3.45          # Offline STT. Needs a model too, ~40 MB, NOT committed:
+                      #   https://alphacephei.com/vosk/models
+                      #   vosk-model-small-en-us-0.15 → models/vosk-model-small-en-us
+                      # or point MONDAY_VOSK_MODEL somewhere else.
+#
+# Piper is the better-sounding option and is deliberately NOT listed: it is
+# GPL-3.0, which is a licence decision rather than a dependency choice. To use
+# it: `pip install piper-tts`, download a voice, set MONDAY_PIPER_VOICE to the
+# .onnx. `voice/tts.py` picks it up automatically and falls back to pyttsx3.

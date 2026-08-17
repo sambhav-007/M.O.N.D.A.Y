@@ -68,3 +68,6 @@ Thumbs.db
 # Private Local Documentation Suite
 docs/
 
+
+# Vosk speech model (~40 MB, downloaded separately — see ROADMAP Phase 7)
+models/vosk-model-*/

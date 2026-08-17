@@ -29,11 +29,30 @@ from pathlib import Path
 
 
 def scan_outlook_com_contacts(q_clean: str) -> List[Dict[str, str]]:
-    """Scans Outlook MAPI Contacts store via win32com.client COM interface."""
+    """Scans Outlook's contacts — but only if Outlook is **already running**.
+
+    This used `win32com.client.Dispatch`, and `Dispatch` *starts the
+    application* when it is not running. So looking up a contact could launch
+    Outlook on the user's desktop, and then walk every item in their Contacts
+    folder over COM: measured at **181 seconds** for one test once `pywin32`
+    was present.
+
+    It went unnoticed because `pywin32` was not installed on this machine, so
+    the whole function was an `ImportError` — until `pyttsx3` was added for
+    backend speech and pulled `pywin32` in as a dependency. A dormant path woke
+    up because something unrelated was installed, which is worth remembering:
+    "this code never runs here" is a statement about the environment, not about
+    the code.
+
+    `GetActiveObject` attaches to a running instance and raises otherwise, which
+    is the behaviour that was always intended. Starting a mail client to answer
+    "what is bob's email" is not a reasonable thing for an assistant to do
+    unasked.
+    """
     results = []
     try:
         import win32com.client
-        outlook = win32com.client.Dispatch("Outlook.Application")
+        outlook = win32com.client.GetActiveObject("Outlook.Application")
         namespace = outlook.GetNamespace("MAPI")
         contacts_folder = namespace.GetDefaultFolder(10)  # olFolderContacts = 10
         items = contacts_folder.Items

@@ -759,6 +759,60 @@ declines.
    more honest than renaming the fixture data, because it says what they are
    actually testing.
 
+### 2026-08-17 — voice, offline both ways (ROADMAP Phase 7)
+
+Two seams: `voice/tts.py` and `voice/stt.py`. Both report **which engine** did
+the work, because "MONDAY has a voice" says nothing useful when there are three
+possible sources and two are usually absent.
+
+**Verified end to end, offline:**
+
+```
+said : 'what is the battery level'
+heard: 'what is the battery level'      vosk, offline=True, 2.3s
+```
+
+- **TTS**: Piper (if `MONDAY_PIPER_VOICE` is set) → `pyttsx3` → `TTS_UNAVAILABLE`
+  naming what to install. Piper is **not** in `requirements.txt`: GPL-3.0 is a
+  licence decision, not a dependency choice. Set the env var and it is used.
+- **STT**: Vosk against the raw PCM already in memory — no WAV round-trip, so no
+  decoder and no FFmpeg (the wall XTTS died on). Falls back to Google Web Speech
+  and records `offline: False` when it does. Model is ~40 MB, **gitignored**,
+  from https://alphacephei.com/vosk/models into `models/vosk-model-small-en-us`.
+- **`speak` waits now** and returns `FileWritten` plus the engine name. It used
+  to start a thread and return `TaskQueued` — "a thread exists" — which is true
+  and nearly useless.
+
+**The double-speak rule is finally explicit.** `MasterPlanner.enable_voice`
+defaults to **False**; `cli.py` sets it True. The desktop UI speaks in the
+browser and has barge-in, echo suppression and a wake word that were verified on
+the real machine — if the backend also spoke, every reply would be said twice.
+That defect was "fixed" last time by the accident of no engine being installed.
+Phase 7 ends the accident, so the rule had to be written down and tested.
+
+**Three things this broke, and all three are the same lesson:**
+
+1. **The suite went 68 s → 482 s and became audible.** `speak` waiting, plus
+   `pyttsx3` newly installed, meant real SAPI5 synthesis and `pygame` playback
+   on every speaking test. `no_audio_output` fakes synthesis into `tmp_path`
+   with real bytes, so `FileWritten` is still exercised rather than bypassed.
+   Tests *about* `voice/tts.py` opt out with `@pytest.mark.real_audio`.
+2. **`pyttsx3` pulls `pywin32`, which woke a dormant path.**
+   `scan_outlook_com_contacts` became importable, and it used
+   `win32com.client.Dispatch` — which **starts Outlook** when it is not running,
+   then enumerates the whole Contacts folder. One test: **181 seconds**. Now
+   `GetActiveObject`, which attaches to a running instance and raises otherwise.
+   Starting a mail client to answer "what is bob's email" is not something an
+   assistant should do unasked. **This is very likely part of what the user saw
+   as "mail tabs opening".**
+3. **"This code never runs here" is a claim about the environment, not the
+   code.** Both of the above were inert for weeks purely because a package was
+   missing.
+
+**A correction to ROADMAP.md:** it said `voice/tts_bridge.py` "already exists as
+the seam". It does not — that is a standalone CLI script for the abandoned XTTS
+venv, and is the record of that attempt. The seam had to be written.
+
 **Still there, still inert:** `TriModelCognitiveEngine` is a second LLM path,
 reached after a failed dispatch. Without `GEMINI_API_KEY` it is falsy and
 changes nothing, so it was left alone — but two LLM paths is one too many, and

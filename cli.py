@@ -88,6 +88,12 @@ def run_interactive_shell() -> None:
     with console.status("[bold gold1]Initializing M.O.N.D.A.Y. Master Planner & Workers...[/]"):
         planner = MasterPlanner()
 
+    # A terminal has no browser to speak for it, so the backend voice is turned
+    # on here and nowhere else. `MasterPlanner` defaults it off precisely so the
+    # desktop UI — which speaks in the browser, with barge-in — is not doubled.
+    # See the note at the end of `MasterPlanner.process_command`.
+    planner.enable_voice = True
+
     while True:
         try:
             user_input = Prompt.ask("\n[bold orange1]monday[/] [bold cyan]>[/]").strip()

@@ -255,7 +255,48 @@ work.
 
 **Done when**: "message papa saying I'll be late" → "and tell mum too" works.
 
-### Phase 7 — Voice, offline and not robotic (≈1 day)
+### Phase 7 — Voice, offline and not robotic ✅ **DONE 2026-08-17**
+
+Two seams, `voice/tts.py` and `voice/stt.py`, each obliged to report **which
+engine** did the work. Verified end to end: MONDAY synthesises a sentence and
+transcribes it back, exactly, in 2.3 s, with nothing leaving the machine.
+
+```
+said : 'what is the battery level'
+heard: 'what is the battery level'    (vosk, offline=True)
+```
+
+- **TTS**: Piper if `MONDAY_PIPER_VOICE` points at a voice → `pyttsx3` (SAPI5)
+  → `TTS_UNAVAILABLE`, which names what to install. Piper is deliberately not in
+  `requirements.txt`: GPL-3.0 is a licence decision, not a dependency choice.
+- **STT**: Vosk on the raw PCM already in memory — no WAV round-trip, so no
+  decoder and no FFmpeg — falling back to the Google recogniser *and saying so*
+  in `data["offline"]`.
+- **`speak` waits now.** It used to start a thread and return `TaskQueued` —
+  "a thread exists", true and nearly useless. There is a file to witness, so it
+  witnesses one: `FileWritten`, plus the engine's name.
+
+**The correction to this document:** it claimed "`voice/tts_bridge.py` already
+exists as the seam". It does not — that file is a standalone CLI script for the
+abandoned XTTS venv, and is the record of that attempt rather than a hook the
+app can call. The seam had to be written.
+
+**Two things this broke, both instructive:**
+
+1. **The suite went from 68 s to 482 s and became audible.** `speak` waiting
+   plus `pyttsx3` now installed meant real SAPI5 synthesis and `pygame`
+   playback on every speaking test. `no_audio_output` in `conftest.py` fakes
+   synthesis into `tmp_path` — with real bytes, so `FileWritten` evidence is
+   still exercised rather than bypassed.
+2. **Installing `pyttsx3` woke a dormant code path.** It pulls `pywin32`, which
+   made `scan_outlook_com_contacts` importable — and it used
+   `win32com.client.Dispatch`, which **starts Outlook** when it is not running,
+   then walks every item in the Contacts folder. One test took **181 seconds**.
+   Now `GetActiveObject`, which attaches to a running instance and raises
+   otherwise. "This code never runs here" was a statement about the
+   environment, not about the code.
+
+### Phase 7 — as planned
 
 The honest resolution of the parked XTTS work. Take it in three steps and stop
 as soon as the quality is good enough — the first step needs no ML binaries at

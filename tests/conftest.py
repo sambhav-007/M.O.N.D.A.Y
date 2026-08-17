@@ -221,6 +221,77 @@ def no_browser_tabs(monkeypatch):
 
 
 @pytest.fixture(autouse=True)
+def no_audio_output(request, monkeypatch, tmp_path):
+    """Stops the suite synthesising and playing audio on the machine.
+
+    Phase 7 gave the backend a real voice, and `VoiceAgent.speak` now **waits**
+    for synthesis so it can witness a file rather than a thread. Both are
+    improvements and together they made the suite do real work through the sound
+    card: SAPI5 synthesis on every speaking test, then `pygame` playback of the
+    result. The run went from **68 seconds to 482**, and some of that was
+    audible.
+
+    That is the browser-tab bug again, one day later and with speakers instead
+    of tabs — which is the argument for this file existing rather than for
+    another one-off patch. A test should not reach outside the process to prove
+    a function assembled the right call.
+
+    Synthesis is faked into `tmp_path` so `FileWritten` evidence stays real:
+    the file exists and has bytes, so the contract is exercised rather than
+    bypassed. Playback returns True without touching a mixer.
+
+    A test that is *about* `voice/tts.py` itself opts out with
+    `@pytest.mark.real_audio`. Without that escape the module's own unit tests
+    would be asserting against this fixture rather than against the code —
+    which is how a fake quietly becomes the thing under test.
+    """
+    from voice import tts
+
+    spoken: list = []
+    if request.node.get_closest_marker("real_audio") is not None:
+        return spoken
+
+    def _fake_synthesize(text: str, out_path: object) -> object:
+        spoken.append(text)
+        target = tmp_path / "spoken.wav"
+        # Real bytes: `AgentResult.ok(evidence=FileWritten(...))` reads the size,
+        # and a zero-byte file would make the honest path look like the failing
+        # one.
+        target.write_bytes(b"RIFF____WAVEfmt " + bytes(64))
+        return tts.Spoken(ok=True, engine="fake", path=str(target))
+
+    monkeypatch.setattr(tts, "synthesize", _fake_synthesize)
+    monkeypatch.setattr(tts, "play", lambda path: True)
+    return spoken
+
+
+@pytest.fixture(autouse=True)
+def no_com_automation(monkeypatch):
+    """Keeps the suite out of Outlook.
+
+    `scan_outlook_com_contacts` drives Outlook over COM. It used `Dispatch`,
+    which *launches* the application, and then enumerated every item in the
+    Contacts folder — 181 seconds for a single test, and a mail client opening
+    on the user's desktop.
+
+    The product bug is fixed separately (`GetActiveObject` attaches to a running
+    instance instead of starting one). This is the test-side belt: even an
+    already-running Outlook should not be walked by a test suite, because the
+    result would then depend on whose machine it ran on.
+    """
+    try:
+        import win32com.client  # type: ignore
+    except ImportError:
+        return  # nothing to intercept; the path is inert here
+
+    def _refuse(*_a: object, **_k: object) -> object:
+        raise OSError("COM automation is disabled during tests")
+
+    monkeypatch.setattr(win32com.client, "GetActiveObject", _refuse, raising=False)
+    monkeypatch.setattr(win32com.client, "Dispatch", _refuse, raising=False)
+
+
+@pytest.fixture(autouse=True)
 def _stage_three_is_off_unless_asked_for(request, monkeypatch):
     """Switches the language model out of the router for the whole suite.
 

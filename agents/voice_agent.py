@@ -99,50 +99,54 @@ class VoiceAgent:
                 error="VOICE_DISABLED",
             ).as_dict()
 
-        def _generate_and_play():
-            output_path = self.root_dir / "data" / "staging" / "temp_speech.wav"
-            output_path.parent.mkdir(parents=True, exist_ok=True)
-
-            # Option A: Coqui XTTS v2 zero-shot voice cloning from 7-second speaker sample
-            if self.xtts_model is not None and self.sample_path.exists():
-                try:
-                    self.xtts_model.tts_to_file(
-                        text=text,
-                        speaker_wav=str(self.sample_path.resolve()),
-                        language="en",
-                        file_path=str(output_path.resolve())
-                    )
-                    if PYGAME_AVAILABLE:
-                        pygame.mixer.music.load(str(output_path.resolve()))
-                        pygame.mixer.music.play()
-                        while pygame.mixer.music.get_busy():
-                            pygame.time.Clock().tick(10)
-                    return
-                except Exception:
-                    pass
-
-            # Option B: High quality MondayVoiceModel reference audio synthesis fallback
-            try:
-                self.voice_model.synthesize_speech(text, output_audio_path=str(output_path.resolve()))
-            except Exception:
-                pass
-
-        # Run synthesis in background thread so M.O.N.D.A.Y. UI does NOT freeze
-        # while talking. Because this returns before the thread finishes — and
-        # both synthesis paths above swallow their exceptions — the only thing
-        # this function can honestly witness is that the work was queued.
+        # Synthesis is now **waited for**, and that is the change worth reading.
         #
-        # It used to return `audio_synthesized: True, trained_voice_used: True`
-        # on the next line. Both were claims about a thread that had not run yet,
-        # and the second was false regardless: neither gTTS nor pyttsx3 uses the
-        # reference sample, and cloning it was abandoned (handoff.md §5).
-        threading.Thread(target=_generate_and_play, daemon=True).start()
-        log_action("voice_speak", text[:60], 1, "queued", self.name)
+        # This used to start a thread and return on the next line with
+        # `audio_synthesized: True, trained_voice_used: True`. Both were claims
+        # about work that had not happened yet, and the second was false
+        # regardless — nothing here has ever used the reference sample, and
+        # cloning it was abandoned (handoff.md §5). The honest version of a
+        # fire-and-forget call was `TaskQueued`: "a thread exists", which is
+        # true and nearly useless.
+        #
+        # `voice/tts.py` writes a file, so there is something real to witness.
+        # Waiting for it costs a fraction of a second and buys `FileWritten`
+        # evidence plus the name of the engine that actually spoke — which
+        # matters, because there are three possible engines here and two of them
+        # are usually absent. Playback is what runs in the background.
+        from voice import tts
+
+        output_path = self.root_dir / "data" / "staging" / "temp_speech.wav"
+        spoken = tts.synthesize(text, output_path)
+
+        if not spoken.ok:
+            log_action("voice_speak", text[:60], 1, "failed", self.name,
+                       {"error": spoken.error})
+            return AgentResult.failed(
+                f"I can't speak that: {spoken.detail or spoken.error}",
+                error=spoken.error,
+                data={"text": text},
+            ).as_dict()
+
+        played = tts.play(spoken.path)
+        log_action("voice_speak", text[:60], 1, "success", self.name,
+                   {"engine": spoken.engine, "played": played})
 
         return AgentResult.ok(
             f'[Voice] M.O.N.D.A.Y. Speaking: "{text}"',
-            evidence=TaskQueued(worker="voice synthesis thread", detail=f"{len(text)} chars"),
-            data={"text": text, "speech_queued": True},
+            evidence=FileWritten(
+                path=spoken.path,
+                bytes_written=Path(spoken.path).stat().st_size,
+            ),
+            data={
+                "text": text,
+                "engine": spoken.engine,
+                # Whether audio reached the speakers is a separate claim from
+                # whether it was synthesised, and `play` only reports that
+                # playback *started*. Both are stated rather than merged.
+                "playback_started": played,
+                "audio_path": spoken.path,
+            },
         ).as_dict()
 
     def listen(self, timeout_seconds: int = 5) -> Dict[str, Any]:
@@ -171,6 +175,34 @@ class VoiceAgent:
                 wf.setframerate(fs)
                 wf.writeframes(recording.tobytes())
 
+            # ── Offline first ────────────────────────────────────────────────
+            # Vosk takes the raw PCM that is already in memory. Going to Google
+            # was the only path until now, which made "voice works offline" an
+            # overstatement in the place it mattered most: with no network
+            # MONDAY could speak but could not hear.
+            from voice import stt
+
+            heard = stt.transcribe_pcm(recording.tobytes(), fs)
+            if heard.ok:
+                return AgentResult.ok(
+                    f'[Mic] Recognized speech: "{heard.transcript}"',
+                    evidence=FileWritten(
+                        path=str(wav_path), bytes_written=wav_path.stat().st_size
+                    ),
+                    data={"transcript": heard.transcript, "listening": False,
+                          "engine": heard.engine, "offline": True},
+                ).as_dict()
+            if heard.error == "NO_SPEECH":
+                # The recogniser worked and there was nothing to hear. Reporting
+                # that as a recognition failure sends the user to debug a
+                # microphone that is fine.
+                return AgentResult.failed(
+                    "[Mic] I didn't hear anything.",
+                    error="NO_SPEECH",
+                    data={"engine": heard.engine, "offline": True},
+                ).as_dict()
+
+            # ── Otherwise the online recogniser, and say that it was used ────
             recognizer = sr.Recognizer()
             with sr.AudioFile(str(wav_path.resolve())) as source:
                 audio = recognizer.record(source)
@@ -180,7 +212,9 @@ class VoiceAgent:
                     evidence=FileWritten(
                         path=str(wav_path), bytes_written=wav_path.stat().st_size
                     ),
-                    data={"transcript": transcript, "listening": False},
+                    data={"transcript": transcript, "listening": False,
+                          "engine": "google_web_speech", "offline": False,
+                          "offline_unavailable": heard.detail},
                 ).as_dict()
         except Exception as err:
             return AgentResult.failed(
