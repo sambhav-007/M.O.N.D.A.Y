@@ -71,3 +71,6 @@ docs/
 
 # Vosk speech model (~40 MB, downloaded separately — see ROADMAP Phase 7)
 models/vosk-model-*/
+
+# Claude Code workspace config (tooling, not project source)
+.claude/
