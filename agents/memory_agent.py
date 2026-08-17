@@ -75,7 +75,115 @@ class MemoryAgent:
                     last_accessed TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 )
             """)
+            # ── Contacts are their own table, and that is the whole point ────
+            # A contact used to be a `memories` row like "papa's number" =
+            # "+91…", found by `recall`, which is a TF-IDF *similarity* search
+            # over every row in the store. Similarity does not distinguish a
+            # contact record from a saved conversation transcript that happens
+            # to mention the same person, and once it did not: a WhatsApp
+            # message was addressed to a phone number lifted from an unrelated
+            # turn (handoff.md §9.2).
+            #
+            # Four validation guards were added afterwards and they work, but
+            # they are a filter bolted onto the wrong data model. A lookup that
+            # reads *this* table cannot return a transcript, because transcripts
+            # are not in it. That is a structural answer rather than a careful
+            # one, and structural answers do not have to be remembered by the
+            # next person to touch the code.
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS contacts (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    name TEXT NOT NULL UNIQUE COLLATE NOCASE,
+                    phone TEXT,
+                    email TEXT,
+                    source TEXT DEFAULT 'user',
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            """)
             conn.commit()
+
+    # ── Contacts ─────────────────────────────────────────────────────────────
+    def save_contact(
+        self, name: str, phone: str = "", email: str = "", source: str = "user"
+    ) -> Dict[str, Any]:
+        """Stores a contact by name. Blank fields leave the stored value alone.
+
+        Upserts on name, case-insensitively, so teaching a number twice updates
+        rather than duplicating — and so a later email does not erase a phone
+        number taught earlier.
+        """
+        name_clean = (name or "").strip()
+        if not name_clean:
+            return AgentResult.failed(
+                "A contact needs a name.", error="NO_CONTACT_NAME"
+            ).as_dict()
+        if not (phone or "").strip() and not (email or "").strip():
+            return AgentResult.failed(
+                f"Nothing to save for {name_clean} — give me a number or an address.",
+                error="NO_CONTACT_DETAILS",
+            ).as_dict()
+
+        with sqlite3.connect(MEMORIES_DB_PATH) as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                "SELECT id, phone, email FROM contacts WHERE name = ? COLLATE NOCASE",
+                (name_clean,),
+            )
+            row = cursor.fetchone()
+            if row:
+                cursor.execute(
+                    "UPDATE contacts SET phone = ?, email = ?, source = ?, "
+                    "updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+                    ((phone or "").strip() or row[1],
+                     (email or "").strip() or row[2],
+                     source, row[0]),
+                )
+                contact_id = row[0]
+            else:
+                cursor.execute(
+                    "INSERT INTO contacts (name, phone, email, source) VALUES (?, ?, ?, ?)",
+                    (name_clean, (phone or "").strip() or None,
+                     (email or "").strip() or None, source),
+                )
+                contact_id = cursor.lastrowid
+            conn.commit()
+
+        log_action("save_contact", name_clean, 1, "success", self.name, {"id": contact_id})
+        return AgentResult.ok(
+            f"✓ Saved {name_clean}.",
+            evidence=RecordStored(store="memories.db:contacts", key=name_clean),
+            data={"id": contact_id, "name": name_clean,
+                  "phone": (phone or "").strip(), "email": (email or "").strip()},
+        ).as_dict()
+
+    def get_contact(self, name: str) -> Optional[Dict[str, Any]]:
+        """Exact, case-insensitive lookup. None when there is no such contact.
+
+        **Exact on purpose.** The failure this table exists to prevent came from
+        a *similar* match, so there is no fuzzy fallback here and there should
+        never be one. Not knowing a number is a recoverable state — MONDAY asks
+        for it and saves it. Confidently using the wrong one is not.
+        """
+        key = (name or "").strip()
+        if not key:
+            return None
+        with sqlite3.connect(MEMORIES_DB_PATH) as conn:
+            conn.row_factory = sqlite3.Row
+            row = conn.execute(
+                "SELECT name, phone, email, source FROM contacts "
+                "WHERE name = ? COLLATE NOCASE",
+                (key,),
+            ).fetchone()
+        return dict(row) if row else None
+
+    def list_contacts(self) -> List[Dict[str, Any]]:
+        with sqlite3.connect(MEMORIES_DB_PATH) as conn:
+            conn.row_factory = sqlite3.Row
+            rows = conn.execute(
+                "SELECT name, phone, email, source FROM contacts ORDER BY name"
+            ).fetchall()
+        return [dict(r) for r in rows]
 
     def remember(self, key: str, value: str, topic: str = "general") -> Dict[str, Any]:
         """Stores a persistent key-value memory record in SQLite database."""

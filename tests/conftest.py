@@ -139,6 +139,88 @@ def _scrub_response(response):
 
 
 @pytest.fixture(autouse=True)
+def no_browser_tabs(monkeypatch):
+    """Stops the suite opening browser tabs on the machine running it.
+
+    **Reported by the user, 2026-08-17: "I could only see mail tabs opening."**
+    They were right, and it had been happening on every run.
+
+    `CommunicationAgent.draft_email` calls `webbrowser.open(gmail_url)` for every
+    draft it writes — "also launch browser tab for visual inspection". A dozen
+    tests compose email (`test_email_and_whatsapp_ux.py` alone drafts seven
+    times, and `DEMO.md`'s Act 5 drafts once more), so a full run opened a stack
+    of Gmail compose tabs. `open_whatsapp_chat` and `open_app_or_website` are
+    the same shape.
+
+    This is the `fake_powershell` problem again: that fixture exists because the
+    volume tests drove the real speakers and left the machine muted. A test
+    should not reach outside the process to prove a function assembled the right
+    URL. The recorder is returned so a test that genuinely cares can assert
+    *what* would have been opened, which is more precise than watching tabs
+    appear.
+
+    Not a fix to the product behaviour, which is a separate question: opening a
+    Gmail tab the instant a draft is written — before the user has confirmed
+    anything — is arguably too eager, given the UI already offers an explicit
+    "Open Pre-Filled Gmail Web Composer" button. That is a design decision and
+    belongs in its own change.
+
+    **Three ways out, not one.** `webbrowser.open` was the reported symptom, but
+    on Windows a deep link goes through `os.startfile` and an application goes
+    through `subprocess.Popen` — so intercepting only the browser would have
+    left WhatsApp and `launch_application` still opening real windows. Writing
+    the fixture against the symptom is how this bug survives its own fix.
+    """
+    import os
+    import subprocess
+    import webbrowser
+
+    opened: list = []
+
+    def _record(url: str, *args: object, **kwargs: object) -> bool:
+        opened.append(str(url))
+        return True
+
+    monkeypatch.setattr(webbrowser, "open", _record)
+    monkeypatch.setattr(webbrowser, "open_new", _record, raising=False)
+    monkeypatch.setattr(webbrowser, "open_new_tab", _record, raising=False)
+    # Windows' "open this with whatever handles it" — whatsapp:// links, apps,
+    # documents. Absent on other platforms, hence `raising=False`.
+    monkeypatch.setattr(os, "startfile", _record, raising=False)
+
+    # The desktop notification pops a PowerShell MessageBox via `Popen`, which
+    # would sit on screen waiting to be dismissed. Intercepted *narrowly*:
+    #
+    # `subprocess.run` is implemented on top of `Popen`, so a blanket stub
+    # breaks every legitimate subprocess in the suite — `test_voice_ui.py` runs
+    # the shipped `Voice` object under node, and nine of its tests failed the
+    # moment this patched Popen unconditionally. Match the one command that
+    # opens a window and delegate everything else to the real thing.
+    real_popen = subprocess.Popen
+
+    def _popen(args: object, *a: object, **kw: object) -> object:
+        flat = " ".join(map(str, args)) if isinstance(args, (list, tuple)) else str(args)
+        if "MessageBox" in flat:
+            opened.append(flat)
+
+            class _Stub:
+                pid = -1
+                returncode = 0
+
+                def wait(self, timeout: object = None) -> int:
+                    return 0
+
+                def poll(self) -> int:
+                    return 0
+
+            return _Stub()
+        return real_popen(args, *a, **kw)
+
+    monkeypatch.setattr(subprocess, "Popen", _popen)
+    return opened
+
+
+@pytest.fixture(autouse=True)
 def _stage_three_is_off_unless_asked_for(request, monkeypatch):
     """Switches the language model out of the router for the whole suite.
 

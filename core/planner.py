@@ -13,7 +13,13 @@ from __future__ import annotations
 
 import sys
 import re
-from typing import Any, Dict, Optional
+from collections import deque
+from typing import Any, Deque, Dict, Optional
+
+#: How many prior messages stage 3 sees — six is three exchanges. Enough for
+#: "and tell mum too" and short enough that a 3B model's context is spent on the
+#: tool schema (~12 KB) rather than on last week's small talk.
+MAX_CONTEXT_MESSAGES = 6
 
 # Force Windows console stdout/stderr to UTF-8 with errors='replace'
 if sys.stdout and hasattr(sys.stdout, "reconfigure"):
@@ -223,6 +229,15 @@ class MasterPlanner(EmailMixin, ContactMixin, Tier2Mixin):
 
         # Multi-Turn Conversation State Machine
         self.pending_clarification: Optional[Dict[str, Any]] = None
+
+        # Recent turns, for stage 3 only. `auto_store_conversation_turn` already
+        # persists every exchange, but that store is a TF-IDF corpus searched by
+        # similarity — useful for "what did I say about the demo", useless for
+        # "and tell mum too", which needs the *last* turn rather than a similar
+        # one. This is the short-term half, and it is deliberately in memory:
+        # conversation context should not survive a restart, because a command
+        # resolved against a week-old turn is a bug, not a feature.
+        self.recent_turns: Deque[Dict[str, str]] = deque(maxlen=MAX_CONTEXT_MESSAGES)
 
         # Tier-2 executor registry (PRD §9). A gated action parks its *name* and
         # arguments in pending_clarification, never a callable — the state has to
@@ -442,6 +457,7 @@ class MasterPlanner(EmailMixin, ContactMixin, Tier2Mixin):
         # Auto-store conversation turn to SQLite memory.db
         if isinstance(tool_result, dict) and tool_result.get("message"):
             self.memory_agent.auto_store_conversation_turn(cmd, str(tool_result.get("message", "")))
+            self._remember_turn(cmd, str(tool_result.get("message", "")))
 
         output = {
             "user_command": cmd,
@@ -467,6 +483,20 @@ class MasterPlanner(EmailMixin, ContactMixin, Tier2Mixin):
                 threading.Thread(target=self.voice_agent.speak, args=(speech,), daemon=True).start()
 
         return output
+
+    #: A reply longer than this is truncated before it enters the context. A
+    #: `history` listing or a web-search result can be thousands of characters,
+    #: and spending a 3B model's context on the *text of an answer it already
+    #: gave* crowds out the tool schema, which is the part it needs.
+    MAX_CONTEXT_REPLY_CHARS = 300
+
+    def _remember_turn(self, command: str, reply: str) -> None:
+        """Adds one exchange to the short-term context stage 3 sees."""
+        self.recent_turns.append({"role": "user", "content": command})
+        trimmed = reply.strip()
+        if len(trimmed) > self.MAX_CONTEXT_REPLY_CHARS:
+            trimmed = trimmed[: self.MAX_CONTEXT_REPLY_CHARS].rstrip() + "…"
+        self.recent_turns.append({"role": "assistant", "content": trimmed})
 
     def _announce_cancelled_gate(self, pending: Dict[str, Any]) -> str:
         """Records and describes an approval gate abandoned for a new command.
@@ -719,7 +749,8 @@ class MasterPlanner(EmailMixin, ContactMixin, Tier2Mixin):
         # ── 3. The router ────────────────────────────────────────────────────
         emit = _event_sink(emit)
         decision = self.router.route(
-            command, intent=intent, confidence=confidence, emit=emit
+            command, intent=intent, confidence=confidence, emit=emit,
+            history=list(self.recent_turns),
         )
         self.last_routing_decision = decision
         emit("routing", decision.as_dict())

@@ -59,11 +59,18 @@ class StubLlm:
     def __init__(self, choice: Optional[LlmChoice] = None) -> None:
         self.choice = choice
         self.calls: List[str] = []
+        self.history: List[Dict[str, str]] = []
         self.model = "stub"
         self.unavailable_reason = "stub"
 
-    def choose(self, command: str, on_token: Optional[Any] = None) -> Optional[LlmChoice]:
+    def choose(
+        self,
+        command: str,
+        on_token: Optional[Any] = None,
+        history: Optional[List[Dict[str, str]]] = None,
+    ) -> Optional[LlmChoice]:
         self.calls.append(command)
+        self.history = list(history or [])
         if on_token is not None and self.choice is not None and self.choice.text:
             on_token(self.choice.text)
         return self.choice

@@ -223,6 +223,7 @@ class LlmStage:
         self,
         command: str,
         on_token: Optional[Any] = None,
+        history: Optional[List[Dict[str, str]]] = None,
     ) -> Optional[LlmChoice]:
         """Asks the model to pick a skill, or to answer. None if it cannot.
 
@@ -253,12 +254,16 @@ class LlmStage:
             import ollama
 
             client = ollama.Client(host=self.host, timeout=timeout)
+            # Prior turns first, then the command. This is what makes "and tell
+            # mum too" mean anything: on its own it names no action and no
+            # recipient, and every stage before this one is stateless by design.
+            messages: List[Dict[str, str]] = [{"role": "system", "content": SYSTEM_PROMPT}]
+            messages.extend(history or [])
+            messages.append({"role": "user", "content": command})
+
             call = dict(
                 model=self.model,
-                messages=[
-                    {"role": "system", "content": SYSTEM_PROMPT},
-                    {"role": "user", "content": command},
-                ],
+                messages=messages,
                 tools=self._tools,
                 # Deterministic-ish: this is a routing decision, not prose.
                 options={"temperature": 0.0},

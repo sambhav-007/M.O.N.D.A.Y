@@ -69,6 +69,9 @@ class ContactMixin:
                 ),
             })
 
+        # Same pair as `_handle_save_contact_number`: the typed table is the
+        # store of record, the memory row is compatibility.
+        self.memory_agent.save_contact(name, phone=f"+{phone}", source="user")
         self.memory_agent.remember(f"{name}'s number", f"+{phone}", topic="contacts")
 
         if not pending_text:
@@ -161,8 +164,12 @@ class ContactMixin:
                 ),
             }
 
-        key = f"{name}'s number"
-        self.memory_agent.remember(key, f"+{phone}", topic="contacts")
+        # The typed table is the store of record. The `memories` row is written
+        # too, and only for backwards compatibility: a user's existing contacts
+        # live there, `search_local_contacts` still reads it, and dropping it
+        # would lose numbers taught before this table existed.
+        self.memory_agent.save_contact(name, phone=f"+{phone}", source="user")
+        self.memory_agent.remember(f"{name}'s number", f"+{phone}", topic="contacts")
         return {
             "success": True,
             "intent": "save_contact_number",
@@ -177,11 +184,21 @@ class ContactMixin:
     # ── WhatsApp helpers ─────────────────────────────────────────────────────
     def _resolve_phone_number(self, target: str) -> Dict[str, Any]:
         """
-        Turns "+919876543210" or a remembered name into a WhatsApp number.
+        Turns "+919876543210" or a saved name into a WhatsApp number.
 
-        Contact lookup (`search_local_contacts`) carries emails only — there is no
-        phone field — so names are resolved from the memory store instead:
-        "remember bhumi's number is +91..." then "message bhumi saying hi".
+        Three sources, in descending order of trust:
+
+        1. **The number itself**, if the user typed one.
+        2. **The `contacts` table** — an exact, case-insensitive lookup of a
+           typed record. This cannot return a conversation transcript, because
+           transcripts are not in that table.
+        3. **The legacy `memories` search**, behind four guards, for numbers
+           taught before the table existed. It is a TF-IDF *similarity* search,
+           which is precisely why it needs the guards and why it is last.
+
+        Source 3 is what once addressed a message to a number lifted from an
+        unrelated saved turn. It is kept because deleting it would lose a user's
+        existing contacts, not because it is a good way to find a phone number.
         """
         direct = self.comms_agent.normalise_phone(target)
         if direct:
@@ -191,6 +208,17 @@ class ContactMixin:
         if not name:
             return {"phone": None, "error": "NO_TARGET", "message": "Who should I message?"}
 
+        # ── 2. The typed table ───────────────────────────────────────────────
+        try:
+            contact = self.memory_agent.get_contact(target)
+        except Exception:
+            contact = None
+        if contact and contact.get("phone"):
+            typed = self.comms_agent.normalise_phone(str(contact["phone"]))
+            if typed:
+                return {"phone": typed, "source": "saved contact"}
+
+        # ── 3. The legacy similarity search, behind its guards ───────────────
         try:
             recalled = self.memory_agent.recall(target, limit=8)
         except Exception:

@@ -672,6 +672,93 @@ model (llama3.2:3b)… first run loads it, which is slow", is replaced by the
 result, and the proposal flow (`shut down chrome` → decline) works end to end
 with no console errors.
 
+### 2026-08-17 — the suite was opening browser tabs on the user's machine
+
+**Reported by the user: "when you test, I could only see mail tabs opening."**
+They were right, and it had been happening on every run for as long as the email
+tests existed.
+
+`CommunicationAgent.draft_email` calls `webbrowser.open(gmail_url)` for every
+draft it writes — *"also launch browser tab for visual inspection"*.
+`test_email_and_whatsapp_ux.py` drafts seven times, `DEMO.md`'s Act 5 once more,
+and several other tests besides, so a full run stacked up Gmail compose tabs on
+their desktop.
+
+Why *mail* specifically, and nothing else? Because email was the one thing
+escaping the process. Everything else was already intercepted — that is the
+whole reason the leak was invisible to me and obvious to them.
+
+This is the **third** time this class of bug has been found here, so it now has
+its own file (`tests/test_no_side_effects.py`):
+
+1. The volume tests drove the real speakers and left the machine muted →
+   `fake_powershell`.
+2. The suite wrote 2,196 rows into the user's real assistant memory, and got
+   slower every run as a result → `_isolate_memory_db`.
+3. This.
+
+**Three ways out, not one.** The first fix intercepted `webbrowser.open` only —
+which would have left WhatsApp still launching, because a `whatsapp://` deep
+link goes through `os.startfile` on Windows. Writing the fixture against the
+reported symptom is how a bug survives its own fix.
+
+**And the obvious fix was too broad.** Patching `subprocess.Popen`
+unconditionally broke nine `test_voice_ui.py` tests, because `subprocess.run` is
+*implemented on top of* `Popen` and those tests run the shipped `Voice` object
+under node. Only the PowerShell `MessageBox` — the one command that puts a
+window on screen — is intercepted; everything else is delegated to the real
+`Popen`.
+
+**Left alone deliberately:** whether `draft_email` should open a tab at all.
+Doing it the instant a draft is written, before the user has confirmed anything,
+is arguably too eager given the UI already offers an explicit "Open Pre-Filled
+Gmail Web Composer" button. That is a product decision and wants its own change.
+
+### 2026-08-17 — conversation memory (ROADMAP Phase 6)
+
+**Contacts are a typed table.** `memories.db` gained a `contacts` table (name
+unique, case-insensitive, plus phone, email, source). `_resolve_phone_number`
+now reads: the number the user typed → the contacts table → the legacy
+similarity search behind its four guards. The guards stay, because contacts
+taught before this change live in `memories` and dropping that path would lose
+them; they are simply no longer the only defence. A lookup that reads the
+contacts table **cannot** return a conversation transcript, because transcripts
+are not in that table — structural rather than careful, and structural answers
+do not have to be remembered by the next person.
+
+**Short-term context.** The last six messages go to stage 3 and nowhere else.
+Replies are truncated to 300 characters first: a `history` listing is thousands
+of characters, and spending a 3B model's context on an answer it already gave
+crowds out the 12 KB tool schema it actually needs.
+
+**The result, measured:**
+
+```
+> message papa saying I'll be late   → pattern → message_contact ✓
+> and tell mum too                   → stage 3 → message_contact, slots={'rest': 'I'}
+```
+
+Right skill, wrong argument. The follow-up reaching `message_contact` at all is
+the context doing real work — it names no action and no recipient, and stages 1
+and 2 are stateless by design. Resolving the ellipsis into *arguments* is past
+what a 3B does reliably. Adding a follow-up rule to the system prompt was tried
+and **made it worse** (the model then chose no tool at all), so it was left
+alone. It fails safely: the Phase 4 proposal gate shows `rest=I` and the user
+declines.
+
+**Two isolation bugs I caused and fixed:**
+
+1. `save_contact` bypassed the `no_memory_writes` stub in `test_whatsapp.py`,
+   which only covered `remember`/`recall`. The contacts table is session-scoped,
+   so "papa" taught by one test was still known in the next, and the test
+   asserting an *unknown* contact prompts for a number found one saved.
+2. My own `test_conversation_memory.py` saved a contact named "Bhumi" to
+   demonstrate case-insensitive lookup, which broke two `test_whatsapp.py` tests
+   that assert a negative about that name. Those tests are about the *legacy*
+   guards, so they now stub the contacts table out via `no_saved_contacts` —
+   more honest than renaming the fixture data, because it says what they are
+   actually testing.
+
 **Still there, still inert:** `TriModelCognitiveEngine` is a second LLM path,
 reached after a failed dispatch. Without `GEMINI_API_KEY` it is falsy and
 changes nothing, so it was left alone — but two LLM paths is one too many, and

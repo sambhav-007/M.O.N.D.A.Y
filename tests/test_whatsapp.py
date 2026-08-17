@@ -182,7 +182,26 @@ def test_filler_words_are_never_treated_as_a_recipient(planner, filler):
     assert planner._resolve_phone_number(filler)["phone"] is None
 
 
-def test_conversation_transcripts_cannot_supply_a_recipient(planner, monkeypatch):
+@pytest.fixture
+def no_saved_contacts(planner, monkeypatch):
+    """Takes the typed `contacts` table out of the picture.
+
+    The tests below are about the **legacy** similarity-search path and its four
+    guards, which now run only when the contacts table has no answer. Without
+    this they assert a negative about a store any other test can write to — and
+    that is exactly how they broke: `test_conversation_memory.py` saves a
+    contact called "Bhumi" to demonstrate case-insensitive lookup, the table is
+    session-scoped, and suddenly "bhumi" resolved here.
+
+    Stubbing the newer path is more honest than renaming the fixture data,
+    because it says what these tests are actually about.
+    """
+    monkeypatch.setattr(planner.memory_agent, "get_contact", lambda name: None)
+
+
+def test_conversation_transcripts_cannot_supply_a_recipient(
+    planner, monkeypatch, no_saved_contacts
+):
     """
     recall() is a TF-IDF similarity search and returns loosely related rows,
     including saved conversation turns. Lifting a number out of one is exactly
@@ -198,7 +217,7 @@ def test_conversation_transcripts_cannot_supply_a_recipient(planner, monkeypatch
     assert planner._resolve_phone_number("bhumi")["phone"] is None
 
 
-def test_only_contact_shaped_memories_resolve(planner, monkeypatch):
+def test_only_contact_shaped_memories_resolve(planner, monkeypatch, no_saved_contacts):
     """The key must name the person AND read like a contact record."""
     monkeypatch.setattr(
         planner.memory_agent, "recall",
@@ -244,6 +263,28 @@ def no_memory_writes(planner, monkeypatch):
             {"key": k, "value": v} for k, v in saved.items()
             if query.strip().lower() in k.lower()
         ]},
+    )
+
+    # The typed `contacts` table has to be intercepted too, and forgetting it is
+    # what this comment is here to prevent. Stubbing only `remember`/`recall`
+    # left `save_contact` writing to the real table, which is session-scoped —
+    # so "papa" taught by one test was still known in the next, and the test
+    # that asserts an *unknown* contact prompts for a number found one already
+    # saved. Isolation has to cover every store a command can reach.
+    contacts = {}
+
+    def _save_contact(name, phone="", email="", source="user"):
+        row = contacts.setdefault(name.strip().lower(), {"name": name, "phone": "", "email": ""})
+        if phone:
+            row["phone"] = phone
+        if email:
+            row["email"] = email
+        return {"success": True}
+
+    monkeypatch.setattr(planner.memory_agent, "save_contact", _save_contact)
+    monkeypatch.setattr(
+        planner.memory_agent, "get_contact",
+        lambda name: contacts.get((name or "").strip().lower()),
     )
     return saved
 

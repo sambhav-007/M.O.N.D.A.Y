@@ -101,6 +101,7 @@ class Router:
         intent: str = "",
         confidence: float = 0.0,
         emit: Optional[Any] = None,
+        history: Optional[Any] = None,
     ) -> RoutingDecision:
         """Returns the routing decision without executing anything.
 
@@ -175,6 +176,12 @@ class Router:
                 # large tool schema most commands produce none — the model
                 # selects a tool instead, which is one chunk, not a stream.
                 on_token=(lambda f: emit("token", {"text": f})) if emit else None,
+                # Only stage 3 gets conversation context. Stages 1 and 2 are
+                # stateless on purpose: a pattern that matched yesterday must
+                # match today, and a classifier whose answer depended on the
+                # previous command would make the published routing figure
+                # unreproducible.
+                history=history,
             )
             if choice is not None and choice.skill:
                 skill = self.registry.get(choice.skill)

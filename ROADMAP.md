@@ -196,7 +196,44 @@ complete answer in ~8 s, even though the second is the same work.
 - **Bonus it unlocks**: the UI's existing barge-in can stop *generation*, not
   just speech — which is the Gemini Live interaction, on a local model.
 
-### Phase 6 — Conversation memory (≈1 day)
+### Phase 6 — Conversation memory ✅ **DONE 2026-08-17** (with one honest caveat)
+
+Both halves landed, and the "done when" is **half met** — stated plainly because
+the gap is the interesting part.
+
+**The `contacts` table.** Contacts are a typed table now, queried exactly and
+case-insensitively. `_resolve_phone_number` reads, in descending order of trust:
+the number the user typed → the contacts table → the legacy similarity search
+behind its four guards. The guards stay, because a user's contacts taught before
+this change live in `memories` and deleting that path would lose them. What
+changed is that they are no longer the *only* defence: a lookup that reads the
+contacts table cannot return a conversation transcript, because transcripts are
+not in it.
+
+**Short-term context.** The last six messages go to stage 3 and to nothing else.
+Stages 1 and 2 stay stateless: a pattern that matched yesterday must match today,
+and a classifier whose answer depended on the previous command would make the
+published routing figure unreproducible.
+
+**The caveat, measured against the live model:**
+
+```
+> message papa saying I'll be late     → pattern → message_contact ✓
+> and tell mum too                     → stage 3 → message_contact, slots={'rest': 'I'}
+```
+
+It reaches the **right skill** from a follow-up that names no action — which only
+works because it saw the previous turn, so the context is doing real work. It
+fills the **wrong argument**. A 3B model resolving an elliptical reference into
+structured arguments is evidently past what it does reliably.
+
+Adding a follow-up rule to the system prompt was tried and **made it worse** —
+the model then selected no tool at all. Left as it was.
+
+This fails safely and visibly: the proposal gate from Phase 4 shows `rest=I` and
+the user declines. That is the design working, not a workaround for it.
+
+### Phase 6 — as planned
 
 The gap that makes MONDAY feel like a command line rather than an assistant.
 Two parts, and the first is a bug fix that has been outstanding since the router
