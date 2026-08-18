@@ -468,8 +468,17 @@ names the two that are real.
   regression. Run the live ones deliberately with `py -3.12 -m pytest -m network`
   (expect failures when DuckDuckGo rate-limits this machine — that is the point
   of separating them).
-- **No LLM is configured.** `core/planner.py` has a Gemini code path gated on an
-  API key; without one there is no conversational memory across turns.
+- ~~**No LLM is configured.**~~ — SUPERSEDED 2026-08-16/17. The router has a
+  local third stage (`core/llm.py`, via Ollama), and conversation memory across
+  turns arrived with it. What this bullet described — a hosted Gemini call in
+  `core/planner.py`, gated on an API key — was **removed 2026-08-18**. It ran
+  after a dispatch that failed *or* merely one the classifier was unsure about,
+  and replaced the result with a generated string marked `success: True`: on any
+  machine that had a key, a genuine failure and a stage-3 "shall I?" both became
+  fabricated successes. Stage 3 is now the only language model in the routing
+  path. The two remaining Gemini paths are code synthesis in
+  `agents/coder_agent.py` and document Q&A in `agents/document_agent.py`, both
+  still inactive without a key.
 
 ---
 

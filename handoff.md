@@ -1,6 +1,6 @@
 # M.O.N.D.A.Y — Session Handoff
 
-_Last updated: 2026-08-14. Machine: Windows 11 Home, user `sambh`._
+_Last updated: 2026-08-18. Machine: Windows 11 Home, user `sambh`._
 
 > **Read this first.** `README.md` § *Status & Known Limitations* is the
 > authoritative statement of what works and what does not. This file is a running
@@ -818,6 +818,79 @@ reached after a failed dispatch. Without `GEMINI_API_KEY` it is falsy and
 changes nothing, so it was left alone — but two LLM paths is one too many, and
 unifying them belongs with ROADMAP Phase 6.
 
+### 2026-08-18 — one language model in the routing path
+
+The last entry ended with "two LLM paths is one too many". There is one now.
+
+`MasterPlanner.process_command` had a hosted Gemini call **directly below the
+dispatch**, and it fired when the classifier had fallen back *or* the dispatch
+had failed for any reason short of a refusal:
+
+```python
+if fallback or (not tool_result.get("success") and not tool_result.get("refusal")):
+    llm_response = self.cognitive_engine.generate_cognitive_response(cmd, context_memories)
+    if llm_response:
+        tool_result = {"success": True, "cognitive_llm": True, "message": "🤖 …"}
+```
+
+**Four defects in six lines**, and only the absence of an API key kept every one
+of them theoretical:
+
+1. **Generated text reported as work done.** `success: True`, no evidence, no
+   `generated` flag. `CognitiveResponseDict.__bool__` was fixed for exactly this
+   once; the caller reintroduced it one level up.
+2. **`fallback or …`, not `and`.** A command that matched a *pattern* and did
+   real work had its evidenced result discarded whenever 2.1 happened to be
+   unsure — which is precisely when the pattern, not the classifier, was
+   carrying the routing.
+3. **It swallowed the stage-3 proposal gate.** `_propose_llm_skill` returns
+   `success=False` by design, so "💭 I think you mean… shall I?" was replaced by
+   an unrelated answer while `pending_clarification` stayed armed. The user's
+   next "yes" would have answered a question they were never shown.
+4. **It left the machine.** Stage 3 is local; this was not.
+
+Stage 3 (`core/llm.py`) is now the only language model in the routing path.
+`self.cognitive_engine` is gone from the planner — structurally, not by comment
+— and `TriModelCognitiveEngine` survives as a re-export for the two *generation*
+call sites that still use it: code synthesis in `agents/coder_agent.py` and
+document Q&A in `agents/document_agent.py`.
+
+**A capability moved rather than being deleted with the path.** The removed call
+was handed `get_contextual_memories(cmd)`; stage 3 was not. So `LlmStage.choose`
+now takes `memories` and renders them with `memory_context()` as their **own**
+system message — the containment instructions and the user's data are never one
+editable string — placed before the conversation turns. Rows whose topic is
+`conversation_history` are excluded: `recall` reads one table that holds both
+kinds of row, and offering a transcript as a remembered fact is the same error
+the contacts lookup made before it got its own table.
+
+**Two credential defects found in the same corner**, both live in the paths that
+remain (`tests/test_gemini_credentials.py`, 6 tests):
+
+- `load_gemini_api_key` accepted **`OPENAI_API_KEY`** as its third choice, and
+  every caller sends the result to `generativelanguage.googleapis.com`. A
+  machine with an OpenAI key and no Gemini key handed that key to Google.
+- The key was authenticated as **`?key=…` in the URL**, which is the part of a
+  request that lands in access logs, proxy history and pasted tracebacks. It is
+  an `x-goog-api-key` header now, and the endpoint is defined once
+  (`vision_agent.GEMINI_ENDPOINT`) and imported by `core/cognitive.py`.
+
+**The regression tests were mutation-checked**, because a test that passes
+against the code it was written for proves nothing and this defect was inert
+here. Restoring the override — in the shape a machine *with* a key would run it
+— fails four of the new tests independently; restoring `?key=` and the OpenAI
+fallback fails two more; dropping the `memories=` argument fails one.
+
+**Three stage-3 doubles had drifted** and only the suite caught them:
+`_Streaming` in `test_streaming.py` and `_Recorder` in
+`test_conversation_memory.py` did not accept `memories`, and
+`test_100_ruthless.py` reached the engine through `planner.cognitive_engine`.
+`test_the_stub_still_matches_the_thing_it_stands_in_for` guards *one* stub
+mechanically; the other three are hand-written in their own files and are guarded
+by nothing but a red suite. Worth generalising if a fourth appears.
+
+**773 → 789 passing, 0 failing, offline, ~105 s.** (The 773 baseline was measured before this change, not quoted from the last entry.)
+
 ## 9. WhatsApp (added 2026-08-08)
 
 WhatsApp has **no API a desktop script may send through**. The deep link
@@ -1175,25 +1248,29 @@ the current browser TTS) — just route UI speech through `POST /agent/voice/spe
 
 ### Suggested order for the remaining work
 
-Everything on the previous list is done. What is left, roughly by value:
+**Rewritten 2026-08-18.** The first two items on the previous version of this
+list had both been done for a day — voice by ROADMAP Phase 7 on 08-17, the typed
+`contacts` table by `15c6f6d` on the same day — and this file's own header warns
+that stale items here cost a later session real time. They did. What is actually
+left, roughly by value:
 
-1. **UPGRADE_PLAN Phase 4 — one voice, offline.** The one phase not started. The
-   backend has no TTS at all on this machine (gTTS and pyttsx3 both absent), so
-   `speechSynthesis` in the UI is the only voice — which resolved the
-   double-speak by circumstance rather than by design. If `cli.py` ever needs to
-   talk, route it through the same decision rather than letting both fire. Piper
-   (`pip install piper-tts`) is the plan; verify it against Smart App Control
-   with a throwaway import **before** adding it to `requirements.txt`.
-2. **UPGRADE_PLAN Phase 5 — the typed `contacts` table.** §2.3 of that document,
-   and the most valuable item on it: the four guards in `_resolve_phone_number`
-   are correct and must stay, but they are a filter bolted onto the wrong data
-   model. A contact lookup that reads a `contacts` table cannot return a
-   conversation transcript, because it does not read that table.
-3. **The corpus, per the stopword finding above.** `document_intel` gets nothing
+1. **The corpus, per the stopword finding above.** `document_intel` gets nothing
    from MASSIVE and `chitchat` almost nothing, so those two classes are still
    effectively synthetic-only and are the least well evidenced of the seven.
-4. **`/help` in the WebGL console pane** — the width-budget item above; still
+   This is the largest remaining piece of work and the one with a number
+   attached to it.
+2. **The two Gemini paths that are left.** `agents/coder_agent.py` (code
+   synthesis) and `agents/document_agent.py` (document Q&A) still call
+   `TriModelCognitiveEngine` — hosted, and duplicating a local model that is now
+   wired and tested. Both are inert without a key, which is exactly what made
+   the third one survive as long as it did. Point them at `core/llm.py` or
+   delete them; do not leave them as they are on the grounds that they do not
+   run here.
+3. **`/help` in the WebGL console pane** — the width-budget item above; still
    never actually looked at in the app.
+4. **A mechanical guard for the stage-3 doubles.** `StubLlm` is checked against
+   `LlmStage.choose` by signature; `_Streaming` and `_Recorder` are not, and both
+   broke silently when the signature grew a `memories` argument.
 
 ---
 

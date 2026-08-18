@@ -18,7 +18,7 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-from core.planner import MasterPlanner
+from core.planner import MasterPlanner, TriModelCognitiveEngine
 from core.security import evaluate_action_permission, classify_action_risk
 from core.task_dag_engine import TaskDAGEngine
 from core.tool_registry import ToolRegistry
@@ -638,8 +638,14 @@ class TestRuthlessAdversarialSuite:
         assert res.status_code == 200
 
     def test_cognitive_engine_generate_response(self):
-        """Verifies TriModelCognitiveEngine generative reasoning."""
-        res = self.planner.cognitive_engine.generate_cognitive_response(
+        """Verifies TriModelCognitiveEngine generative reasoning.
+
+        Constructed here rather than reached through the planner: the planner
+        stopped holding one on 2026-08-18, when the hosted call that ran after
+        every failed or low-confidence dispatch was removed. The engine is still
+        used for code synthesis and document Q&A, which is what this covers.
+        """
+        res = TriModelCognitiveEngine().generate_cognitive_response(
             prompt="summarize workflow",
             retrieved_memories=["User prefers Python"],
             boot_context={"user": "Siddhant"}

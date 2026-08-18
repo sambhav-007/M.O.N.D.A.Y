@@ -233,6 +233,16 @@ the model then selected no tool at all. Left as it was.
 This fails safely and visibly: the proposal gate from Phase 4 shows `rest=I` and
 the user declines. That is the design working, not a workaround for it.
 
+**The second half of this phase's clean-up landed 2026-08-18.** Phase 7 recorded
+that `TriModelCognitiveEngine` was "still there, still inert" and that unifying
+the two LLM paths belonged here. It is done: the hosted Gemini call that sat
+below the dispatch in `process_command` — firing after any failed *or* merely
+low-confidence dispatch, and rewriting the result as `success: True` with no
+evidence — is deleted, and stage 3 is the only language model in the routing
+path. The stored memories that call used to receive moved across to
+`LlmStage.choose`, so short-term context (the last six turns) and long-term
+context (`memories.db`) now reach the same model. See `handoff.md`, 2026-08-18.
+
 ### Phase 6 — as planned
 
 The gap that makes MONDAY feel like a command line rather than an assistant.

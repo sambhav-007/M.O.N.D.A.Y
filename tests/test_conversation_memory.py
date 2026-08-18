@@ -180,7 +180,8 @@ def test_the_model_receives_the_prior_turns(planner):
             self.seen: List[Dict[str, str]] = []
 
         def choose(self, command: str, on_token: Any = None,
-                   history: Optional[List[Dict[str, str]]] = None) -> Any:
+                   history: Optional[List[Dict[str, str]]] = None,
+                   memories: Optional[List[Dict[str, Any]]] = None) -> Any:
             self.seen = list(history or [])
             return LlmChoice(skill="battery_status", model=self.model)
 

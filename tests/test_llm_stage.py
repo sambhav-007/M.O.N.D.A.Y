@@ -25,10 +25,13 @@ from core.intent_patterns import slot_spec
 from core.llm import (
     CHOOSE_TIMEOUT,
     FIRST_CALL_TIMEOUT,
+    SYSTEM_PROMPT,
     LlmChoice,
     LlmStage,
     build_tool_schema,
+    memory_context,
 )
+from core import planner as planner_module
 from core.planner import MasterPlanner
 from core.router import Router
 from core.skills import Skill, SkillRegistry
@@ -60,6 +63,7 @@ class StubLlm:
         self.choice = choice
         self.calls: List[str] = []
         self.history: List[Dict[str, str]] = []
+        self.memories: List[Dict[str, Any]] = []
         self.model = "stub"
         self.unavailable_reason = "stub"
 
@@ -68,9 +72,11 @@ class StubLlm:
         command: str,
         on_token: Optional[Any] = None,
         history: Optional[List[Dict[str, str]]] = None,
+        memories: Optional[List[Dict[str, Any]]] = None,
     ) -> Optional[LlmChoice]:
         self.calls.append(command)
         self.history = list(history or [])
+        self.memories = list(memories or [])
         if on_token is not None and self.choice is not None and self.choice.text:
             on_token(self.choice.text)
         return self.choice
@@ -674,3 +680,214 @@ def test_availability_is_probed_once_not_per_command(registry, monkeypatch):
     for _ in range(6):
         assert stage.available() is False
     assert len(probes) == 1, f"probed {len(probes)} times; the result must be cached"
+
+
+# ── One language model in the routing path ───────────────────────────────────
+# There were two. Stage 3 is this one: local, last, evidenced, contained. The
+# other sat in `process_command` directly below the dispatch — a hosted Gemini
+# call that fired when the classifier had fallen back *or* the dispatch had
+# failed for any reason short of a refusal, and replaced whatever came back with
+# `{"success": True, "cognitive_llm": True}` wrapped around a generated string.
+#
+# It was inert on the development machine only because no API key was
+# configured, which is a fact about the machine and not about the code. That is
+# the same lesson the voice work learned when installing `pyttsx3` woke a
+# dormant path that started Outlook to answer a contact lookup. These tests are
+# the ones that would have failed had a key been present.
+def _dispatch_returning(planner, monkeypatch, result):
+    """Replaces the dispatch with a known result.
+
+    The right seam: the deleted code ran *after* `_dispatch_to_agent` returned
+    and rewrote its verdict, so what matters is what survives the trip back.
+    """
+    monkeypatch.setattr(planner, "_dispatch_to_agent", lambda *a, **kw: dict(result))
+
+
+def _unsure_classifier(monkeypatch, intent="unclear", confidence=0.11):
+    """Forces component 2.1 to report low confidence, which set `fallback`."""
+    monkeypatch.setattr(
+        planner_module, "predict_intent", lambda *_a, **_kw: (intent, confidence, True)
+    )
+
+
+def test_the_planner_holds_no_second_language_model(planner):
+    """Structural, not a comment: there is no engine here to call by accident."""
+    assert not hasattr(planner, "cognitive_engine")
+
+
+def test_a_failed_dispatch_stays_failed(planner, monkeypatch):
+    """A structured failure is evidence. Answering over the top of it is not.
+
+    `WEB_SEARCH_HTTP_202` is the real case: DuckDuckGo rate-limits this machine,
+    the agent reports that precisely, and the override turned it into a cheerful
+    generated paragraph marked `success: True`.
+    """
+    _dispatch_returning(planner, monkeypatch, {
+        "success": False,
+        "error": "WEB_SEARCH_HTTP_202",
+        "message": "DuckDuckGo refused the request (HTTP 202).",
+    })
+    result = planner.process_command("search for something")["execution_result"]
+
+    assert result["success"] is False
+    assert result["error"] == "WEB_SEARCH_HTTP_202"
+    assert result.get("cognitive_llm") is not True
+    assert "🤖" not in result["message"]
+
+
+def test_an_unsure_classifier_does_not_discard_a_real_result(planner, monkeypatch):
+    """The condition was `fallback or <dispatch failed>`, not `and`.
+
+    So a command that matched a pattern and did real work had its result thrown
+    away whenever 2.1 happened to be unsure — and 2.1 being unsure is precisely
+    when the pattern, not the classifier, was carrying the routing.
+    """
+    _unsure_classifier(monkeypatch)
+    _dispatch_returning(planner, monkeypatch, {
+        "success": True,
+        "message": "Battery at 74%.",
+        "evidence": {"kind": "system_query", "source": "psutil"},
+    })
+    result = planner.process_command("battery")["execution_result"]
+
+    assert result["message"].startswith("Battery at 74%")
+    assert result["evidence"]["source"] == "psutil"
+    assert result.get("cognitive_llm") is not True
+
+
+def test_a_stage_3_proposal_reaches_the_user(planner, monkeypatch):
+    """`_propose_llm_skill` returns success=False by design.
+
+    The override read that as a failed dispatch, replaced the question with an
+    unrelated answer, and left `pending_clarification` armed — so the user was
+    never shown the question their next "yes" would answer.
+    """
+    planner.pending_clarification = None
+    _unsure_classifier(monkeypatch)
+    stub = StubLlm(LlmChoice(
+        skill="open_app_or_website", arguments={"target": "chrome"}, model="stub"
+    ))
+    original = planner.router.llm
+    planner.router.llm = stub
+    try:
+        result = planner.process_command("xyzzy the chrome thing")["execution_result"]
+    finally:
+        planner.router.llm = original
+
+    assert result.get("awaiting_llm_confirmation") is True
+    assert "chrome" in result["message"]
+    assert planner.pending_clarification is not None
+    planner.pending_clarification = None
+
+
+def test_a_generated_answer_arrives_generated_through_the_whole_pipeline(planner, monkeypatch):
+    """`_dispatch_to_agent` labels it; nothing downstream may relabel it."""
+    planner.pending_clarification = None
+    _unsure_classifier(monkeypatch)
+    stub = StubLlm(LlmChoice(text="A tuple cannot be changed.", model="llama3.2:3b"))
+    original = planner.router.llm
+    planner.router.llm = stub
+    try:
+        result = planner.process_command("xyzzy tuples")["execution_result"]
+    finally:
+        planner.router.llm = original
+
+    assert result["generated"] is True
+    assert result["evidence"]["kind"] == "model_answered"
+    assert result.get("cognitive_llm") is not True
+
+
+# ── Stored facts, and the line between a fact and a transcript ───────────────
+# The deleted path was handed `get_contextual_memories(cmd)`; stage 3 was not.
+# Deleting one of two LLM paths must not quietly delete a capability with it, so
+# the memories moved across — and stopped at the same containment line
+# everything else does.
+def _capturing_stage(registry, monkeypatch, seen):
+    monkeypatch.delenv("MONDAY_LLM", raising=False)
+    ollama = pytest.importorskip("ollama")
+
+    class _Client:
+        def __init__(self, *a: Any, **kw: Any) -> None:
+            pass
+
+        def list(self) -> Dict[str, Any]:
+            return {"models": [{"model": "llama3.2:3b"}]}
+
+        def chat(self, **kw: Any) -> Dict[str, Any]:
+            seen.append(kw["messages"])
+            return {"message": {"content": "noted"}}
+
+    monkeypatch.setattr(ollama, "Client", _Client)
+    return LlmStage(registry, model="llama3.2:3b")
+
+
+def test_stored_facts_reach_the_model_as_their_own_system_message(registry, monkeypatch):
+    """Their own message, not appended to the prompt: the containment
+    instructions and the user's data are never one editable string."""
+    seen: List[Any] = []
+    stage = _capturing_stage(registry, monkeypatch, seen)
+    stage.choose(
+        "what is my wifi password",
+        memories=[{"key": "wifi password", "value": "hunter2", "topic": "general"}],
+    )
+
+    messages = seen[0]
+    assert messages[0]["content"] == SYSTEM_PROMPT
+    assert messages[1]["role"] == "system"
+    assert "hunter2" in messages[1]["content"]
+
+
+def test_facts_are_placed_before_the_conversation(registry, monkeypatch):
+    """A stored fact is background; the turns are what is being answered."""
+    seen: List[Any] = []
+    stage = _capturing_stage(registry, monkeypatch, seen)
+    stage.choose(
+        "and tell mum too",
+        history=[{"role": "user", "content": "message dad"}],
+        memories=[{"key": "mum", "value": "9876543210", "topic": "contacts"}],
+    )
+
+    assert [m["role"] for m in seen[0]] == ["system", "system", "user", "user"]
+
+
+def test_a_conversation_transcript_is_not_offered_as_a_remembered_fact():
+    """`recall` reads one table and that table holds both kinds of row.
+
+    Handing a transcript to the model as something the user asked to be
+    remembered is the error the contact lookup made when a question about an
+    email address was answered out of a conversation row.
+    """
+    assert memory_context([
+        {"key": "turn_12", "value": "user: hello", "topic": "conversation_history"},
+    ]) == ""
+
+
+def test_nothing_remembered_adds_nothing_to_the_prompt(registry, monkeypatch):
+    assert memory_context(None) == ""
+    assert memory_context([]) == ""
+    assert memory_context([{"key": "", "value": "", "topic": "general"}]) == ""
+
+    seen: List[Any] = []
+    stage = _capturing_stage(registry, monkeypatch, seen)
+    stage.choose("what time is it")
+    assert [m["role"] for m in seen[0]] == ["system", "user"]
+
+
+def test_the_planner_hands_the_stage_what_the_memory_agent_found(planner, monkeypatch):
+    """The wiring, end to end — the part a unit test of `memory_context` cannot
+    see, and the part that would have been cut with the old path."""
+    planner.pending_clarification = None
+    _unsure_classifier(monkeypatch)
+    monkeypatch.setattr(
+        planner.memory_agent, "get_contextual_memories",
+        lambda *_a, **_kw: [{"key": "wifi password", "value": "hunter2", "topic": "general"}],
+    )
+    stub = StubLlm(LlmChoice(text="It is hunter2.", model="stub"))
+    original = planner.router.llm
+    planner.router.llm = stub
+    try:
+        planner.process_command("xyzzy what did I tell you about the wifi")
+    finally:
+        planner.router.llm = original
+
+    assert [m["value"] for m in stub.memories] == ["hunter2"]

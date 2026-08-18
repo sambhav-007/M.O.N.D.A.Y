@@ -28,9 +28,25 @@ except ImportError:
     PIL_AVAILABLE = False
 
 
+#: One definition of where the Gemini REST API lives. `core/cognitive.py` sends
+#: to the same endpoint and imports it from here rather than writing it out a
+#: second time.
+GEMINI_ENDPOINT = (
+    "https://generativelanguage.googleapis.com/v1beta/models/"
+    "gemini-1.5-flash:generateContent"
+)
+
+
 def load_gemini_api_key() -> Optional[str]:
-    """Dynamically locates and loads GEMINI_API_KEY from environment or .env files."""
-    for k in ["GEMINI_API_KEY", "GOOGLE_API_KEY", "OPENAI_API_KEY"]:
+    """Locates a Google API key in the environment or a `.env` file.
+
+    `OPENAI_API_KEY` used to be third in this list, and every caller sends what
+    this returns to `generativelanguage.googleapis.com` — so a machine with an
+    OpenAI key and no Gemini key would have handed that key to Google. A
+    credential for one provider is not a credential for another, however much
+    the call site would like one to exist.
+    """
+    for k in ["GEMINI_API_KEY", "GOOGLE_API_KEY"]:
         val = os.environ.get(k)
         if val and len(val.strip()) > 10:
             return val.strip()
@@ -146,8 +162,10 @@ class VisionAgent:
         if not api_key:
             return None
 
-        # Call Gemini 1.5 Flash Vision REST API
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={api_key}"
+        # Call Gemini 1.5 Flash Vision REST API. The key goes in a header, not
+        # in the query string: URLs are the part of a request that gets logged,
+        # kept in proxy history and pasted into bug reports.
+        url = GEMINI_ENDPOINT
         payload = {
             "contents": [{
                 "parts": [
@@ -164,7 +182,10 @@ class VisionAgent:
 
         try:
             req_data = json.dumps(payload).encode("utf-8")
-            req = urllib.request.Request(url, data=req_data, headers={"Content-Type": "application/json"})
+            req = urllib.request.Request(url, data=req_data, headers={
+                "Content-Type": "application/json",
+                "x-goog-api-key": api_key,
+            })
             with urllib.request.urlopen(req, timeout=15) as resp:
                 result = json.loads(resp.read().decode("utf-8"))
                 candidates = result.get("candidates", [])

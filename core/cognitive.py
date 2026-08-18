@@ -73,7 +73,7 @@ class TriModelCognitiveEngine:
         boot_context: Optional[Dict[str, Any]] = None,
     ) -> CognitiveResponseDict:
         """Queries generative Gemini API endpoint or cognitive engine for zero-shot reasoning."""
-        from agents.vision_agent import load_gemini_api_key
+        from agents.vision_agent import GEMINI_ENDPOINT, load_gemini_api_key
         api_key = load_gemini_api_key()
 
         memories = retrieved_memories or context_memories or []
@@ -89,14 +89,18 @@ class TriModelCognitiveEngine:
 
         resp_text = None
         if api_key:
-            url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={api_key}"
+            # Header, not query string — see `VisionAgent._query_multimodal_api`.
+            url = GEMINI_ENDPOINT
             sys_prompt = f"You are M.O.N.D.A.Y., an advanced autonomous desktop AI assistant.{mem_context_str}\nUser Query: '{prompt}'"
             payload = {"contents": [{"parts": [{"text": sys_prompt}]}]}
 
             try:
                 import json, urllib.request
                 req_data = json.dumps(payload).encode("utf-8")
-                req = urllib.request.Request(url, data=req_data, headers={"Content-Type": "application/json"})
+                req = urllib.request.Request(url, data=req_data, headers={
+                    "Content-Type": "application/json",
+                    "x-goog-api-key": api_key,
+                })
                 with urllib.request.urlopen(req, timeout=10) as resp:
                     data = json.loads(resp.read().decode("utf-8"))
                     candidates = data.get("candidates", [])

@@ -102,6 +102,7 @@ class Router:
         confidence: float = 0.0,
         emit: Optional[Any] = None,
         history: Optional[Any] = None,
+        memories: Optional[Any] = None,
     ) -> RoutingDecision:
         """Returns the routing decision without executing anything.
 
@@ -182,6 +183,11 @@ class Router:
                 # previous command would make the published routing figure
                 # unreproducible.
                 history=history,
+                # Stored facts, for the same reason and with the same limit:
+                # stage 3 alone. A pattern whose meaning depended on what the
+                # user once asked to be remembered would match differently on
+                # two machines.
+                memories=memories,
             )
             if choice is not None and choice.skill:
                 skill = self.registry.get(choice.skill)

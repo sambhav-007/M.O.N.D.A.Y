@@ -14,7 +14,7 @@ from __future__ import annotations
 import sys
 import re
 from collections import deque
-from typing import Any, Deque, Dict, Optional
+from typing import Any, Deque, Dict, List, Optional
 
 #: How many prior messages stage 3 sees — six is three exchanges. Enough for
 #: "and tell mum too" and short enough that a 3B model's context is spent on the
@@ -72,6 +72,12 @@ from ml.rl_router import EpsilonGreedyBandit, ROUTING_ACTIONS
 # import these from here, and they were defined here until the substring chain
 # was removed and this file became a coordinator. Keeping the names importable
 # from `core.planner` means the move cost no call site anything.
+#
+# `TriModelCognitiveEngine` is now *only* a re-export: `CoderAgent` and
+# `DocumentAgent` reach it through this module for code synthesis and document
+# Q&A, which are generation, not routing. The planner itself no longer holds an
+# instance — see Step 3 of `process_command` for why there is exactly one
+# language model in the routing path.
 __all__ = [
     "MasterPlanner", "CognitiveResponseDict", "TriModelCognitiveEngine",
     "HELP_TRIGGERS", "PROHIBITED_KEYWORDS", "build_help_text",
@@ -209,7 +215,6 @@ class MasterPlanner(EmailMixin, ContactMixin, Tier2Mixin):
         self.vision_agent = VisionAgent()
         self.public_api_agent = PublicApiAgent()
         self.audio_summarizer_agent = AudioSummarizerAgent()
-        self.cognitive_engine = TriModelCognitiveEngine()
         self.task_dag_engine = TaskDAGEngine(self)
         self.tool_registry = ToolRegistry()
 
@@ -423,20 +428,38 @@ class MasterPlanner(EmailMixin, ContactMixin, Tier2Mixin):
             routed_arm = self.rl_bandit.select_action()
             routing_strategy = ROUTING_ACTIONS[routed_arm]
 
-        # Step 3: Match intent to target agent tool execution
+        # Step 3: Match intent to target agent tool execution.
+        #
+        # There used to be a second language model directly below this call: if
+        # the classifier had fallen back, *or* the dispatch had failed for any
+        # reason short of a refusal, a hosted Gemini call was made and its reply
+        # replaced `tool_result` with `{"success": True, "cognitive_llm": True}`.
+        # Four things were wrong with it, and only the absence of an API key on
+        # this machine kept them theoretical — which is a fact about the machine,
+        # not about the code:
+        #
+        # 1. **It reported generated text as work done.** No evidence, no
+        #    `generated` flag, `success: True`. `CognitiveResponseDict.__bool__`
+        #    was fixed for exactly this failure once already; the caller simply
+        #    reintroduced it one level up.
+        # 2. **`fallback or …` did not require the dispatch to have failed.** A
+        #    command that matched a pattern and did real work — with real
+        #    evidence — had its result discarded whenever component 2.1 happened
+        #    to be unsure, which is precisely when the *pattern* was carrying the
+        #    routing.
+        # 3. **It swallowed the stage-3 proposal gate.** `_propose_llm_skill`
+        #    returns success=False by design, so "shall I?" was overwritten by an
+        #    unrelated answer while `pending_clarification` stayed armed — and
+        #    the next "yes" would answer a question the user never saw.
+        # 4. **It left the machine.** Stage 3 is local; this was not.
+        #
+        # Stage 3 inside the router is now the only language model in the routing
+        # path: it runs last, answers with `ModelAnswered` evidence, cannot reach
+        # Tier 2, and proposes rather than performs anything that is not a read.
         tool_result = self._dispatch_to_agent(
-            cmd, intent, user_approved, confidence, emit=emit
+            cmd, intent, user_approved, confidence, emit=emit,
+            memories=context_memories,
         )
-
-        # If standard dispatch requires generative reasoning, query Cognitive Engine
-        if fallback or (isinstance(tool_result, dict) and not tool_result.get("success") and not tool_result.get("refusal")):
-            llm_response = self.cognitive_engine.generate_cognitive_response(cmd, context_memories)
-            if llm_response:
-                tool_result = {
-                    "success": True,
-                    "cognitive_llm": True,
-                    "message": f"🤖 M.O.N.D.A.Y. Cognitive Response:\n{llm_response}"
-                }
 
         # Step 4: Reward feedback to the arm that was actually pulled.
         # This used to hardcode `ROUTING_ACTIONS.index("direct_dispatch")` on both
@@ -723,6 +746,7 @@ class MasterPlanner(EmailMixin, ContactMixin, Tier2Mixin):
         user_approved: bool,
         confidence: float = 0.0,
         emit: Optional[Any] = None,
+        memories: Optional[List[Dict[str, Any]]] = None,
     ) -> Dict[str, Any]:
         """Chooses a skill for the command and runs it.
 
@@ -767,7 +791,7 @@ class MasterPlanner(EmailMixin, ContactMixin, Tier2Mixin):
         emit = _event_sink(emit)
         decision = self.router.route(
             command, intent=intent, confidence=confidence, emit=emit,
-            history=list(self.recent_turns),
+            history=list(self.recent_turns), memories=memories,
         )
         self.last_routing_decision = decision
         emit("routing", decision.as_dict())

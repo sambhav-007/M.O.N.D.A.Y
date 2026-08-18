@@ -164,7 +164,8 @@ def test_token_events_are_forwarded_from_the_model(planner, monkeypatch):
     class _Streaming:
         model = "stub-model"
 
-        def choose(self, command: str, on_token: Any = None, history: Any = None) -> Any:
+        def choose(self, command: str, on_token: Any = None, history: Any = None,
+                   memories: Any = None) -> Any:
             from core.llm import LlmChoice
 
             for fragment in ("Mon", "days ", "are ", "fine."):
