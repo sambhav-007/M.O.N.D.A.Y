@@ -994,6 +994,66 @@ column per intent so that stays visible instead of being averaged away.
   stripping it would flatter the measurement rather than the app. The measured
   lift is therefore slightly understated, which is the right direction.
 
+### 2026-08-18 (evening) — the 8B, and a pattern that matched but was wrong
+
+**Phase 8, and a correction to my own measurement.** The eval came first on
+purpose, and it earned that order twice.
+
+`reports/stage3_selection.py` scores stage 3 on real MASSIVE utterances,
+restricted to the ones stages 1 and 2 miss — stage 3 never sees a command a
+pattern caught, so including those would measure the patterns and call it the
+model. It found, on `llama3.2:3b`, that **five of six share questions went to
+`crypto_price`**. "Live cryptocurrency prices" and "Live share price for a
+listed company" are both true and neither says *not the other one*, and that
+string is the model's whole view of the capability. Sixteen descriptions now name
+what they exclude: **59.1% → 64.3%**, same model, same sample, for a text edit.
+
+**Then I got the model comparison wrong and had to withdraw it.** The first run
+said the 8B won (67.3% vs 64.9%); the next said it lost (62.0% vs 63.7%). The
+cause was mine: `build_set` used **one** RNG walked across intents in sorted
+order, so excluding three `datetime_query` utterances reshuffled the sample for
+every intent alphabetically after it. The tell was both models moving ±3–4 on
+intents whose descriptions had not been touched. Within a run the comparison was
+always sound; across runs it was not, which is the entire job of that file. Fixed:
+per-intent seed, sample built once and shared by every model, 6 → 12 per intent.
+
+**The 8B is the default now, as a preference order rather than a name.**
+`PREFERRED_MODELS = ("llama3.1:8b", "llama3.2:3b", "llama3.2:1b")`, resolved
+against what the server reports. Hard-coding the 8B would have taken stage 3
+away from any machine that only pulled the 3B — `available()` would say "not
+pulled" and go quiet where it used to work. An explicit `MONDAY_LLM_MODEL` still
+wins outright, including when it names something absent, because "that model is
+not pulled" is more useful than quietly running a different one.
+
+It is resident on the GPU: `offloaded 29/29 layers`, 4.1 GiB VRAM, and the
+6.0 GiB RTX 4050 that ROADMAP §0 never looked for. Latency roughly doubles
+(p50 1.3 s → 2.3 s) and that figure has been stable across every run.
+
+**Phase 9 — a pattern may match and still be wrong.** `core/slot_sanity.py`:
+
+```
+'please organize a meeting with my company workers' -> organize_folder
+'book me a flight to delhi on tuesday'              -> schedule_event {'title': 'me a flight to delhi'}
+'summarise my last email and reply to it'           -> summarize_document {'path': 'my last email and reply to it'}
+```
+
+The first sorts a folder's files because the user said "organize". A parse that
+fails its check is declined at stage 1 and the cascade continues — 25 rejections
+across the whole corpus, 9 of them to skills that act.
+
+**Rule 2 was scoped by measuring it, not by taste.** Its first version rejected
+73, and every one of *its* rejections went to `answer_question`: read-only, a
+search, where a clumsy query still answers the question and refusing gives the
+user nothing. It now applies only to skills that act. Rules 3 and 4 stay
+universal because they predict a guaranteed failure — a file that does not exist
+cannot be summarised.
+
+**The price, stated rather than buried:** coverage 35.3% → 35.1%. Precision costs
+coverage. A coverage number without a negative set can always be raised by
+matching more, so `tests/test_slot_sanity.py` carries both halves.
+
+**864 → 899 passing.**
+
 ## 9. WhatsApp (added 2026-08-08)
 
 WhatsApp has **no API a desktop script may send through**. The deep link

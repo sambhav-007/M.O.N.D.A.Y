@@ -45,20 +45,28 @@ from __future__ import annotations
 
 import os
 from dataclasses import dataclass
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Sequence
 
 from core.skills import Skill, SkillRegistry
 
-#: The model to ask. The default is deliberately the small one: it is what a
-#: machine with no GPU can run, and stage 3 must degrade rather than fail.
+#: Preference order, best first, resolved against what the server actually has.
 #:
-#: It is **not** the ceiling, though this comment used to say so. That claim was
-#: measured against system RAM; what matters is VRAM, and the development
-#: machine turned out to have a 6.0 GiB RTX 4050 that Ollama uses without being
-#: asked. An 8B at Q4_K_M is ~4.9 GB and fits. Point `MONDAY_LLM_MODEL` at one
-#: and stage 3 uses it — no code change — which is exactly why the model is an
-#: env var. See ROADMAP Phase 8 for the measurement that should decide which.
-DEFAULT_MODEL = os.environ.get("MONDAY_LLM_MODEL", "llama3.2:3b")
+#: A single hard-coded default cannot be right for both machines this has to run
+#: on. The development machine has a 6.0 GiB RTX 4050 and Ollama puts all 29
+#: layers of an 8B on it; a machine with no GPU cannot load one at all. Naming
+#: only the 8B would take stage 3 away from the second machine — `available()`
+#: would report "not pulled" and go quiet where it used to work — and naming
+#: only the 3B leaves the first machine on a model it has outgrown.
+#:
+#: So the *first of these the server reports* is used. Earlier comments here
+#: claimed a 3B was the ceiling; that was measured against system RAM, and what
+#: binds a local model is VRAM. See ROADMAP Phase 8.
+PREFERRED_MODELS = ("llama3.1:8b", "llama3.2:3b", "llama3.2:1b")
+
+#: An explicit choice wins outright and is never second-guessed — including when
+#: the named model is absent, because "that model is not pulled" is a more useful
+#: answer than quietly running a different one.
+DEFAULT_MODEL = os.environ.get("MONDAY_LLM_MODEL", "")
 
 #: Where Ollama listens. Local by default, and that is most of why Ollama was
 #: chosen over a hosted API: the command text never leaves the machine.
@@ -139,6 +147,24 @@ class LlmChoice:
             object.__setattr__(self, "arguments", {})
         if self.dropped is None:
             object.__setattr__(self, "dropped", [])
+
+
+def _first_present(preferred: Sequence[str], available: Sequence[str]) -> str:
+    """The first preferred model the server has, matched on the family name.
+
+    Ollama reports `llama3.2:3b`, and a machine that pulled `llama3.1:8b-q4_0`
+    should still count as having `llama3.1:8b`. Matching the part before the
+    colon is deliberately loose for that reason; matching the whole tag would
+    reject a quantisation the user chose on purpose.
+    """
+    families = {}
+    for name in available:
+        families.setdefault(name.split(":")[0], name)
+    for wanted in preferred:
+        found = families.get(wanted.split(":")[0])
+        if found:
+            return found
+    return ""
 
 
 def build_tool_schema(registry: SkillRegistry) -> List[Dict[str, Any]]:
@@ -235,6 +261,23 @@ class LlmStage:
             self._available = False
             self._unavailable_reason = f"no Ollama server at {self.host} ({type(exc).__name__})"
             return False
+
+        # No model named: take the best one this machine has, in preference
+        # order. Resolved here rather than at import, because what is pulled is
+        # a property of the server and cannot be known before it answers.
+        if not self.model:
+            chosen = _first_present(PREFERRED_MODELS, names)
+            if not chosen:
+                self._available = False
+                self._unavailable_reason = (
+                    "no preferred model is pulled (wanted one of "
+                    f"{', '.join(PREFERRED_MODELS)}; have: "
+                    f"{', '.join(sorted(names)) or 'none'})"
+                )
+                return False
+            self.model = chosen
+            self._available, self._unavailable_reason = True, ""
+            return True
 
         # Ollama reports "llama3.2:3b"; a bare "llama3.2" should still match.
         wanted = self.model.split(":")[0]

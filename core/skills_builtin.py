@@ -45,7 +45,7 @@ def build_builtin_registry(planner: Any) -> SkillRegistry:
     registry.register(Skill(
         name="tell_time",
         read_only=True,
-        description="The current clock time — not the date and not a calendar event",
+        description="The time here, from this computer's clock — it cannot give the time in another city, and it is not the date",
         patterns=[
             "[(what|whats|what's)] [is] [the] time [is it]",
             "time",

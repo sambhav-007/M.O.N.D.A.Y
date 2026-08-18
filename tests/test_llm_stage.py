@@ -25,9 +25,11 @@ from core.intent_patterns import slot_spec
 from core.llm import (
     CHOOSE_TIMEOUT,
     FIRST_CALL_TIMEOUT,
+    PREFERRED_MODELS,
     SYSTEM_PROMPT,
     LlmChoice,
     LlmStage,
+    _first_present,
     build_tool_schema,
     memory_context,
 )
@@ -891,3 +893,92 @@ def test_the_planner_hands_the_stage_what_the_memory_agent_found(planner, monkey
         planner.router.llm = original
 
     assert [m["value"] for m in stub.memories] == ["hunter2"]
+
+
+# ── Which model, when nobody said ────────────────────────────────────────────
+# One hard-coded default cannot serve both machines this runs on. The
+# development machine puts all 29 layers of an 8B on a 6 GiB RTX 4050; a machine
+# with no GPU cannot load one at all. Naming only the 8B would take stage 3 away
+# from the second — `available()` would say "not pulled" and go quiet where it
+# used to work.
+def test_the_best_available_model_is_preferred():
+    assert _first_present(PREFERRED_MODELS, ["llama3.2:3b", "llama3.1:8b"]) == "llama3.1:8b"
+
+
+def test_a_smaller_model_is_used_when_the_bigger_one_is_absent():
+    """The regression this avoids: stage 3 going silent on a machine where it
+    worked, because the default moved to a model that machine never pulled."""
+    assert _first_present(PREFERRED_MODELS, ["llama3.2:3b"]) == "llama3.2:3b"
+
+
+def test_a_deliberate_quantisation_still_counts():
+    """Someone who pulled `llama3.1:8b-instruct-q4_0` chose that on purpose.
+    Matching the whole tag would reject it and fall back to a worse model."""
+    assert _first_present(PREFERRED_MODELS, ["llama3.1:8b-instruct-q4_0"]).startswith("llama3.1:8b")
+
+
+def test_nothing_preferred_means_nothing_chosen():
+    assert _first_present(PREFERRED_MODELS, ["mistral:7b"]) == ""
+    assert _first_present(PREFERRED_MODELS, []) == ""
+
+
+def test_an_explicit_model_is_never_second_guessed(registry, monkeypatch):
+    """A named model that is absent must report exactly that.
+
+    Quietly running a different one would make "which model answered this?"
+    unanswerable, and stage 3's whole contract is that a generated answer says
+    where it came from.
+    """
+    monkeypatch.delenv("MONDAY_LLM", raising=False)
+    ollama = pytest.importorskip("ollama")
+
+    class _Client:
+        def __init__(self, *a: Any, **kw: Any) -> None:
+            pass
+
+        def list(self) -> Dict[str, Any]:
+            return {"models": [{"model": "llama3.2:3b"}]}
+
+    monkeypatch.setattr(ollama, "Client", _Client)
+    stage = LlmStage(registry, model="llama3.1:8b")
+
+    assert stage.available() is False
+    assert "not pulled" in stage.unavailable_reason
+    assert stage.model == "llama3.1:8b", "an explicit choice was silently replaced"
+
+
+def test_an_unnamed_model_resolves_against_the_server(registry, monkeypatch):
+    monkeypatch.delenv("MONDAY_LLM", raising=False)
+    ollama = pytest.importorskip("ollama")
+
+    class _Client:
+        def __init__(self, *a: Any, **kw: Any) -> None:
+            pass
+
+        def list(self) -> Dict[str, Any]:
+            return {"models": [{"model": "llama3.2:3b"}, {"model": "llama3.1:8b"}]}
+
+    monkeypatch.setattr(ollama, "Client", _Client)
+    stage = LlmStage(registry, model="")
+
+    assert stage.available() is True
+    assert stage.model == "llama3.1:8b"
+
+
+def test_a_server_with_no_preferred_model_says_what_it_wanted(registry, monkeypatch):
+    monkeypatch.delenv("MONDAY_LLM", raising=False)
+    ollama = pytest.importorskip("ollama")
+
+    class _Client:
+        def __init__(self, *a: Any, **kw: Any) -> None:
+            pass
+
+        def list(self) -> Dict[str, Any]:
+            return {"models": [{"model": "mistral:7b"}]}
+
+    monkeypatch.setattr(ollama, "Client", _Client)
+    stage = LlmStage(registry, model="")
+
+    assert stage.available() is False
+    assert "llama3.1:8b" in stage.unavailable_reason
+    assert "mistral:7b" in stage.unavailable_reason

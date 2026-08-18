@@ -63,7 +63,10 @@ REPORTS = PROJECT_ROOT / "reports"
 CORPUS = PROJECT_ROOT / "data" / "external" / "massive_en_us.csv"
 
 #: The sample is drawn with this seed so two models are asked the same
-#: questions. A model that wins on a different sample has not won.
+#: questions. A model that wins on a different sample has not won — and one
+#: generator shared across intents meant exactly that, because excluding a
+#: single utterance shifted the draw for every intent sorted after it. The seed
+#: is per intent now, so each intent's sample depends only on that intent.
 SEED = 20260818
 
 #: MASSIVE intent → the skills a correct stage 3 may choose, with the reasoning.
@@ -87,6 +90,14 @@ ACCEPTABLE: Dict[str, Set[str]] = {
     # "tell me news about the stock market", and both readings are correct.
     "qa_stock": {"stock_price", "latest_news"},
     # Time and date are one question to a person and two skills here.
+    #
+    # MASSIVE's `datetime_query` also contains "what time is it in london",
+    # which MONDAY cannot answer at all — there is no timezone lookup, and
+    # `tell_time` would reply with the time in Chandigarh. Those utterances are
+    # excluded below rather than keyed, because scoring `tell_time` as correct
+    # there rewards a confidently wrong answer, and that is the one thing this
+    # repository has spent every commit removing. They belong in Phase 9's
+    # negative set, where "reach nothing" is the right outcome.
     "datetime_query": {"tell_time", "tell_date"},
     # Calendar. `desktop_notification` is accepted for "remind me…" because a
     # reminder and an event are the same request in a different register.
@@ -112,8 +123,25 @@ ACCEPTABLE: Dict[str, Set[str]] = {
     "recommendation_movies": {"web_search", "answer_question"},
 }
 
-#: Per intent, so one large class cannot decide the score on its own.
-PER_INTENT = 6
+#: Per intent, so one large class cannot decide the score on its own. At six, a
+#: single command was worth 17% of an intent's score and the two models differed
+#: by fewer commands than that noise; twelve makes the per-intent numbers worth
+#: reading and the total worth comparing across runs.
+PER_INTENT = 12
+
+#: Utterances dropped from the set after inspection, with the reason. Kept as
+#: data so the exclusions are reviewable — a benchmark that quietly drops what
+#: the model got wrong is worth nothing, so each of these is excluded for a
+#: property of the *question*, never for the answer any model gave.
+#:
+#: Matched as a substring, case-insensitively, against the utterance.
+EXCLUDED: Dict[str, str] = {
+    # No timezone lookup exists. `tell_time` would answer with local time,
+    # which is wrong rather than unhelpful.
+    "time is it in ": "asks the time in another city; MONDAY has no timezone lookup",
+    "time in new york": "same",
+    "time in london": "same",
+}
 
 
 def build_set(planner) -> List[Tuple[str, str, Set[str]]]:
@@ -127,37 +155,46 @@ def build_set(planner) -> List[Tuple[str, str, Set[str]]]:
         if massive_intent not in ACCEPTABLE:
             continue
         command = str(text)
+        if any(fragment in command.lower() for fragment in EXCLUDED):
+            continue
         intent, confidence, _ = predict_intent(planner.classifier, command)
         # Stage 3 only ever sees what the deterministic stages declined.
         if planner.router.route(command, intent=intent, confidence=confidence).routed:
             continue
         by_intent[str(massive_intent)].append(command)
 
-    rng = random.Random(SEED)
     chosen: List[Tuple[str, str, Set[str]]] = []
     for massive_intent, commands in sorted(by_intent.items()):
-        rng.shuffle(commands)
+        # One generator per intent, seeded from its name: excluding an utterance
+        # from one intent must not reshuffle any other.
+        random.Random(f"{SEED}:{massive_intent}").shuffle(commands)
         for command in commands[:PER_INTENT]:
             chosen.append((command, massive_intent, ACCEPTABLE[massive_intent]))
     return chosen
 
 
-def run(model: str, limit: int = 0) -> Tuple[List[dict], dict]:
-    os.environ.pop("MONDAY_LLM", None)          # stage 3 must be ON for this
-    os.environ["MONDAY_LLM_MODEL"] = model
+def load_cases(limit: int = 0) -> Tuple[List[Tuple[str, str, Set[str]]], object]:
+    """Builds the sample once, for every model in the run to share.
 
-    from core.llm import LlmStage
+    Built with stage 3 switched off, so which commands are asked does not depend
+    on what any model would have done with them.
+    """
+    os.environ["MONDAY_LLM"] = "off"
+
     from core.planner import MasterPlanner
 
     planner = MasterPlanner()
     planner.enable_voice = False
-
-    # The set is built with stage 3 switched off, so the same commands are used
-    # for every model regardless of what any of them would have done.
     planner.router.llm = None
     cases = build_set(planner)
-    if limit:
-        cases = cases[:limit]
+    return (cases[:limit] if limit else cases), planner
+
+
+def run(model: str, cases, planner) -> Tuple[List[dict], dict]:
+    os.environ.pop("MONDAY_LLM", None)          # stage 3 must be ON for this
+    os.environ["MONDAY_LLM_MODEL"] = model
+
+    from core.llm import LlmStage
 
     stage = LlmStage(planner.router.registry, model=model)
     if not stage.available():
@@ -253,11 +290,14 @@ def main(argv: Sequence[str] | None = None) -> None:
     args = parser.parse_args(argv)
 
     models = args.model or [os.environ.get("MONDAY_LLM_MODEL", "llama3.2:3b")]
+    cases, planner = load_cases(args.limit)
+    print(f"{len(cases)} commands, {len(set(c[1] for c in cases))} intents")
+
     all_rows: List[dict] = []
     summaries: List[dict] = []
     for model in models:
         print(f"── {model} ─────────────────────────────────")
-        rows, summary = run(model, args.limit)
+        rows, summary = run(model, cases, planner)
         all_rows.extend(rows)
         summaries.append(summary)
         print(f"   {summary['correct']}/{summary['n']} correct "

@@ -374,6 +374,29 @@ apart what MONDAY actually lacks, measured rather than felt:
 Five of those six are **architecture, not parameters**. That is the good news,
 and it is why this plan spends only one phase on the model itself.
 
+### Phase 8 — Use the GPU that is already in this machine ⚠️ **PARTLY DONE 2026-08-18**
+
+> **Done:** the eval (`reports/stage3_selection.py`), the 8B pulled and
+> confirmed resident on the GPU (`offloaded 29/29 layers`), and the default
+> changed to a *preference order* — `PREFERRED_MODELS` in `core/llm.py`, best
+> first, resolved against what the server actually has, so a machine that only
+> pulled the 3B keeps working instead of going quiet.
+>
+> **Not established:** that the 8B is more accurate. Two runs disagreed (67.3%
+> vs 62.0%), and the cause was a flaw in the eval's own sampling — one RNG
+> walked across intents, so excluding three utterances from one intent
+> reshuffled every intent sorted after it. Fixed (per-intent seed, sample built
+> once and shared, 6 → 12 per intent), and the clean comparison is what decides
+> this. What *is* established: the 8B costs about double the latency
+> (p50 1.3 s → 2.3 s), consistently, across every run.
+>
+> **The result worth keeping from this phase** is that the eval found something
+> the model swap could not: five of six share questions were going to
+> `crypto_price`, because "Live cryptocurrency prices" and "Live share price for
+> a listed company" are both true and neither says *not the other one*. Sixteen
+> descriptions now say what their skill excludes. Same model, same sample:
+> **59.1% → 64.3%**, for a text edit.
+
 ### Phase 8 — Use the GPU that is already in this machine
 
 **The ROADMAP said a 3B at Q4 was the ceiling. That was computed from system RAM
@@ -408,6 +431,37 @@ coin toss. **Exit criterion:** selection accuracy on that set beats the 3B by a
 stated margin, and p95 warm latency stays under 3 s.
 
 **Half a day. No new dependency, no new code path — one env var and a report.**
+
+### Phase 9 — Stop the confident wrong answer ✅ **DONE 2026-08-18**
+
+> `core/slot_sanity.py`, four rules, wired into stage 1 in `core/router.py`: a
+> pattern that matches but produces a parse the skill cannot believe is
+> **declined**, and the cascade continues to stages 2 and 3. Not an error and
+> not a refusal — it means stage 1 has no confident reading, which is what the
+> later stages are for.
+>
+> Measured over all 10,631 corpus utterances, it rejects **25** parses, of which
+> 9 reached a skill that *acts*. The ones worth naming:
+>
+> ```
+> 'please organize a meeting with my company workers' -> organize_folder
+> 'remember me to meet reveca today at six p. m.'     -> remember_fact
+> 'book me a flight to delhi on tuesday'              -> schedule_event
+> ```
+>
+> The first would have sorted a folder's files because the user said "organize".
+>
+> **Rule 2 was scoped after measuring it.** Its first version rejected 73 parses,
+> and reading them showed every one of its own rejections went to
+> `answer_question` — read-only, and a search. A clumsy query still answers the
+> question; refusing it gives the user nothing. So rule 2 applies only to skills
+> that act. Rules 3 and 4 stay universal because they predict a *guaranteed*
+> failure rather than a worse result.
+>
+> **The price, stated:** coverage 35.3% → 35.1%. Precision costs coverage, and a
+> coverage number without a negative set can always be raised by matching more —
+> `tests/test_slot_sanity.py` carries both halves, the commands that must reach
+> nothing and the ones that must keep working.
 
 ### Phase 9 — Stop the confident wrong answer
 

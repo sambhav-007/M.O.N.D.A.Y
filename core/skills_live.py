@@ -103,7 +103,7 @@ def register_live_skills(registry: SkillRegistry, planner: Any) -> None:
     registry.register(Skill(
         name="weather",
         read_only=True,
-        description="Current weather, here or in a named place",
+        description="Current weather and forecast, here or in a named place — weather only, never the local time there",
         patterns=[
             "[(what is|whats|what's)] [the] weather",
             "[(what is|whats|what's)] [the] weather [(like)] (in|for|at) {location}",
@@ -173,7 +173,7 @@ def register_live_skills(registry: SkillRegistry, planner: Any) -> None:
     registry.register(Skill(
         name="latest_news",
         read_only=True,
-        description="Live news headlines from the news feed, overall or on one topic — current events, not encyclopaedia facts",
+        description="Today's news headlines, when the user asks for news or headlines — not facts about a person, not cinema or event listings",
         patterns=[
             "[(what is|whats|what's)] [the] [(latest|today's|todays|current)] news",
             "[(what are|whats|what's)] [the] [(latest|today's|todays|top)] (headlines|stories)",

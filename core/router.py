@@ -42,6 +42,7 @@ from dataclasses import dataclass, field
 from typing import Any, Dict, Optional
 
 from core.skills import Skill, SkillRegistry
+from core.slot_sanity import implausible
 
 #: Below this, the classifier is guessing and stage 2 declines to act on it.
 #: `predict_intent`'s own fallback threshold is 0.65; this is the routing floor,
@@ -112,18 +113,28 @@ class Router:
         end-to-end routing-accuracy figure.
         """
         # ── Stage 1: patterns ────────────────────────────────────────────────
+        rejected_parse = ""
         match = self.registry.match_pattern(command)
         if match is not None:
             skill = self.registry.get(match.intent)
             if skill is not None:
-                return RoutingDecision(
-                    stage="pattern",
-                    skill=skill,
-                    slots=match.slots,
-                    intent=intent,
-                    confidence=confidence,
-                    reason=f"matched pattern '{match.pattern}'",
-                )
+                # Matching is not the same as being right. `book me a flight to
+                # delhi on tuesday` matched the calendar pattern and captured
+                # title='me a flight to delhi', and `schedule_event` acts — so a
+                # junk entry went into a real calendar with no question asked. A
+                # parse that fails its plausibility check is declined here and
+                # the cascade continues, because "stage 1 has no confident
+                # reading" is exactly what stages 2 and 3 are for.
+                rejected_parse = implausible(skill, match.slots, command) or ""
+                if not rejected_parse:
+                    return RoutingDecision(
+                        stage="pattern",
+                        skill=skill,
+                        slots=match.slots,
+                        intent=intent,
+                        confidence=confidence,
+                        reason=f"matched pattern '{match.pattern}'",
+                    )
 
         # ── Stage 2: the classifier ──────────────────────────────────────────
         if intent and confidence >= MIN_INTENT_CONFIDENCE:
@@ -153,7 +164,9 @@ class Router:
                 )
 
         # ── Why the deterministic stages declined ────────────────────────────
-        if intent and confidence < MIN_INTENT_CONFIDENCE:
+        if rejected_parse:
+            reason = f"pattern parse rejected — {rejected_parse}"
+        elif intent and confidence < MIN_INTENT_CONFIDENCE:
             reason = f"intent '{intent}' at {confidence:.2f} is below the {MIN_INTENT_CONFIDENCE} floor"
         elif intent:
             reason = f"no skill serves intent '{intent}'"
