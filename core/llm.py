@@ -49,9 +49,15 @@ from typing import Any, Dict, List, Optional
 
 from core.skills import Skill, SkillRegistry
 
-#: The model to ask. A 3B at Q4 is ~2 GB of weights and this machine has ~4 GB
-#: free (ROADMAP §0), so this is the ceiling, not a starting point. `llama3.2:1b`
-#: is the fallback if memory is tight; anything 7B or larger will not load.
+#: The model to ask. The default is deliberately the small one: it is what a
+#: machine with no GPU can run, and stage 3 must degrade rather than fail.
+#:
+#: It is **not** the ceiling, though this comment used to say so. That claim was
+#: measured against system RAM; what matters is VRAM, and the development
+#: machine turned out to have a 6.0 GiB RTX 4050 that Ollama uses without being
+#: asked. An 8B at Q4_K_M is ~4.9 GB and fits. Point `MONDAY_LLM_MODEL` at one
+#: and stage 3 uses it — no code change — which is exactly why the model is an
+#: env var. See ROADMAP Phase 8 for the measurement that should decide which.
 DEFAULT_MODEL = os.environ.get("MONDAY_LLM_MODEL", "llama3.2:3b")
 
 #: Where Ollama listens. Local by default, and that is most of why Ollama was

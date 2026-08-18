@@ -26,14 +26,23 @@ XTTS, FFmpeg) all died on the same wall.
 | RAM | **15.3 GB total, 4.2 GB free** ← the binding constraint |
 | SQLite | 3.49.1, `enable_load_extension()` **works** |
 | `onnxruntime` | **not installed** — the single highest Smart App Control risk below |
-| `ollama` | not installed |
+| `ollama` | not installed *(installed since — `%LOCALAPPDATA%\Ollama\ollama.exe`)* |
+| GPU | **NVIDIA RTX 4050 Laptop, 6.0 GiB VRAM** — not measured on 2026-08-16, and it changes the ceiling below |
 | `ffmpeg` | not installed, and **SAC blocks it outright** — never pick anything that needs it |
 | `node` | installed (already used by `tests/test_voice_ui.py`) |
 
-**4.2 GB free is the number that matters.** A 3B model at Q4 is ~2.0 GB of
+~~**4.2 GB free is the number that matters.** A 3B model at Q4 is ~2.0 GB of
 weights plus context; that fits, with MONDAY's own sklearn pipelines alongside
 it, but not comfortably. An 8B model does not fit at all. Plan for 3B, keep 1B
-as the fallback, and do not let anyone talk this up to 7B later.
+as the fallback, and do not let anyone talk this up to 7B later.~~
+
+**CORRECTED 2026-08-18 — this measured the wrong memory.** The binding
+constraint for a local model is VRAM, and this machine has a **6.0 GiB RTX
+4050** that the 08-16 probe did not look for. Ollama finds it without being
+asked (`library=CUDA compute=8.9 ... available="5.0 GiB"`), and an 8B at Q4_K_M
+is ~4.9 GB, so it fits with a 4k context. The 3B stays the *fallback*, not the
+ceiling — see Phase 8. The rest of this section stands; RAM is still what
+constrains everything that is not on the GPU.
 
 ---
 
@@ -332,6 +341,201 @@ surface — keep both, or the double-speak comes back.
 
 **Only step 2 is gated on `onnxruntime`.** Steps 1 and 3 have no SAC exposure at
 all, which is why this phase is worth attempting even if the probe in §5 fails.
+
+---
+
+---
+
+## 3b. Phases 8–14 — from "answers what it was taught" to "handles what you ask"
+
+**Written 2026-08-18, after the corpus measurement.** Phases 4–7 gave MONDAY a
+local model, streaming, memory and a voice. It is still, in an important sense,
+a lookup table with a model bolted to the end. This is the plan for the rest,
+and it starts with what is honest about the target.
+
+### What "GPT / Claude / Gemini level" can and cannot mean here
+
+It cannot mean matching a frontier model's raw reasoning. Those are hundreds of
+billions of parameters in a datacentre; this is a laptop with **6 GB of VRAM**.
+Any plan whose first line is "be as smart as GPT-5" is a plan that fails.
+
+But almost nothing a person means by "smart assistant" is raw reasoning. Pulling
+apart what MONDAY actually lacks, measured rather than felt:
+
+| | What it looks like | Where MONDAY is | Fixable by |
+|---|---|---|---|
+| **Hearing** | understands it however you say it | **35.3%** of real utterances route (`reports/massive_coverage.md`) | patterns + a better model — Phases 8, 11 |
+| **Precision** | doesn't do the wrong thing confidently | `book me a flight to delhi on tuesday` → creates a **calendar event titled "me a flight to delhi"** | Phase 9 |
+| **Hands** | can actually do many things | 49 skills; whole categories (alarms, music, files, maps) have no route at all | Phase 11 |
+| **Depth** | chains steps to reach a goal | **one** skill per turn, always | Phase 10 |
+| **Memory** | remembers across days and documents | last 6 turns + a key/value table | Phase 12 |
+| **Reasoning** | genuinely hard questions | a 3B model | Phase 13 (optional key) |
+
+Five of those six are **architecture, not parameters**. That is the good news,
+and it is why this plan spends only one phase on the model itself.
+
+### Phase 8 — Use the GPU that is already in this machine
+
+**The ROADMAP said a 3B at Q4 was the ceiling. That was computed from system RAM
+and it is wrong.** Measured 2026-08-18:
+
+```
+NVIDIA GeForce RTX 4050 Laptop GPU — 6141 MiB total, 5920 MiB free
+ollama:  library=CUDA compute=8.9 ... total="6.0 GiB" available="5.0 GiB"
+```
+
+Ollama is installed (`%LOCALAPPDATA%\Ollama\ollama.exe`), CUDA is detected, and
+`llama3.2:3b` answers a routing decision in **1.3 s warm**. An 8B at Q4_K_M is
+~4.9 GB and fits, with room for a 4k context.
+
+It matters because the 3B is visibly the weak link. Same probe, same day:
+
+```
+'dim the lights a bit'   -> llm chose volume_down      (wrong skill entirely)
+'put on some music'      -> llm chose chitchat         (gave up)
+'set an alarm for 7am'   -> llm chose schedule_event   (right instinct, no alarm skill exists)
+```
+
+**Do:** pull `qwen2.5:7b-instruct` and `llama3.1:8b`, set `MONDAY_LLM_MODEL`, and
+measure both against the 3B on a labelled selection set. Keep whichever wins;
+keep the 3B as the fallback for machines without the VRAM (the env var already
+allows that, and `LlmStage.available()` already degrades honestly).
+
+**The real deliverable is the measurement, not the model.** `reports/stage3_selection.py`:
+~150 commands with the skill each should reach, scored as selection accuracy and
+warm latency. Without it, "smarter" is a vibe and the next model swap is a
+coin toss. **Exit criterion:** selection accuracy on that set beats the 3B by a
+stated margin, and p95 warm latency stays under 3 s.
+
+**Half a day. No new dependency, no new code path — one env var and a report.**
+
+### Phase 9 — Stop the confident wrong answer
+
+A greedy pattern is worse than no pattern when the skill it reaches *acts*:
+
+```
+'book me a flight to delhi on tuesday'
+    -> schedule_event {'title': 'me a flight to delhi', 'when': 'tuesday'}
+'summarise my last email and reply to it'
+    -> summarize_document {'path': 'my last email and reply to it'}
+```
+
+The first writes a junk event into a real calendar. `(schedule|add|create|book)
+{title} (at|on|for) {when}` is doing what it was told; the fault is that a
+free-text slot in front of an acting skill has no plausibility check at all.
+
+**Do:** (a) a slot sanity layer — a `{path}` that names no file, a `{title}`
+starting with a pronoun, a `{symbol}` of four words are all *signals the parse is
+wrong*, and the honest response is the clarification MONDAY already knows how to
+ask; (b) reuse the Phase 4 proposal gate for pattern matches that trip it, so the
+answer becomes "did you mean…?" rather than a silent wrong action; (c) a negative
+set in the routing report — commands that must reach **nothing** — because
+coverage alone can always be gamed by matching more.
+
+**Exit criterion:** the negative set passes at 100%, and no acting skill can be
+reached with a slot that failed its sanity check.
+
+### Phase 10 — More than one step
+
+This is the phase that changes what MONDAY *is*. Today stage 3 picks exactly one
+skill and stops. "Summarise my last email and reply to it" is two steps, so it
+cannot be done at all — not because either half is missing, but because nothing
+composes them.
+
+**Do:** a bounded tool loop. The model gets the result of each call and may make
+another, up to a hard budget (start at 5 calls / 60 s), then must answer. Every
+step carries its own evidence and its own audit row.
+
+**Containment does not move, and this is the part to get right:**
+- Tier 2 stays unreachable from the model — the loop makes *more* calls, not
+  more privileged ones.
+- A non-read-only skill still proposes rather than performs; approving once
+  approves **that step**, not the rest of the plan.
+- The budget is a hard stop, and hitting it is a reported failure, not a
+  silent truncation.
+
+**Look at `core/task_dag_engine.py` first.** It already claims multi-step, and
+two implementations that must agree about the Tier-2 gate is the exact defect
+this repository has found in its own code five times. Either the DAG engine
+becomes this loop's substrate or it is deleted — not both.
+
+**Two days, and the highest-value two days on this list.**
+
+### Phase 11 — Give it more hands
+
+`reports/massive_coverage.md` is a measured backlog of things people say to an
+assistant that MONDAY has no route for at all. In descending order of how often
+they were said:
+
+| Missing capability | Evidence |
+|---|---|
+| alarms and timers | `alarm_set/query/remove`, dropped in `datagen/massive.py` for having no route |
+| music and playback | `play_music`, `music_query` + friends — 5 intents, all dropped |
+| a real dimmer | `iot_hue_lightdim` 114 rows, **0.0%** — the tool only knows on/off |
+| transport and maps | `transport_*` — 4 intents dropped |
+| recipes and cooking | `cooking_*` — 2 intents dropped |
+| file operations by name | not in MASSIVE, but it is a desktop assistant |
+| clipboard, windows, media keys | same |
+
+Each is small on its own. The rule from `datagen/massive.py` applies in reverse:
+a capability is only worth adding if it can be done **honestly** — media keys via
+`pyautogui` are real; "book me a taxi" is not, and should keep refusing.
+
+**Ship them in tranches of five, re-running the coverage report each time.** The
+number moves or the tranche did not work.
+
+### Phase 12 — Memory that compounds
+
+Six turns of context and a key/value table is not memory; it is a scratchpad.
+**Do:** summarise finished conversations into durable notes, and put the user's
+own documents behind retrieval — `DocumentAgent.rag_search` already exists and
+already does the hard part. The goal is "what did we decide about the report last
+week" answering correctly, from evidence, with the document named.
+
+### Phase 13 — A fourth stage, for the questions that need one
+
+The honest way to reach frontier-level *answers* is to let the user plug in a
+frontier model, not to pretend a 3B is one. Stage 4: an API key in `.env`, off by
+default, reached only when stage 3 declines or flags low confidence.
+
+**The rules that make this safe are already written and must be reused, not
+re-derived:** nothing leaves the machine unless the user configured a key
+(§7.4); an answer carries `ModelAnswered` evidence and never claims work was
+done (§7.2); Tier 2 stays unreachable (§7.3); and the offline path still answers
+the demo with the network off (§7.1). One provider, one code path — the last
+thing this repository needs is a second `TriModelCognitiveEngine`, which is
+exactly what was deleted on 2026-08-18.
+
+### Phase 14 — Make "smarter" a number
+
+Five phases of work with no scoreboard is five phases of opinion. One command
+that prints one table:
+
+```
+coverage        % of MASSIVE utterances reaching a skill        reports/massive_coverage.py
+precision       % of the negative set correctly refused         Phase 9
+selection       % of labelled commands reaching the right skill Phase 8
+task success    % of scripted multi-step tasks completed        Phase 10
+latency         p50 / p95, warm                                 Phase 8
+```
+
+Run it before and after every phase above. A phase that does not move a number
+is a phase to reconsider.
+
+### Order, and what each buys
+
+| | Phase | Buys | Cost | Risk |
+|---|---|---|---|---|
+| 1 | **8 — the GPU** | a model that picks the right skill | half a day | none: one env var |
+| 2 | **9 — precision** | stops confident wrong actions | 1 day | none: it only adds refusals |
+| 3 | **10 — the tool loop** | multi-step tasks; the biggest change | 2 days | medium: must not widen the gate |
+| 4 | **11 — more hands** | the tasks it simply cannot do | 1 day per tranche | low, if each is honest |
+| 5 | **12 — memory** | continuity across days | 1–2 days | low |
+| 6 | **13 — optional frontier key** | genuinely hard reasoning | 1 day | low, if §7 is reused |
+| 7 | **14 — the scoreboard** | knowing any of it worked | half a day | none |
+
+Phases 8 and 9 together are one day and are worth doing before anything else:
+one makes the model choose better, the other stops it acting on a bad choice.
 
 ---
 
