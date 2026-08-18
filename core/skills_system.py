@@ -73,7 +73,7 @@ def register_system_skills(registry: SkillRegistry, planner: Any) -> None:
 
     registry.register(Skill(
         name="organize_folder",
-        description="Sort a folder's files by type",
+        description="Sort the files in a folder into subfolders by file type — it moves files, it does not delete them",
         patterns=[
             "(organize|organise|sort|tidy) {path}",
             "(organize|organise|sort|tidy) [the] (folder|directory|dir) {path}",
@@ -132,7 +132,7 @@ def register_system_skills(registry: SkillRegistry, planner: Any) -> None:
     registry.register(Skill(
         name="list_processes",
         read_only=True,
-        description="What is running right now",
+        description="Programs running on this computer right now, as Task Manager shows them — not a to-do or shopping list",
         patterns=[
             "(list|show) [(the|my)] [running] (processes|programs|apps|tasks)",
             "[(what is|whats|what's)] running",
@@ -154,7 +154,7 @@ def register_system_skills(registry: SkillRegistry, planner: Any) -> None:
 
     registry.register(Skill(
         name="speak_text",
-        description="Say something out loud",
+        description="Read a given phrase aloud through the speakers — not a volume control",
         patterns=[
             "(say|speak) {phrase}",
             "say out loud {phrase}",
@@ -344,7 +344,7 @@ def register_system_skills(registry: SkillRegistry, planner: Any) -> None:
 
     registry.register(Skill(
         name="toggle_smart_light",
-        description="Switch a smart light (not implemented — says why)",
+        description="Switch a smart light, lamp, plug or socket on or off (not implemented — says why)",
         patterns=[
             "turn (on|off) [(the|my)] {device} (light|lights|lamp|plug)",
             "turn [(the|my)] {device} (light|lights|lamp|plug) (on|off)",
@@ -380,7 +380,7 @@ def register_system_skills(registry: SkillRegistry, planner: Any) -> None:
 
     registry.register(Skill(
         name="schedule_event",
-        description="Add an event to the local calendar",
+        description="Add a new event, meeting or reminder to the local calendar at a given time",
         patterns=[
             "(schedule|add|create|book) [(a|an)] [(meeting|event|appointment)] {title} (at|on|for) {when}",
             "(schedule|add|create|book) {title} (at|on|for) {when}",
@@ -398,7 +398,7 @@ def register_system_skills(registry: SkillRegistry, planner: Any) -> None:
     registry.register(Skill(
         name="upcoming_events",
         read_only=True,
-        description="What is coming up in the calendar",
+        description="Read what is coming up in the saved calendar — meetings, events and reminders already added",
         patterns=[
             "[(what is|whats|what's)] [(on|in)] my calendar",
             "[(what are|show|list)] [my] [(upcoming|next)] (events|meetings|appointments)",
@@ -420,7 +420,7 @@ def register_system_skills(registry: SkillRegistry, planner: Any) -> None:
 
     registry.register(Skill(
         name="desktop_notification",
-        description="Show a desktop notification",
+        description="Pop a desktop notification on screen now — not a scheduled reminder",
         patterns=[
             "notify me {text}",
             "(show|send|pop) [me] [a] notification {text}",

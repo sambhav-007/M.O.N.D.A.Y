@@ -146,7 +146,7 @@ def register_live_skills(registry: SkillRegistry, planner: Any) -> None:
     registry.register(Skill(
         name="crypto_price",
         read_only=True,
-        description="Live cryptocurrency prices",
+        description="Live cryptocurrency prices — Bitcoin, Ethereum and other coins only, never company shares",
         patterns=[
             "[(what is|whats|what's)] [the] {coin:coin} (price|rate|value)",
             "[(what is|whats|what's)] [the] price of [(a|one)] {coin:coin}",
@@ -173,7 +173,7 @@ def register_live_skills(registry: SkillRegistry, planner: Any) -> None:
     registry.register(Skill(
         name="latest_news",
         read_only=True,
-        description="Live news headlines, overall or on one topic",
+        description="Live news headlines from the news feed, overall or on one topic — current events, not encyclopaedia facts",
         patterns=[
             "[(what is|whats|what's)] [the] [(latest|today's|todays|current)] news",
             "[(what are|whats|what's)] [the] [(latest|today's|todays|top)] (headlines|stories)",
@@ -210,7 +210,7 @@ def register_live_skills(registry: SkillRegistry, planner: Any) -> None:
     registry.register(Skill(
         name="stock_price",
         read_only=True,
-        description="Live share price for a listed company",
+        description="Live share price of a listed company or ticker (NSE, BSE, NASDAQ) — shares, not cryptocurrency",
         patterns=[
             "[(what is|whats|what's)] [the] [current] (stock|share) price (of|for) {symbol}",
             "[(what is|whats|what's)] [the] [current] price of {symbol} (stock|stocks|share|shares)",
@@ -380,7 +380,7 @@ def register_live_skills(registry: SkillRegistry, planner: Any) -> None:
     registry.register(Skill(
         name="answer_question",
         read_only=True,
-        description="Answer a general-knowledge question from Wikipedia or the web",
+        description="Answer a general-knowledge or factual question from Wikipedia or the web — established facts, not today's headlines",
         patterns=[
             "(who is|who was|who are|who were) {topic}",
             "(what is|what are|what was|whats|what's) {topic}",

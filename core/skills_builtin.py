@@ -45,7 +45,7 @@ def build_builtin_registry(planner: Any) -> SkillRegistry:
     registry.register(Skill(
         name="tell_time",
         read_only=True,
-        description="What time is it",
+        description="The current clock time — not the date and not a calendar event",
         patterns=[
             "[(what|whats|what's)] [is] [the] time [is it]",
             "time",
@@ -76,7 +76,7 @@ def build_builtin_registry(planner: Any) -> SkillRegistry:
     registry.register(Skill(
         name="tell_date",
         read_only=True,
-        description="What is today's date",
+        description="Today's date and the day of the week — the calendar day, not the clock time",
         patterns=[
             "[(what|whats|what's)] [is] [the] date [today]",
             "date",
@@ -156,7 +156,7 @@ def build_builtin_registry(planner: Any) -> SkillRegistry:
 
     registry.register(Skill(
         name="mute_volume",
-        description="Mute the system volume",
+        description="Silence the system volume completely — mute, quiet, no sound",
         patterns=[
             "mute",
             "mute [the] (volume|sound|audio|speakers|system|everything)",
@@ -466,7 +466,7 @@ def build_builtin_registry(planner: Any) -> SkillRegistry:
 
     registry.register(Skill(
         name="remember_fact",
-        description="Save something to memory",
+        description="Save a fact, a note, or an item on a list, to read back later",
         patterns=[
             # Every one of these keeps a mandatory verb. Making the verb optional
             # expands to a bare `{key} is {value}`, which matches any sentence
@@ -494,7 +494,7 @@ def build_builtin_registry(planner: Any) -> SkillRegistry:
     registry.register(Skill(
         name="recall_memory",
         read_only=True,
-        description="Look something up in memory",
+        description="Read back something saved earlier — a fact, a note, or what is on a saved list",
         patterns=[
             "recall {query}",
             "what did i say about {query}",
