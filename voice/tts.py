@@ -17,8 +17,9 @@ The order, and the reasoning behind it (ROADMAP §4.1, measured on this machine)
    there once installed. Measured on this machine it offers only *David* and
    *Zira*, the legacy voices — so it is the dependable floor, not the good
    answer. The ROADMAP originally had this first and the probe corrected it.
-3. **Nothing** — reported as `TTS_UNAVAILABLE`, which is the current state of
-   this machine and must stay honest. `MondayVoiceModel.synthesize_speech` used
+3. **Nothing** — reported as `TTS_UNAVAILABLE`, which must stay honest. It was
+   the state of this machine when this was written; `pyttsx3` has since been
+   installed, so stage 2 answers here now. `MondayVoiceModel.synthesize_speech` used
    to return `success: True` when gTTS had raised *and* pyttsx3 was absent, so
    no audio existed anywhere.
 

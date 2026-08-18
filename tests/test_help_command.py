@@ -8,12 +8,14 @@ Two things are being protected here:
    instead of summarising the file.
 2. The menu does not promise capabilities the system lacks. The version it
    replaced advertised "signature mondayvoice.mp3 speech output" (the voice
-   clone was abandoned — speech is gTTS) and a "Self-Evolution Plugin System"
+   clone was abandoned; speech is Piper or pyttsx3, both offline) and a "Self-Evolution Plugin System"
    that "synthesizes generalized Python scripts" (the coder agent supports three
    fixed domains and refuses everything else).
 """
 
 from __future__ import annotations
+
+import os
 
 import pytest
 
@@ -72,7 +74,8 @@ def test_task_mentioning_help_still_routes_to_its_agent(planner):
 def test_help_does_not_claim_abandoned_or_fabricated_features():
     text = build_help_text().lower()
     # The voice clone was abandoned (Smart App Control blocks the FFmpeg XTTS
-    # needs); replies are gTTS / browser speechSynthesis.
+    # needs). Backend speech is Piper or pyttsx3, both offline; the desktop UI
+    # speaks in the browser with `speechSynthesis`. gTTS is in neither path.
     assert "mondayvoice" not in text
     # The coder agent supports three fixed domains and honestly refuses the rest.
     assert "self-evolution" not in text
@@ -87,6 +90,35 @@ def test_help_lists_only_genuinely_gated_tier2_actions():
     # These are policy placeholders with no implementation — never advertise them.
     for phantom in ("delete_file", "overwrite_file", "execute_shell"):
         assert phantom not in text
+
+
+def test_help_does_not_claim_speech_needs_the_network():
+    """Backend speech went offline with ROADMAP Phase 7 (2026-08-17).
+
+    `voice/tts.py` tries Piper, then pyttsx3 over Windows SAPI5. gTTS is in
+    neither path — but the menu went on saying "spoken replies use gTTS, which
+    needs the network" for a day afterwards. That is the same defect this menu
+    was written to fix: it used to advertise a `mondayvoice.mp3` voice clone
+    that had been abandoned. A capability menu that ages badly is worse than no
+    menu, because it is believed.
+    """
+    text = build_help_text().lower()
+    assert "gtts" not in text
+    assert "needs the network" not in text
+    # The env var is the whole of the Piper decision, so naming it is what makes
+    # the line actionable rather than an apology for the voice.
+    assert "monday_piper_voice" in text
+
+
+def test_help_names_the_voice_settings_that_exist():
+    """The two switches named in the menu must be the two the code reads."""
+    from voice import tts
+
+    text = build_help_text()
+    assert "MONDAY_PIPER_VOICE" in text
+    assert "MONDAY_TTS=off" in text
+    assert tts.PIPER_VOICE == os.environ.get("MONDAY_PIPER_VOICE", "")
+    assert "off" in tts._DISABLED
 
 
 def test_help_flags_what_needs_setup():

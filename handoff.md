@@ -891,6 +891,38 @@ by nothing but a red suite. Worth generalising if a fourth appears.
 
 **773 → 789 passing, 0 failing, offline, ~105 s.** (The 773 baseline was measured before this change, not quoted from the last entry.)
 
+### 2026-08-18 (later) — /help still said speech needed the network
+
+`/help` ended with *"Spoken replies use gTTS, which needs the network."* That
+stopped being true on 08-17: `voice/tts.py` tries Piper, then `pyttsx3` over
+Windows SAPI5, and gTTS is in neither path. The menu now names the one setting
+that is real — `MONDAY_PIPER_VOICE` for a better voice, SAPI5 otherwise, offline
+either way — and `speak` is listed as offline. Still inside the 68-column budget.
+
+The same sentence had spread to three other places, all corrected:
+`README.md`'s voice-cloning bullet, the `voice/tts.py` docstring (which claimed
+`TTS_UNAVAILABLE` was "the current state of this machine" — `pyttsx3` has been
+installed since it was written), and `tests/test_help_command.py`'s own
+docstring. gTTS now survives only in `ml/voice_cloner.py`, which the `speak`
+skill does not call — checked, not assumed.
+
+**Two tests so it cannot rot back**: the menu may not say `gtts` or "needs the
+network" and must name `MONDAY_PIPER_VOICE`; and the two switches the menu
+advertises must be the two `voice/tts.py` actually reads. The lesson is the
+menu's own history — it once advertised a `mondayvoice.mp3` clone that had been
+abandoned. A capability menu that ages badly is worse than no menu, because it
+is believed.
+
+**One thing worth knowing for next time.** The first commit of this work was
+**refused by `.githooks/pre-commit`**: `tests/test_gemini_credentials.py` used
+`sk-proj-…` as a fake OpenAI key, which matches the vendor-token pattern. The
+guard was right — a scanner that reads the shape of a token cannot read the
+intent behind it, and one that could be argued out of a match would be worth
+nothing. The fixture is now `not-a-real-openai-key-…`. Do not reach for
+`--no-verify`.
+
+**791 passing, 0 failing, offline, ~87 s.**
+
 ## 9. WhatsApp (added 2026-08-08)
 
 WhatsApp has **no API a desktop script may send through**. The deep link

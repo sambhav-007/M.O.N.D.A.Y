@@ -102,7 +102,7 @@ Type these in plain English. Every example below works as written.
    weather in Delhi · bitcoin price · where am i · iss location
 
 🗣️  VOICE
-   speak hello world        say something out loud
+   speak hello world        say it out loud, offline
    "Hey Monday, ..."        wake word — turn Live on first
    Live button / Ctrl+L     always-on listening
    Spacebar (in the app)    push-to-talk
@@ -138,4 +138,7 @@ Type these in plain English. Every example below works as written.
    Sending email needs SMTP_USER / SMTP_PASSWORD in .env
    (for Gmail, an App Password).
    Screen vision needs a Gemini API key.
-   Spoken replies use gTTS, which needs the network."""
+   A less robotic voice needs Piper: point MONDAY_PIPER_VOICE
+   at a .onnx voice file. Without it I speak through Windows
+   SAPI5 — offline either way, just plainer. MONDAY_TTS=off
+   silences the backend entirely."""

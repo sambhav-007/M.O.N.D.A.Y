@@ -425,8 +425,12 @@ lookup carries emails only, so a bare name has no other route to a number.
   `pywin32` are not installed or declared. Falls back to local/SQLite lookup.
 - **Voice cloning of the reference sample** — evaluated with Coqui XTTS and
   rejected: Windows Smart App Control blocks the FFmpeg binary XTTS needs to
-  decode audio, and disabling it is a one-way system security change. Speech uses
-  gTTS / browser `speechSynthesis` instead.
+  decode audio, and disabling it is a one-way system security change. Speech is
+  a generic voice instead: `voice/tts.py` tries Piper (if `MONDAY_PIPER_VOICE`
+  names a `.onnx`) then `pyttsx3` over Windows SAPI5 — **both offline** — and the
+  desktop UI speaks in the browser with `speechSynthesis`. gTTS is in neither
+  path; the only remaining reference to it is the abandoned `ml/voice_cloner.py`,
+  which the `speak` skill does not call.
 
 ### Declared in policy but not implemented
 
