@@ -291,6 +291,205 @@ class PublicApiAgent:
             res["message"] = "💰 Real-Time Crypto & Currency Prices:\n  " + "\n  ".join(p_str)
         return res
 
+    # ── News ─────────────────────────────────────────────────────────────────
+    #
+    # Google News RSS: no key, no account, no quota, and it answers with the
+    # headlines a person would see on the site. Probed from this machine on
+    # 2026-08-18 — top stories and topic search both returned 200. The topic
+    # feed is the same endpoint with a query, so one method serves "the news"
+    # and "technology news" without a second code path to keep in step.
+    NEWS_TOP = "https://news.google.com/rss?hl=en-IN&gl=IN&ceid=IN:en"
+    NEWS_TOPIC = "https://news.google.com/rss/search?q={q}&hl=en-IN&gl=IN&ceid=IN:en"
+
+    def get_latest_news(self, topic: str = "", limit: int = 5) -> Dict[str, Any]:
+        """Live headlines from Google News RSS, optionally about one topic.
+
+        Returns the headlines and their publishers. It does **not** summarise
+        them, and it does not follow the links: a headline is something a source
+        published, and anything more would be this agent's own account of an
+        article it has not read.
+        """
+        topic = (topic or "").strip().strip("\"'")
+        url = (
+            self.NEWS_TOPIC.format(q=urllib.parse.quote(topic))
+            if topic else self.NEWS_TOP
+        )
+
+        try:
+            req = urllib.request.Request(url, headers=self.headers)
+            with urllib.request.urlopen(req, timeout=REQUEST_TIMEOUT_S) as resp:
+                body = resp.read()
+                status = resp.status
+        except Exception as exc:  # noqa: BLE001
+            log_action("get_latest_news", topic or "top stories", 1, "failed", self.name)
+            return AgentResult.failed(
+                f"I couldn't reach the news feed just now ({type(exc).__name__}).",
+                error="NEWS_FEED_UNAVAILABLE",
+                data={"topic": topic},
+            ).as_dict()
+
+        # ElementTree, not a regex and not an HTML parser: RSS is XML, and the
+        # feed is 160 KB of it. `defusedxml` is not a dependency here, so the
+        # parse is wrapped — a malformed feed is a failure, not a traceback.
+        import xml.etree.ElementTree as ET
+
+        try:
+            root = ET.fromstring(body)
+            items = root.findall(".//channel/item")[: max(1, int(limit))]
+        except Exception:  # noqa: BLE001
+            return AgentResult.failed(
+                "The news feed came back in a shape I could not read.",
+                error="NEWS_FEED_UNPARSEABLE",
+                data={"topic": topic},
+            ).as_dict()
+
+        headlines: List[Dict[str, str]] = []
+        for item in items:
+            title = (item.findtext("title") or "").strip()
+            if not title:
+                continue
+            source = (item.findtext("source") or "").strip()
+            # Google puts the publisher in the title AND in a <source> element,
+            # so a naive read prints it twice: "... - The Hindu  - The Hindu".
+            if source and title.endswith(f" - {source}"):
+                title = title[: -len(f" - {source}")]
+            elif not source and " - " in title:
+                title, _, source = title.rpartition(" - ")
+            headlines.append({
+                "title": title.strip(),
+                "source": source.strip(),
+                "link": (item.findtext("link") or "").strip(),
+            })
+
+        if not headlines:
+            return AgentResult.failed(
+                f"The news feed returned nothing for '{topic}'." if topic
+                else "The news feed returned no headlines.",
+                error="NEWS_FEED_EMPTY",
+                data={"topic": topic},
+            ).as_dict()
+
+        label = f"Top {topic} headlines" if topic else "Top headlines"
+        lines = [
+            f"  {i}. {h['title']}" + (f"  — {h['source']}" if h["source"] else "")
+            for i, h in enumerate(headlines, 1)
+        ]
+        # Spoken form is the headlines alone: publisher names and numbering are
+        # for the eye. `core/speech.py` would otherwise read "1." out loud.
+        spoken = ". ".join(h["title"] for h in headlines[:3])
+
+        log_action("get_latest_news", topic or "top stories", len(headlines),
+                   "success", self.name)
+        return AgentResult.ok(
+            f"📰 {label}:\n" + "\n".join(lines),
+            evidence=HttpResponse(status=status, url="news.google.com/rss"),
+            data={"topic": topic, "headlines": headlines, "speech": spoken},
+        ).as_dict()
+
+    # ── Stocks ───────────────────────────────────────────────────────────────
+    #
+    # Yahoo Finance, in two steps, because people type "ifci" and the quote
+    # endpoint wants "IFCI.NS". Both probed from this machine on 2026-08-18.
+    STOCK_SEARCH = "https://query1.finance.yahoo.com/v1/finance/search?q={q}&quotesCount=6&newsCount=0"
+    STOCK_QUOTE = "https://query1.finance.yahoo.com/v8/finance/chart/{symbol}?range=1d&interval=1d"
+
+    def _fetch_json(self, url: str) -> Optional[Dict[str, Any]]:
+        try:
+            req = urllib.request.Request(url, headers=self.headers)
+            with urllib.request.urlopen(req, timeout=REQUEST_TIMEOUT_S) as resp:
+                return json.loads(resp.read().decode("utf-8"))
+        except Exception:  # noqa: BLE001
+            return None
+
+    def resolve_stock_symbol(self, query: str) -> Optional[Dict[str, str]]:
+        """Turns "ifci" into a ticker, or None if nothing matches.
+
+        Separate from the quote so a failure to *find* the company reads
+        differently from a failure to *price* it — "I don't know that company"
+        and "the quote service is down" are different problems for the user.
+
+        Indian listings are preferred when they tie, because this machine is in
+        India and "ifci" there means the NSE listing, not a lookalike elsewhere.
+        """
+        data = self._fetch_json(self.STOCK_SEARCH.format(q=urllib.parse.quote(query)))
+        quotes = (data or {}).get("quotes") or []
+        equities = [q for q in quotes if q.get("quoteType") in ("EQUITY", "ETF", "INDEX")]
+        if not equities:
+            return None
+        equities.sort(key=lambda q: (
+            0 if str(q.get("symbol", "")).endswith(".NS") else 1,
+            -float(q.get("score") or 0),
+        ))
+        best = equities[0]
+        return {
+            "symbol": str(best.get("symbol", "")),
+            "name": str(best.get("longname") or best.get("shortname") or ""),
+            "exchange": str(best.get("exchDisp") or best.get("exchange") or ""),
+        }
+
+    def get_stock_price(self, query: str) -> Dict[str, Any]:
+        """Live quote for a company name or ticker."""
+        query = (query or "").strip().strip("\"'")
+        if not query:
+            return AgentResult.failed(
+                "Which company? Try 'stock price of infosys'.",
+                error="STOCK_NO_SYMBOL",
+            ).as_dict()
+
+        found = self.resolve_stock_symbol(query)
+        if not found or not found["symbol"]:
+            log_action("get_stock_price", query, 1, "failed", self.name)
+            return AgentResult.failed(
+                f"I couldn't find a listed company matching '{query}'.",
+                error="STOCK_SYMBOL_NOT_FOUND",
+                data={"query": query},
+            ).as_dict()
+
+        data = self._fetch_json(self.STOCK_QUOTE.format(
+            symbol=urllib.parse.quote(found["symbol"])
+        ))
+        meta = (((data or {}).get("chart") or {}).get("result") or [{}])[0].get("meta") or {}
+        price = meta.get("regularMarketPrice")
+        if price is None:
+            log_action("get_stock_price", found["symbol"], 1, "failed", self.name)
+            return AgentResult.failed(
+                f"I found {found['symbol']} but the quote came back without a price.",
+                error="STOCK_QUOTE_UNAVAILABLE",
+                data={"query": query, **found},
+            ).as_dict()
+
+        previous = meta.get("chartPreviousClose") or meta.get("previousClose")
+        currency = meta.get("currency", "")
+        symbol_map = {"INR": "₹", "USD": "$", "GBP": "£", "EUR": "€"}
+        unit = symbol_map.get(currency, f"{currency} ")
+
+        move = ""
+        if previous:
+            delta = float(price) - float(previous)
+            pct = (delta / float(previous)) * 100 if previous else 0.0
+            arrow = "▲" if delta >= 0 else "▼"
+            move = f"  {arrow} {abs(delta):,.2f} ({pct:+.2f}%) vs previous close"
+
+        name = found["name"] or found["symbol"]
+        exchange = f" · {meta.get('fullExchangeName') or found['exchange']}" if (
+            meta.get("fullExchangeName") or found["exchange"]) else ""
+
+        log_action("get_stock_price", found["symbol"], 1, "success", self.name)
+        return AgentResult.ok(
+            f"📈 {name} ({found['symbol']}){exchange}\n"
+            f"  {unit}{float(price):,.2f}{move}",
+            evidence=HttpResponse(status=200, url="query1.finance.yahoo.com"),
+            data={
+                "query": query,
+                "symbol": found["symbol"],
+                "name": name,
+                "price": float(price),
+                "currency": currency,
+                "previous_close": float(previous) if previous else None,
+                "speech": f"{name} is at {float(price):,.2f} {currency}",
+            },
+        ).as_dict()
+
     def get_iss_location(self) -> Dict[str, Any]:
         """Fetches live real-time International Space Station (ISS) latitude & longitude coordinates."""
         try:

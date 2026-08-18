@@ -99,6 +99,9 @@ Type these in plain English. Every example below works as written.
    notify me the build finished      desktop notification
 
 📊  LIVE INFO
+   latest news              top headlines, live
+   technology news          or any topic you name
+   ifci share price         a listed company, by name or ticker
    weather in Delhi · bitcoin price · where am i · iss location
 
 🗣️  VOICE

@@ -60,6 +60,58 @@ _OPTIONAL = re.compile(r"\[([^\[\]]*)\]")
 _WHITESPACE = re.compile(r"\s+")
 _SLOT = re.compile(r"\{[^{}]*\}")
 
+#: The wake word, which the browser UI already listens for ("Hey Monday") and
+#: which people then repeat in the typed box. A bare name is only treated as a
+#: wake word when a greeting introduces it or a comma follows it — otherwise
+#: "monday morning meeting" would lose its day. `olly` is MASSIVE's assistant
+#: name and appears in front of ~1 in 20 utterances there.
+_WAKE_WORD = re.compile(
+    r"^(?:(?:hey|hi|hello|ok|okay)[\s,]+(?:monday|olly)|(?:monday|olly)\s*,)[\s,]*",
+    re.IGNORECASE,
+)
+
+#: Openers people put in front of a command. Taken from the real corpus rather
+#: than invented: `audio_volume_up` alone has "can you", "could you please" and
+#: "please" wrapped around commands MONDAY already serves.
+_CIVILITY_OPENER = re.compile(
+    r"^(?:(?:please|kindly|"
+    r"can you|could you|would you|will you|can we|"
+    r"i want you to|i need you to|i would like you to|i'd like you to|"
+    r"i want to|i need to|i would like to|i'd like to|"
+    r"let's|lets)[\s,]+)+",
+    re.IGNORECASE,
+)
+
+#: Closers. `for me` is included because "turn the volume up for me" is common
+#: and means nothing MONDAY can act on differently.
+_CIVILITY_CLOSER = re.compile(
+    r"[\s,]*(?:please|thanks|thank you|for me|if you (?:can|could)|"
+    r"would you|will you|ok|okay)[\s,.!?]*$",
+    re.IGNORECASE,
+)
+
+
+def strip_civilities(text: str) -> str:
+    """Removes wake words and politeness from the edges of a command.
+
+    Edges only. A "please" inside the command is content — it may be sitting in
+    an email body or a WhatsApp message, and those go out to real people.
+
+    Returns the text unchanged when there is nothing to strip, so the caller can
+    tell whether a retry is worth attempting.
+    """
+    stripped = (text or "").strip()
+    # Alternating, because each can reveal the other: "hey monday please mute"
+    # and "please, monday, mute" both occur.
+    while True:
+        shorter = _CIVILITY_CLOSER.sub("", _CIVILITY_OPENER.sub("", _WAKE_WORD.sub("", stripped))).strip()
+        if shorter == stripped:
+            break
+        stripped = shorter
+    # Never hand back an empty command: "please" on its own is not a command,
+    # and an empty string would match a pattern made only of optional segments.
+    return stripped or (text or "").strip()
+
 #: Most tokens a `{name:app}` slot will accept.
 MAX_APP_TOKENS = 3
 
@@ -284,6 +336,23 @@ class IntentContainer:
         if not cleaned:
             return None
 
+        best = self._best_match(cleaned)
+        if best is not None:
+            return best
+
+        # Second pass, and only ever a second one. Measured on the 10,631 real
+        # utterances in `data/external/massive_en_us.csv`, the largest single
+        # class of miss is a command MONDAY already serves wrapped in "can you
+        # …", "please …" or a wake word. Retrying after the wrapper is removed
+        # cannot change a match that already succeeded — it never runs when one
+        # did — so no pattern's meaning or captured slots move.
+        polite = strip_civilities(cleaned)
+        if polite != cleaned:
+            return self._best_match(polite)
+        return None
+
+    def _best_match(self, cleaned: str) -> Optional[Match]:
+        """The most specific pattern matching this exact text, or None."""
         best: Optional[Match] = None
         for intent, entries in self._intents.items():
             for matcher, pattern, score, typed in entries:

@@ -82,6 +82,7 @@ Chapter: **`reports/CLO01_ethics_and_safety.md`**
 | Confusion matrix | `reports/figures/2_1_confusion_matrix.png` | same |
 | **Accuracy on the app's own commands**, not a held-out slice | `reports/real_command_evidence.md`, `reports/real_command_accuracy.csv` | `py -3.12 -m reports.real_command_evidence` |
 | **End-to-end routing accuracy** — which handler a command reaches | `reports/routing_evidence.md`, `reports/routing_accuracy.csv` | `py -3.12 -m reports.routing_evidence` |
+| **Routing coverage on 10,631 real utterances** (Amazon MASSIVE), per capability | `reports/massive_coverage.md` | `py -3.12 -m reports.massive_coverage` |
 | Clustering: K-Means vs Agglomerative vs DBSCAN, silhouette | `reports/figures/2_3_pca_clusters.png` | `py -3.12 -m ml.memory_clustering` |
 | Notebooks | `notebooks/2_1_intent_classifier.ipynb`, `notebooks/2_3_memory_clustering.ipynb` | — |
 

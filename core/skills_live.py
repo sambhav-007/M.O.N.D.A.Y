@@ -107,12 +107,31 @@ def register_live_skills(registry: SkillRegistry, planner: Any) -> None:
         patterns=[
             "[(what is|whats|what's)] [the] weather",
             "[(what is|whats|what's)] [the] weather [(like)] (in|for|at) {location}",
-            "[(what is|whats|what's)] [the] weather (today|right now|outside)",
+            "[(what is|whats|what's)] [the] weather (today|right now|outside|tomorrow|this week)",
             "temperature",
             "temperature (in|for|at) {location}",
             "forecast",
             "forecast (in|for|at) {location}",
             "[(how is|hows|how's)] [the] weather (in|for|at) {location}",
+            # The corpus asks about the sky, not about "the weather": 36 of the
+            # misses start "do i need", 31 "is it going to", 21 "should i wear".
+            "[(how is|hows|how's)] [the] weather [(like)] [(today|outside|now|right now)]",
+            "(tell|show|give|get) me [the] (weather|forecast|temperature)",
+            "(tell|show|give|get) me [the] (weather|forecast|temperature) [(in|for|at)] {location}",
+            "(tell|show|give|get) me [the] (weather|forecast) (today|tomorrow|this week)",
+            "is it (raining|snowing|sunny|cloudy|windy|hot|cold|warm|freezing)",
+            "is it (raining|snowing|sunny|cloudy|windy|hot|cold|warm|freezing) (now|today|outside|right now)",
+            "is it (raining|snowing|sunny|cloudy|windy|hot|cold|warm) (in|at) {location}",
+            "is it going to (rain|snow|be sunny|be cold|be hot)",
+            "is it going to (rain|snow) (today|tomorrow|tonight|this week)",
+            "is it going to (rain|snow) in {location}",
+            "will it (rain|snow|be sunny|be cold|be hot|be warm)",
+            "will it (rain|snow) (today|tomorrow|tonight|this week)",
+            "will it (rain|snow) in {location}",
+            "do i need (an umbrella|a jacket|a coat|a sweater|sunscreen)",
+            "do i need (an umbrella|a jacket|a coat|a sweater) (today|tomorrow)",
+            "should i (wear|bring|take) (an umbrella|a jacket|a coat|a sweater)",
+            "(weather|forecast) (today|tomorrow|tonight|this week)",
         ],
         handler=weather,
         tier=1,
@@ -137,6 +156,76 @@ def register_live_skills(registry: SkillRegistry, planner: Any) -> None:
             "[(what are|whats|what's)] [the] crypto (price|prices|rates)",
         ],
         handler=crypto_price,
+        tier=1,
+        offline=False,
+    ))
+
+    # ── News ─────────────────────────────────────────────────────────────────
+    #
+    # 707 of MASSIVE's utterances are `news_query` and MONDAY served none of
+    # them: 32% "routed", almost all to `answer_question`, which looks the
+    # headline up on Wikipedia. The patterns here are the shapes that corpus
+    # actually contains — "tell me the latest technology news", "what's
+    # happening in the world", "give me the headlines" — not a guess at them.
+    def latest_news(topic: str = "", **_: Any) -> Dict[str, Any]:
+        return planner.public_api_agent.get_latest_news(topic.strip().strip("\"'"))
+
+    registry.register(Skill(
+        name="latest_news",
+        read_only=True,
+        description="Live news headlines, overall or on one topic",
+        patterns=[
+            "[(what is|whats|what's)] [the] [(latest|today's|todays|current)] news",
+            "[(what are|whats|what's)] [the] [(latest|today's|todays|top)] (headlines|stories)",
+            "(top|breaking|latest) (news|headlines|stories)",
+            "news",
+            "headlines",
+            "(tell|show|give|get|read|fetch|find) me [(the|some|any)] [(latest|today's|todays)] news",
+            "(tell|show|give|get|read|fetch|find) me [(the|some|any)] [(latest|today's|todays)] (headlines|stories)",
+            "(tell|show|give|get|read|fetch|find) me [(the|some|any)] [(latest|today's|todays)] {topic} news",
+            "(tell|show|give|get|read|fetch|find) me [(the|some|any)] news (about|on|in|from|regarding) {topic}",
+            "[(the|some|any)] [(latest|today's|todays)] news (about|on|in|from|regarding) {topic}",
+            "{topic} news",
+            "news headlines (about|on|in|from) {topic}",
+            "[(what is|whats|what's)] (happening|going on) in [the] {topic}",
+            "[(what is|whats|what's)] [the] news (about|on|in|from) {topic}",
+            "[(is|are)] there any [(new|latest)] news (about|on|regarding) {topic}",
+            "update me on [the] news",
+            "catch me up on [the] news",
+        ],
+        handler=latest_news,
+        tier=1,
+        offline=False,
+    ))
+
+    # ── Stock prices ─────────────────────────────────────────────────────────
+    #
+    # `qa_stock` is 200 real utterances and the app had only `crypto_price`, so
+    # "tell me price of ifci stock" reached nothing at all. The symbol is
+    # resolved from the name by Yahoo's search endpoint, because people type
+    # "ifci", not "IFCI.NS".
+    def stock_price(symbol: str = "", **_: Any) -> Dict[str, Any]:
+        return planner.public_api_agent.get_stock_price(symbol.strip().strip("\"'"))
+
+    registry.register(Skill(
+        name="stock_price",
+        read_only=True,
+        description="Live share price for a listed company",
+        patterns=[
+            "[(what is|whats|what's)] [the] [current] (stock|share) price (of|for) {symbol}",
+            "[(what is|whats|what's)] [the] [current] price of {symbol} (stock|stocks|share|shares)",
+            "[(what is|whats|what's)] {symbol} (stock|share) price",
+            "(stock|share) price (of|for) {symbol}",
+            "{symbol} (stock|share) price",
+            "(tell|show|give|get|find|fetch) me [the] [current] (stock|share) price (of|for) {symbol}",
+            "(tell|show|give|get|find|fetch) me [the] [current] price of {symbol} (stock|stocks|share|shares)",
+            "(tell|show|give|get|find|fetch) me [the] {symbol} (stock|share) price",
+            "how (is|are) {symbol} (stock|stocks|share|shares) doing",
+            "how much (is|are) {symbol} (stock|stocks|share|shares) [worth]",
+            "{symbol} (stock|shares) [(price|quote|value)]",
+            "quote for {symbol}",
+        ],
+        handler=stock_price,
         tier=1,
         offline=False,
     ))

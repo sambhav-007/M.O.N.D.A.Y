@@ -923,6 +923,77 @@ nothing. The fixture is now `not-a-real-openai-key-…`. Do not reach for
 
 **791 passing, 0 failing, offline, ~87 s.**
 
+### 2026-08-18 (later still) — the corpus was asked what MONDAY cannot hear
+
+Reported: `fetch me latest news` and `tell me price of ifci stock` both came
+back "I'm not sure how to do that yet", and — separately — `Set the system
+volume to 50%.` did too. **Checked first, before changing anything:** the volume
+command was routed identically at `bb388d5`, before this session's commits, so
+nothing here had made the app weaker. `set volume to 50` worked then and works
+now; the failure was always one word ("system") away.
+
+**The classifier was never the problem.** It called both of the first two
+`browser` at 0.92 and 0.94 — confidently and correctly. There is simply nothing
+behind that class: `registry.by_intent("browser")` returns **[]**, and only 3 of
+49 skills declare an intent class at all, so for four of MONDAY's seven classes
+stage 2 is a dead end by construction. Everything depends on stage 1 patterns.
+
+**So the corpus was asked how bad that is.** `reports/massive_coverage.py` puts
+all 10,631 real utterances of `data/external/massive_en_us.csv` through the
+router — stages 1 and 2 only, because a local model may not be running — and
+reports per MASSIVE intent rather than one average:
+
+    OVERALL              30.6%  →  35.3%   (+505 utterances)
+    news_query    707     32.0% →  52.9%
+    qa_stock      200     42.0% →  57.5%
+    audio_volume_mute 156  6.4% →  23.7%
+    audio_volume_up   134  9.0% →  27.6%
+    audio_volume_down  71 12.7% →  40.8%
+    weather_query 848     26.3% →  35.8%
+    datetime_query 493    29.4% →  36.7%
+    email_sendemail 530   26.6% →  33.4%
+
+Three changes got that:
+
+1. **Two capabilities that did not exist.** `latest_news` (Google News RSS —
+   top stories or any topic, publisher named, no summarising of articles it has
+   not read) and `stock_price` (Yahoo: search resolves "ifci" → `IFCI.NS`, then
+   the chart endpoint gives price and move). Both probed live from this machine
+   before a line was written against them; `IFCI.NS` came back ₹80.33. Both are
+   read-only, Tier 1, `offline=False`, and fail structurally when the network is
+   not there.
+2. **Stage 1 retries once with the civilities stripped.** The largest single
+   class of miss was "please", "can you", "could you please" and a trailing
+   "please" around a command MONDAY already served. The retry runs **only when
+   the command as typed matched nothing**, so no existing match or captured slot
+   can move — which matters because slots carry email bodies and WhatsApp
+   messages. `tests/test_civilities.py` asserts exactly that property.
+3. **Patterns widened from the real phrasings**, not from imagination. The
+   biggest single lesson: every volume pattern read "turn the volume up" and
+   almost nobody says that — they say "turn **up the** volume". Same for
+   "what day of the week is it", "is it raining", "do i need an umbrella".
+
+**What the number is not.** Routing is not correctness: an utterance that
+reaches `answer_question` counts as routed, and for "tell me the latest news"
+that was a Wikipedia lookup of the word "news". The report keeps a `top skills`
+column per intent so that stays visible instead of being averaged away.
+
+**Deliberately not done, and why:**
+
+- **`calendar_set` (1,147 rows, 17.8%) and `calendar_query` (793, 27.7%) are the
+  biggest pools left** and were left alone on purpose. `schedule_event` is not
+  read-only and its patterns capture a title *and* a time; widening them
+  carelessly writes junk events into a real calendar. This one wants care, not
+  volume.
+- **`iot_hue_lightdim` / `lightup` / `lightchange` are still at 0–2%.**
+  `toggle_smart_light` only knows on and off, and it reports NOT_IMPLEMENTED
+  besides. Reaching an honest refusal is worth something, but not enough to
+  write "dim the lights" patterns for a tool that has no dimmer.
+- **`olly` is not stripped as a wake word** even though ~1 in 20 MASSIVE
+  utterances open with it. It is that corpus's assistant name, not MONDAY's, and
+  stripping it would flatter the measurement rather than the app. The measured
+  lift is therefore slightly understated, which is the right direction.
+
 ## 9. WhatsApp (added 2026-08-08)
 
 WhatsApp has **no API a desktop script may send through**. The deep link

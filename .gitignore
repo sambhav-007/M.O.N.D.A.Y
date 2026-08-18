@@ -74,3 +74,9 @@ models/vosk-model-*/
 
 # Claude Code workspace config (tooling, not project source)
 .claude/
+
+# Per-utterance routing decisions for all 10,631 MASSIVE rows (~1.1 MB). The
+# other report CSVs are committed and are ~12 KB; this one is ~100x that, and it
+# regenerates exactly from a corpus that IS committed. The summary it produces,
+# reports/massive_coverage.md, is the artefact worth keeping.
+reports/massive_coverage.csv
