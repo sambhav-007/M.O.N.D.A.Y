@@ -1,9 +1,679 @@
 model,command,massive_intent,acceptable,picked,outcome,seconds
-llama3.2:3b,your volume is too high please repeat that lower,audio_volume_down,set_volume|volume_down,volume_down,correct,1.9
-llama3.2:3b,can you make it a little quieter,audio_volume_down,set_volume|volume_down,mute_volume,wrong,1.36
-llama3.2:3b,turn the volume down a little please,audio_volume_down,set_volume|volume_down,volume_down,correct,2.28
-llama3.2:3b,slow down the speaker volume,audio_volume_down,set_volume|volume_down,volume_down,correct,1.98
-llama3.2:3b,please adjust the speakers to a lower more comfortable level,audio_volume_down,set_volume|volume_down,set_volume,correct,2.24
-llama3.2:3b,please lower music volume,audio_volume_down,set_volume|volume_down,volume_down,correct,1.97
-llama3.2:3b,lower the volume on the speakers,audio_volume_down,set_volume|volume_down,set_volume,correct,2.05
-llama3.2:3b,turn off the bass from the audio,audio_volume_down,set_volume|volume_down,set_volume,correct,2.18
+llama3.2:3b,your volume is too high please repeat that lower,audio_volume_down,set_volume|volume_down,volume_down,correct,0.67
+llama3.2:3b,can you make it a little quieter,audio_volume_down,set_volume|volume_down,mute_volume,wrong,0.64
+llama3.2:3b,turn the volume down a little please,audio_volume_down,set_volume|volume_down,volume_down,correct,0.74
+llama3.2:3b,slow down the speaker volume,audio_volume_down,set_volume|volume_down,volume_down,correct,0.67
+llama3.2:3b,please adjust the speakers to a lower more comfortable level,audio_volume_down,set_volume|volume_down,set_volume,correct,0.72
+llama3.2:3b,please lower music volume,audio_volume_down,set_volume|volume_down,volume_down,correct,0.67
+llama3.2:3b,lower the volume on the speakers,audio_volume_down,set_volume|volume_down,set_volume,correct,0.72
+llama3.2:3b,turn off the bass from the audio,audio_volume_down,set_volume|volume_down,set_volume,correct,0.73
+llama3.2:3b,it's really loud can you please turn the music down,audio_volume_down,set_volume|volume_down,set_volume,correct,0.67
+llama3.2:3b,please talk softer,audio_volume_down,set_volume|volume_down,set_volume,correct,0.69
+llama3.2:3b,talk quieter please,audio_volume_down,set_volume|volume_down,mute_volume,wrong,0.64
+llama3.2:3b,lower volume to half,audio_volume_down,set_volume|volume_down,set_volume,correct,0.73
+llama3.2:3b,mute enabled until i say so,audio_volume_mute,mute_volume,stray_confirmation,wrong,0.74
+llama3.2:3b,turn the volume off,audio_volume_mute,mute_volume,mute_volume,correct,0.67
+llama3.2:3b,can you please stop speaking,audio_volume_mute,mute_volume,mute_volume,correct,0.67
+llama3.2:3b,silence volume on speakers,audio_volume_mute,mute_volume,mute_volume,correct,0.67
+llama3.2:3b,do not talk,audio_volume_mute,mute_volume,set_user_name,wrong,0.76
+llama3.2:3b,please be silent until i tell you not to be,audio_volume_mute,mute_volume,stray_confirmation,wrong,0.7
+llama3.2:3b,turn down the noise,audio_volume_mute,mute_volume,volume_down,wrong,0.69
+llama3.2:3b,off the speakers,audio_volume_mute,mute_volume,speak_text,wrong,0.76
+llama3.2:3b,stop making sounds for forty minutes,audio_volume_mute,mute_volume,volume_down,wrong,0.72
+llama3.2:3b,mute speaker,audio_volume_mute,mute_volume,mute_volume,correct,0.68
+llama3.2:3b,touch the mute button,audio_volume_mute,mute_volume,mute_volume,correct,0.67
+llama3.2:3b,stop it,audio_volume_mute,mute_volume,,answered,0.85
+llama3.2:3b,set the default audio setting,audio_volume_other,read_volume|set_volume|volume_down|volume_up,set_volume,correct,0.72
+llama3.2:3b,set the average of the device,audio_volume_other,read_volume|set_volume|volume_down|volume_up,calculate,wrong,0.73
+llama3.2:3b,change the audio settings,audio_volume_other,read_volume|set_volume|volume_down|volume_up,set_volume,correct,0.73
+llama3.2:3b,adjust the volume,audio_volume_other,read_volume|set_volume|volume_down|volume_up,set_volume,correct,0.73
+llama3.2:3b,need to see volume settings,audio_volume_other,read_volume|set_volume|volume_down|volume_up,volume_down,correct,0.66
+llama3.2:3b,change volume to thirty five percent,audio_volume_other,read_volume|set_volume|volume_down|volume_up,set_volume,correct,0.73
+llama3.2:3b,give a pleasant sound,audio_volume_other,read_volume|set_volume|volume_down|volume_up,speak_text,wrong,0.78
+llama3.2:3b,change volume settings in the negative alexa,audio_volume_other,read_volume|set_volume|volume_down|volume_up,set_volume,correct,0.74
+llama3.2:3b,change volume,audio_volume_other,read_volume|set_volume|volume_down|volume_up,set_volume,correct,0.72
+llama3.2:3b,change volume settings in the negative,audio_volume_other,read_volume|set_volume|volume_down|volume_up,volume_down,correct,0.66
+llama3.2:3b,volume settings please,audio_volume_other,read_volume|set_volume|volume_down|volume_up,set_volume,correct,0.72
+llama3.2:3b,show volume settings,audio_volume_other,read_volume|set_volume|volume_down|volume_up,volume_down,correct,0.67
+llama3.2:3b,i can't hear you can you say it again louder,audio_volume_up,set_volume|volume_up,,answered,0.78
+llama3.2:3b,raise your volume,audio_volume_up,set_volume|volume_up,volume_up,correct,0.66
+llama3.2:3b,can you turn up your volume,audio_volume_up,set_volume|volume_up,volume_up,correct,0.66
+llama3.2:3b,increase volume to fifty percent,audio_volume_up,set_volume|volume_up,set_volume,correct,0.71
+llama3.2:3b,increase volume by two levels,audio_volume_up,set_volume|volume_up,set_volume,correct,0.7
+llama3.2:3b,speaker volume increase,audio_volume_up,set_volume|volume_up,volume_up,correct,0.65
+llama3.2:3b,unmute my sound,audio_volume_up,set_volume|volume_up,mute_volume,wrong,0.71
+llama3.2:3b,get louder,audio_volume_up,set_volume|volume_up,volume_up,correct,0.65
+llama3.2:3b,raise the volume to fifty,audio_volume_up,set_volume|volume_up,set_volume,correct,0.71
+llama3.2:3b,change the speaker volume to sixty five percent,audio_volume_up,set_volume|volume_up,set_volume,correct,0.71
+llama3.2:3b,i need a high volume,audio_volume_up,set_volume|volume_up,volume_up,correct,0.71
+llama3.2:3b,i can't hear just increase the volume,audio_volume_up,set_volume|volume_up,volume_up,correct,0.65
+llama3.2:3b,is mary's birthday party tonight,calendar_query,upcoming_events,tell_date,wrong,0.72
+llama3.2:3b,do i have a meeting this afternoon,calendar_query,upcoming_events,upcoming_events,correct,0.75
+llama3.2:3b,olly is there anything i should be reminded about,calendar_query,upcoming_events,upcoming_events,correct,0.66
+llama3.2:3b,do i have any appointments today,calendar_query,upcoming_events,upcoming_events,correct,0.67
+llama3.2:3b,tell me my schedule for later this afternoon,calendar_query,upcoming_events,upcoming_events,correct,0.67
+llama3.2:3b,is wyatt's birthday party at ten p. m.,calendar_query,upcoming_events,tell_date,wrong,0.71
+llama3.2:3b,tell me all the pending reminders,calendar_query,upcoming_events,upcoming_events,correct,0.66
+llama3.2:3b,from four to six when do i have a free break,calendar_query,upcoming_events,upcoming_events,correct,0.9
+llama3.2:3b,do i have to do something later,calendar_query,upcoming_events,stray_confirmation,wrong,0.66
+llama3.2:3b,can you confirm that my meeting for tomorrow has been canceled,calendar_query,upcoming_events,stray_confirmation,wrong,0.8
+llama3.2:3b,is tomorrow a holiday,calendar_query,upcoming_events,tell_date,wrong,0.7
+llama3.2:3b,do i have anything planned today,calendar_query,upcoming_events,upcoming_events,correct,0.67
+llama3.2:3b,can you remind me to order the turkey three weeks before thanksgiving,calendar_set,desktop_notification|schedule_event,schedule_event,correct,0.84
+llama3.2:3b,please set a reminder for tuesdays at nine am,calendar_set,desktop_notification|schedule_event,schedule_event,correct,0.88
+llama3.2:3b,add date and time in calendar with these people,calendar_set,desktop_notification|schedule_event,schedule_event,correct,0.91
+llama3.2:3b,set an event for friday,calendar_set,desktop_notification|schedule_event,schedule_event,correct,0.79
+llama3.2:3b,thirteen minutes from now remind me to drive to the park,calendar_set,desktop_notification|schedule_event,schedule_event,correct,0.86
+llama3.2:3b,remind me every tuesday to go to the dry cleaners,calendar_set,desktop_notification|schedule_event,schedule_event,correct,0.86
+llama3.2:3b,set reminder for tomorrow at two p. m.,calendar_set,desktop_notification|schedule_event,schedule_event,correct,0.9
+llama3.2:3b,remind me tomorrow at two p. m.,calendar_set,desktop_notification|schedule_event,schedule_event,correct,1.02
+llama3.2:3b,please organize a meeting with my company workers,calendar_set,desktop_notification|schedule_event,schedule_event,correct,0.91
+llama3.2:3b,set up a meeting with peter francis for monday at two p. m.,calendar_set,desktop_notification|schedule_event,schedule_event,correct,0.95
+llama3.2:3b,remind me clock that i have a event,calendar_set,desktop_notification|schedule_event,tell_date,wrong,0.71
+llama3.2:3b,if there is any free space please set a reminder for me to call my sister about a college fund between my meetings this evening,calendar_set,desktop_notification|schedule_event,schedule_event,correct,0.89
+llama3.2:3b,clock time,datetime_query,tell_date|tell_time,tell_time,correct,0.65
+llama3.2:3b,is it twentieth march today,datetime_query,tell_date|tell_time,tell_date,correct,0.65
+llama3.2:3b,time now in new york,datetime_query,tell_date|tell_time,tell_date,correct,0.72
+llama3.2:3b,i want exact time in washington right now,datetime_query,tell_date|tell_time,tell_time,correct,0.72
+llama3.2:3b,tell me the time in tokyo,datetime_query,tell_date|tell_time,tell_time,correct,0.72
+llama3.2:3b,what day of the week is june twenty seventh on this year,datetime_query,tell_date|tell_time,tell_date,correct,0.78
+llama3.2:3b,what day of the week is halloween,datetime_query,tell_date|tell_time,tell_date,correct,0.79
+llama3.2:3b,what day it is on twenty second april,datetime_query,tell_date|tell_time,tell_date,correct,0.79
+llama3.2:3b,what will the date be next wednesday,datetime_query,tell_date|tell_time,tell_date,correct,0.72
+llama3.2:3b,alarm clock,datetime_query,tell_date|tell_time,tell_time,correct,0.66
+llama3.2:3b,can you tell me the time right now,datetime_query,tell_date|tell_time,tell_time,correct,0.66
+llama3.2:3b,can you give me the time in new delhi,datetime_query,tell_date|tell_time,tell_time,correct,0.71
+llama3.2:3b,are there any new emails received after four o'clock today,email_query,read_latest_email,read_latest_email,correct,0.8
+llama3.2:3b,what unread emails do i have,email_query,read_latest_email,read_latest_email,correct,0.74
+llama3.2:3b,check inbox for mail from sarah,email_query,read_latest_email,read_latest_email,correct,0.73
+llama3.2:3b,is there anything new in my gmail,email_query,read_latest_email,read_latest_email,correct,0.68
+llama3.2:3b,see my inbox for mail i received from sarah,email_query,read_latest_email,read_latest_email,correct,0.73
+llama3.2:3b,read email from julia,email_query,read_latest_email,read_latest_email,correct,0.78
+llama3.2:3b,what emails have i gotten since last night,email_query,read_latest_email,read_latest_email,correct,0.75
+llama3.2:3b,report what is new in my email inbox please,email_query,read_latest_email,read_latest_email,correct,0.68
+llama3.2:3b,alexa do i have any new emails,email_query,read_latest_email,read_latest_email,correct,0.68
+llama3.2:3b,check unread emails from amy,email_query,read_latest_email,read_latest_email,correct,0.78
+llama3.2:3b,has the university of greenwich emailed me,email_query,read_latest_email,lookup_contact_number,wrong,0.77
+llama3.2:3b,topic,email_query,read_latest_email,answer_question,wrong,0.71
+llama3.2:3b,fetch me the phone number of alexander,email_querycontact,lookup_contact_number|read_latest_email,lookup_contact_number,correct,0.74
+llama3.2:3b,how old is joanne,email_querycontact,lookup_contact_number|read_latest_email,web_search,wrong,0.74
+llama3.2:3b,look up bill information,email_querycontact,lookup_contact_number|read_latest_email,web_search,wrong,0.73
+llama3.2:3b,contact detail of paul,email_querycontact,lookup_contact_number|read_latest_email,lookup_contact_number,correct,0.76
+llama3.2:3b,may you please pull up information about a contact,email_querycontact,lookup_contact_number|read_latest_email,lookup_contact_number,correct,0.74
+llama3.2:3b,provide information about bill from my contact list,email_querycontact,lookup_contact_number|read_latest_email,lookup_contact_number,correct,0.75
+llama3.2:3b,please find a mail address of manoj and tell me,email_querycontact,lookup_contact_number|read_latest_email,lookup_contact_number,correct,0.76
+llama3.2:3b,alexa provide information about bill from my contact list,email_querycontact,lookup_contact_number|read_latest_email,lookup_contact_number,correct,0.73
+llama3.2:3b,tell me the contact details of my brother,email_querycontact,lookup_contact_number|read_latest_email,lookup_contact_number,correct,0.76
+llama3.2:3b,open the contact alex in phonebook,email_querycontact,lookup_contact_number|read_latest_email,lookup_contact_number,correct,0.74
+llama3.2:3b,how to reach hallway,email_querycontact,lookup_contact_number|read_latest_email,open_app_or_website,wrong,0.78
+llama3.2:3b,where seth lives,email_querycontact,lookup_contact_number|read_latest_email,,answered,0.67
+llama3.2:3b,the email reply should state,email_sendemail,compose_email|send_email,compose_email,correct,0.78
+llama3.2:3b,tell chris i will be late through email,email_sendemail,compose_email|send_email,compose_email,correct,0.8
+llama3.2:3b,reply to name,email_sendemail,compose_email|send_email,get_user_name,wrong,0.68
+llama3.2:3b,send this reply to received email,email_sendemail,compose_email|send_email,send_email,correct,0.74
+llama3.2:3b,reply to john stating that i will attend the party,email_sendemail,compose_email|send_email,stray_confirmation,wrong,0.72
+llama3.2:3b,i need to email susan and metion,email_sendemail,compose_email|send_email,compose_email,correct,0.66
+llama3.2:3b,email mom and ask how the weather is there,email_sendemail,compose_email|send_email,compose_email,correct,0.84
+llama3.2:3b,reply to dad write i will be late,email_sendemail,compose_email|send_email,stray_confirmation,wrong,0.78
+llama3.2:3b,please reply to my most recent email,email_sendemail,compose_email|send_email,read_latest_email,wrong,0.68
+llama3.2:3b,send a reply to mike with the answer four hundred and thirty from his email he sent this morning,email_sendemail,compose_email|send_email,recall_memory,wrong,0.81
+llama3.2:3b,email my sister about mom's birthday jane we should think about arranging the party at the park,email_sendemail,compose_email|send_email,compose_email,correct,0.74
+llama3.2:3b,i need this email sent now,email_sendemail,compose_email|send_email,send_email,correct,0.71
+llama3.2:3b,olly tell me my alarms,general_greet,chitchat,list_processes,wrong,0.67
+llama3.2:3b,hey what's today,general_greet,chitchat,tell_date,wrong,0.68
+llama3.2:3b,how was the day,general_greet,chitchat,chitchat,correct,0.84
+llama3.2:3b,tell funny things,general_joke,tell_joke,tell_joke,correct,0.69
+llama3.2:3b,hey siri have you heard any funny jokes lately,general_joke,tell_joke,tell_joke,correct,0.68
+llama3.2:3b,tell me the funniest joke that was ever told,general_joke,tell_joke,tell_joke,correct,0.68
+llama3.2:3b,the joke of the day,general_joke,tell_joke,tell_joke,correct,0.71
+llama3.2:3b,have you heard any good jokes lately,general_joke,tell_joke,tell_joke,correct,0.69
+llama3.2:3b,joke of the day,general_joke,tell_joke,tell_joke,correct,0.7
+llama3.2:3b,make me happy,general_joke,tell_joke,tell_joke,correct,0.7
+llama3.2:3b,a priest walks into a bar,general_joke,tell_joke,tell_joke,correct,0.83
+llama3.2:3b,find me the best knock knock joke on the internet,general_joke,tell_joke,tell_joke,correct,0.79
+llama3.2:3b,olly make me laugh,general_joke,tell_joke,tell_joke,correct,0.69
+llama3.2:3b,tell a joke that puts smile on my face,general_joke,tell_joke,tell_joke,correct,0.68
+llama3.2:3b,cheer me up,general_joke,tell_joke,chitchat,wrong,0.79
+llama3.2:3b,please shut the lights,iot_hue_lightoff,toggle_smart_light,toggle_smart_light,correct,0.74
+llama3.2:3b,no lights,iot_hue_lightoff,toggle_smart_light,toggle_smart_light,correct,0.74
+llama3.2:3b,please switch off the light,iot_hue_lightoff,toggle_smart_light,toggle_smart_light,correct,0.74
+llama3.2:3b,please turn off the lights in bedroom,iot_hue_lightoff,toggle_smart_light,toggle_smart_light,correct,0.77
+llama3.2:3b,switch off all lights,iot_hue_lightoff,toggle_smart_light,toggle_smart_light,correct,0.73
+llama3.2:3b,did i leave the light on in the garage,iot_hue_lightoff,toggle_smart_light,stray_confirmation,wrong,0.86
+llama3.2:3b,switch off main light,iot_hue_lightoff,toggle_smart_light,toggle_smart_light,correct,0.75
+llama3.2:3b,kindly switch off the light in the drawing hall,iot_hue_lightoff,toggle_smart_light,toggle_smart_light,correct,0.75
+llama3.2:3b,shut the lights off in my bedroom please,iot_hue_lightoff,toggle_smart_light,toggle_smart_light,correct,0.76
+llama3.2:3b,can you turn off one of my lights in my bathroom,iot_hue_lightoff,toggle_smart_light,toggle_smart_light,correct,0.71
+llama3.2:3b,olly it's too bright in here can you turn a light off,iot_hue_lightoff,toggle_smart_light,toggle_smart_light,correct,0.75
+llama3.2:3b,i'm going to sleep now,iot_hue_lightoff,toggle_smart_light,tell_time,wrong,0.67
+llama3.2:3b,it's dark in here,iot_hue_lighton,toggle_smart_light,speak_text,wrong,0.74
+llama3.2:3b,it's awfully dark here,iot_hue_lighton,toggle_smart_light,speak_text,wrong,0.74
+llama3.2:3b,light up the lights in the kitchen,iot_hue_lighton,toggle_smart_light,toggle_smart_light,correct,0.77
+llama3.2:3b,switch on the lights,iot_hue_lighton,toggle_smart_light,toggle_smart_light,correct,0.74
+llama3.2:3b,alexa please turn on the lights,iot_hue_lighton,toggle_smart_light,toggle_smart_light,correct,0.75
+llama3.2:3b,switch on all the lights,iot_hue_lighton,toggle_smart_light,toggle_smart_light,correct,0.74
+llama3.2:3b,lights out,iot_hue_lighton,toggle_smart_light,mute_volume,wrong,0.66
+llama3.2:3b,and the darkness has fallen,iot_hue_lighton,toggle_smart_light,tell_joke,wrong,0.68
+llama3.2:3b,hey alexa turn on disco lights in my apartment and let the party begin,iot_hue_lighton,toggle_smart_light,toggle_smart_light,correct,0.81
+llama3.2:3b,i can't see anything,iot_hue_lighton,toggle_smart_light,desktop_contents,wrong,0.67
+llama3.2:3b,put the disco lights on,iot_hue_lighton,toggle_smart_light,toggle_smart_light,correct,0.77
+llama3.2:3b,please turn on the lights in my house,iot_hue_lighton,toggle_smart_light,toggle_smart_light,correct,0.78
+llama3.2:3b,power off on,iot_wemo_off,toggle_smart_light,mute_volume,wrong,0.67
+llama3.2:3b,turn off the t. v. in,iot_wemo_off,toggle_smart_light,mute_volume,wrong,0.64
+llama3.2:3b,the wemo plug should be turned off on,iot_wemo_off,toggle_smart_light,toggle_smart_light,correct,0.86
+llama3.2:3b,turn off the rice cooker socket,iot_wemo_off,toggle_smart_light,toggle_smart_light,correct,0.69
+llama3.2:3b,please switch off on the wemo plug socket,iot_wemo_off,toggle_smart_light,toggle_smart_light,correct,0.79
+llama3.2:3b,switch off the wemo plug socket,iot_wemo_off,toggle_smart_light,toggle_smart_light,correct,0.78
+llama3.2:3b,disable my okug,iot_wemo_off,toggle_smart_light,mute_volume,wrong,0.64
+llama3.2:3b,can you turn off wemo plug socket,iot_wemo_off,toggle_smart_light,toggle_smart_light,correct,0.73
+llama3.2:3b,turn off my wemo socket,iot_wemo_off,toggle_smart_light,toggle_smart_light,correct,0.72
+llama3.2:3b,off all type of active devices,iot_wemo_off,toggle_smart_light,list_processes,wrong,0.67
+llama3.2:3b,turn off smart socket,iot_wemo_off,toggle_smart_light,toggle_smart_light,correct,0.74
+llama3.2:3b,turn off wemo plug in game room,iot_wemo_off,toggle_smart_light,toggle_smart_light,correct,0.75
+llama3.2:3b,turn on when plugged in else turn off,iot_wemo_on,toggle_smart_light,set_volume,wrong,0.73
+llama3.2:3b,turn on the fan socket,iot_wemo_on,toggle_smart_light,toggle_smart_light,correct,0.79
+llama3.2:3b,turn on new smart socket,iot_wemo_on,toggle_smart_light,toggle_smart_light,correct,0.75
+llama3.2:3b,turn on the wemo plug socket to plug in my dongle,iot_wemo_on,toggle_smart_light,toggle_smart_light,correct,0.73
+llama3.2:3b,turn on living room radio,iot_wemo_on,toggle_smart_light,open_app_or_website,wrong,0.95
+llama3.2:3b,please turn on my wemo plug socket,iot_wemo_on,toggle_smart_light,toggle_smart_light,correct,0.79
+llama3.2:3b,turn on the rice cooker socket,iot_wemo_on,toggle_smart_light,toggle_smart_light,correct,0.71
+llama3.2:3b,start the laundry,iot_wemo_on,toggle_smart_light,organize_folder,wrong,0.77
+llama3.2:3b,on mobile charger plug,iot_wemo_on,toggle_smart_light,desktop_notification,wrong,0.81
+llama3.2:3b,if switch is on then turn on else turn off,iot_wemo_on,toggle_smart_light,set_volume,wrong,0.73
+llama3.2:3b,turn on the wemo plug socket to connect my charger to it,iot_wemo_on,toggle_smart_light,toggle_smart_light,correct,0.73
+llama3.2:3b,power on wemo,iot_wemo_on,toggle_smart_light,open_app_or_website,wrong,0.77
+llama3.2:3b,generate a new inventory,lists_createoradd,remember_fact,organize_folder,wrong,0.74
+llama3.2:3b,hey put carrots on that,lists_createoradd,remember_fact,desktop_notification,wrong,0.74
+llama3.2:3b,remind me to order more soap,lists_createoradd,remember_fact,remember_fact,correct,0.84
+llama3.2:3b,put clean dog at the top of the cleaning list,lists_createoradd,remember_fact,organize_folder,wrong,0.77
+llama3.2:3b,hey olly i need you to make a list of cricket players of indian team who played for the international team in two thousand and fourteen,lists_createoradd,remember_fact,web_search,wrong,0.85
+llama3.2:3b,join this,lists_createoradd,remember_fact,,answered,1.53
+llama3.2:3b,add paav bhaji in menu card,lists_createoradd,remember_fact,open_app_or_website,wrong,1.0
+llama3.2:3b,i want sweet potato pie from a local bakery,lists_createoradd,remember_fact,web_search,wrong,0.78
+llama3.2:3b,make me a new checklist,lists_createoradd,remember_fact,organize_folder,wrong,0.77
+llama3.2:3b,include this,lists_createoradd,remember_fact,,declined,30.28
+llama3.2:3b,i need more milk,lists_createoradd,remember_fact,open_app_or_website,wrong,1.67
+llama3.2:3b,current,lists_createoradd,remember_fact,tell_date,wrong,0.66
+llama3.2:3b,do i have any lists for the upcoming week,lists_query,recall_memory,upcoming_events,wrong,0.69
+llama3.2:3b,i have all details about pda's,lists_query,recall_memory,research_topic,wrong,0.74
+llama3.2:3b,android,lists_query,recall_memory,geolocation,wrong,0.73
+llama3.2:3b,what else is missing in the diary,lists_query,recall_memory,recall_memory,correct,0.85
+llama3.2:3b,my health planning,lists_query,recall_memory,system_health,wrong,0.7
+llama3.2:3b,important house information,lists_query,recall_memory,desktop_contents,wrong,0.74
+llama3.2:3b,olly what do i need to get done today,lists_query,recall_memory,upcoming_events,wrong,0.68
+llama3.2:3b,let me know what is remaining on my query,lists_query,recall_memory,recall_memory,correct,0.77
+llama3.2:3b,check the notes app and give me details of all the lists,lists_query,recall_memory,desktop_contents,wrong,0.85
+llama3.2:3b,tell me that list i wrote two days ago,lists_query,recall_memory,recall_memory,correct,0.79
+llama3.2:3b,java,lists_query,recall_memory,,answered,0.68
+llama3.2:3b,buying clothes,lists_query,recall_memory,web_search,wrong,0.75
+llama3.2:3b,please delete this file,lists_remove,recall_memory|remember_fact,organize_folder,wrong,0.75
+llama3.2:3b,i won't be getting an oil change for my car today,lists_remove,recall_memory|remember_fact,stray_confirmation,wrong,0.76
+llama3.2:3b,remove table from furniture,lists_remove,recall_memory|remember_fact,organize_folder,wrong,0.78
+llama3.2:3b,tell me something interesting on the message list,lists_remove,recall_memory|remember_fact,recall_memory,correct,0.75
+llama3.2:3b,replace,lists_remove,recall_memory|remember_fact,,answered,1.87
+llama3.2:3b,get rid of peas,lists_remove,recall_memory|remember_fact,organize_folder,wrong,0.75
+llama3.2:3b,remove lunch with company workers on thursday,lists_remove,recall_memory|remember_fact,organize_folder,wrong,0.81
+llama3.2:3b,delete last entry,lists_remove,recall_memory|remember_fact,,answered,0.51
+llama3.2:3b,delete my to do's for this week,lists_remove,recall_memory|remember_fact,remember_fact,correct,0.87
+llama3.2:3b,cut red peppers from groceries,lists_remove,recall_memory|remember_fact,organize_folder,wrong,0.76
+llama3.2:3b,it's make me good lucking guy inside very very horkersd wo,lists_remove,recall_memory|remember_fact,tell_joke,wrong,0.69
+llama3.2:3b,erase all,lists_remove,recall_memory|remember_fact,organize_folder,wrong,0.74
+llama3.2:3b,pull up political news today from c. n. n.,news_query,latest_news,latest_news,correct,0.86
+llama3.2:3b,is there a way to check if there is any new news stories to read,news_query,latest_news,latest_news,correct,0.75
+llama3.2:3b,if there news about up politics what is that,news_query,latest_news,latest_news,correct,0.74
+llama3.2:3b,get news from b. b. c.,news_query,latest_news,latest_news,correct,0.8
+llama3.2:3b,is there any current news on the presidential election,news_query,latest_news,latest_news,correct,0.75
+llama3.2:3b,set environmental news notification,news_query,latest_news,desktop_notification,wrong,0.75
+llama3.2:3b,tell me some braking news in new york,news_query,latest_news,latest_news,correct,0.74
+llama3.2:3b,find me info on cars,news_query,latest_news,web_search,wrong,0.73
+llama3.2:3b,news articles on a particular subject,news_query,latest_news,latest_news,correct,0.79
+llama3.2:3b,donald trump,news_query,latest_news,answer_question,wrong,0.76
+llama3.2:3b,olly what's happened in the news today,news_query,latest_news,latest_news,correct,0.74
+llama3.2:3b,find news about brexit,news_query,latest_news,latest_news,correct,0.74
+llama3.2:3b,please look up exchange between us and mexco,qa_currency,answer_question|crypto_price|web_search,web_search,correct,0.78
+llama3.2:3b,find exchange rate for u. s. d. to euro,qa_currency,answer_question|crypto_price|web_search,web_search,correct,0.76
+llama3.2:3b,exchange rate from cad to u. s. d.,qa_currency,answer_question|crypto_price|web_search,web_search,correct,0.78
+llama3.2:3b,dollar to euro exchange rate,qa_currency,answer_question|crypto_price|web_search,crypto_price,correct,0.72
+llama3.2:3b,olly what is the exchange rate between the us dollar and the aus dollar,qa_currency,answer_question|crypto_price|web_search,web_search,correct,0.75
+llama3.2:3b,alexa tell me the exchange rate of ten dollar to euro,qa_currency,answer_question|crypto_price|web_search,web_search,correct,0.8
+llama3.2:3b,show me current exchange rate between euros and other currencies,qa_currency,answer_question|crypto_price|web_search,crypto_price,correct,0.73
+llama3.2:3b,one dolla equals how much inr,qa_currency,answer_question|crypto_price|web_search,web_search,correct,0.77
+llama3.2:3b,please give me detail of one yen equals dollar,qa_currency,answer_question|crypto_price|web_search,web_search,correct,0.78
+llama3.2:3b,can you tell me the exchange rate for canadian currency,qa_currency,answer_question|crypto_price|web_search,web_search,correct,0.77
+llama3.2:3b,convert currency calculator,qa_currency,answer_question|crypto_price|web_search,calculate,wrong,0.73
+llama3.2:3b,and the pound is doing how badly against the euro,qa_currency,answer_question|crypto_price|web_search,crypto_price,correct,0.73
+llama3.2:3b,what does tense mean,qa_definition,answer_question|web_search,web_search,correct,0.77
+llama3.2:3b,definition xy,qa_definition,answer_question|web_search,stray_confirmation,wrong,0.68
+llama3.2:3b,give me the description about watch,qa_definition,answer_question|web_search,,answered,0.74
+llama3.2:3b,tell me the definition of arrow,qa_definition,answer_question|web_search,answer_question,correct,0.73
+llama3.2:3b,define this object,qa_definition,answer_question|web_search,system_health,wrong,0.74
+llama3.2:3b,what does the word hypocrisy mean,qa_definition,answer_question|web_search,answer_question,correct,0.74
+llama3.2:3b,what does a geranium look like,qa_definition,answer_question|web_search,web_search,correct,0.74
+llama3.2:3b,try out in wikipedia,qa_definition,answer_question|web_search,answer_question,correct,0.75
+llama3.2:3b,give me the description about smartphone,qa_definition,answer_question|web_search,desktop_contents,wrong,0.74
+llama3.2:3b,what does potato mean,qa_definition,answer_question|web_search,web_search,correct,0.72
+llama3.2:3b,do you know the definition of school,qa_definition,answer_question|web_search,answer_question,correct,0.73
+llama3.2:3b,hey what is the definition of passive,qa_definition,answer_question|web_search,answer_question,correct,0.74
+llama3.2:3b,tell me the highest mountain in the world,qa_factoid,answer_question|research_topic|web_search,answer_question,correct,0.78
+llama3.2:3b,which country's have a border to india,qa_factoid,answer_question|research_topic|web_search,web_search,correct,0.76
+llama3.2:3b,what brand hair spray does donald trump use,qa_factoid,answer_question|research_topic|web_search,web_search,correct,0.78
+llama3.2:3b,please tell who invented telephone and what is the date,qa_factoid,answer_question|research_topic|web_search,web_search,correct,0.82
+llama3.2:3b,how old is emma watson newest boyfriend,qa_factoid,answer_question|research_topic|web_search,web_search,correct,0.79
+llama3.2:3b,how tall was abraham lincoln,qa_factoid,answer_question|research_topic|web_search,answer_question,correct,0.77
+llama3.2:3b,alexa give me everything you know about bob dean,qa_factoid,answer_question|research_topic|web_search,web_search,correct,0.74
+llama3.2:3b,how old is cher,qa_factoid,answer_question|research_topic|web_search,web_search,correct,0.77
+llama3.2:3b,what does celebrity do,qa_factoid,answer_question|research_topic|web_search,web_search,correct,0.75
+llama3.2:3b,which ocean touches at our continent,qa_factoid,answer_question|research_topic|web_search,web_search,correct,0.79
+llama3.2:3b,find route,qa_factoid,answer_question|research_topic|web_search,web_search,correct,0.74
+llama3.2:3b,is steph curry married,qa_factoid,answer_question|research_topic|web_search,answer_question,correct,0.77
+llama3.2:3b,if a pencil cost four dollars and a book ten dollars cost how much i should pay if i buy two pencil and three book,qa_maths,answer_question|calculate,calculate,correct,0.81
+llama3.2:3b,multiply one thousand by twelve,qa_maths,answer_question|calculate,calculate,correct,0.77
+llama3.2:3b,solve this equation one plus one,qa_maths,answer_question|calculate,calculate,correct,0.75
+llama3.2:3b,tell me the answer for two plus two,qa_maths,answer_question|calculate,calculate,correct,0.74
+llama3.2:3b,calculate two multiplied by two,qa_maths,answer_question|calculate,calculate,correct,0.75
+llama3.2:3b,google,qa_maths,answer_question|calculate,web_search,wrong,0.72
+llama3.2:3b,solution,qa_maths,answer_question|calculate,web_search,wrong,0.73
+llama3.2:3b,ten percentages of hundred,qa_maths,answer_question|calculate,calculate,correct,0.73
+llama3.2:3b,if i have fifty dollars and spend twenty four how many dollars will i have left,qa_maths,answer_question|calculate,calculate,correct,0.75
+llama3.2:3b,is equal to,qa_maths,answer_question|calculate,get_user_name,wrong,0.75
+llama3.2:3b,please solve this math,qa_maths,answer_question|calculate,calculate,correct,0.74
+llama3.2:3b,can you help me find the answer to this question,qa_maths,answer_question|calculate,answer_question,correct,0.77
+llama3.2:3b,current price of google please,qa_stock,latest_news|stock_price,crypto_price,wrong,0.74
+llama3.2:3b,check stock price for dinky donuts,qa_stock,latest_news|stock_price,stock_price,correct,0.81
+llama3.2:3b,please tell me when i can become rich if i invested in dow stocks today and what will be the return after five years,qa_stock,latest_news|stock_price,stock_price,correct,1.09
+llama3.2:3b,how strong is the dollar compared to the peso,qa_stock,latest_news|stock_price,web_search,wrong,0.79
+llama3.2:3b,stock prices at walmart,qa_stock,latest_news|stock_price,stock_price,correct,0.74
+llama3.2:3b,give me the opening stock price of sony,qa_stock,latest_news|stock_price,stock_price,correct,0.68
+llama3.2:3b,keep me updated on stock market prices,qa_stock,latest_news|stock_price,stock_price,correct,0.81
+llama3.2:3b,stock,qa_stock,latest_news|stock_price,stock_price,correct,0.71
+llama3.2:3b,give the stock price details of motorolla,qa_stock,latest_news|stock_price,stock_price,correct,0.74
+llama3.2:3b,were the stocks rising or declining,qa_stock,latest_news|stock_price,crypto_price,wrong,0.75
+llama3.2:3b,stock company name,qa_stock,latest_news|stock_price,stock_price,correct,0.75
+llama3.2:3b,how high is the south n. p.,qa_stock,latest_news|stock_price,web_search,wrong,0.79
+llama3.2:3b,what events are in me area,recommendation_events,answer_question|latest_news|web_search,latest_news,correct,0.77
+llama3.2:3b,are there any events coming up,recommendation_events,answer_question|latest_news|web_search,upcoming_events,wrong,0.68
+llama3.2:3b,local area events,recommendation_events,answer_question|latest_news|web_search,latest_news,correct,0.75
+llama3.2:3b,is there some play can i go tonight in the city,recommendation_events,answer_question|latest_news|web_search,latest_news,correct,0.78
+llama3.2:3b,can you tell me what kind of show can i go tonight in miami,recommendation_events,answer_question|latest_news|web_search,web_search,correct,0.77
+llama3.2:3b,are there dog shows going on near new york city,recommendation_events,answer_question|latest_news|web_search,latest_news,correct,0.8
+llama3.2:3b,both young drivers and provisional drivers crash more often than other drivers because they have not yet had the wide range of experiences they need to drive safely by themselves research has shown that driving experience is a major factor in reducing road crashes and that the safest time for young drivers is when they are driving under supervision while learning,recommendation_events,answer_question|latest_news|web_search,research_topic,wrong,0.94
+llama3.2:3b,are there any events happening in town,recommendation_events,answer_question|latest_news|web_search,latest_news,correct,0.75
+llama3.2:3b,show me where i can find a hamburger,recommendation_events,answer_question|latest_news|web_search,web_search,correct,0.78
+llama3.2:3b,what can i do tonight in the city,recommendation_events,answer_question|latest_news|web_search,latest_news,correct,0.81
+llama3.2:3b,searching on holidays in my location,recommendation_events,answer_question|latest_news|web_search,weather,wrong,0.77
+llama3.2:3b,anything unique to do in the city today,recommendation_events,answer_question|latest_news|web_search,latest_news,correct,0.82
+llama3.2:3b,guide me to the restaurant,recommendation_locations,answer_question|geolocation|web_search,open_app_or_website,wrong,0.94
+llama3.2:3b,best reviews restaurant in south sacramento,recommendation_locations,answer_question|geolocation|web_search,web_search,correct,0.79
+llama3.2:3b,can you find me a furniture store near me,recommendation_locations,answer_question|geolocation|web_search,web_search,correct,0.78
+llama3.2:3b,where can i shop as a local tourist,recommendation_locations,answer_question|geolocation|web_search,web_search,correct,0.78
+llama3.2:3b,tell me chinese restaurants in the area,recommendation_locations,answer_question|geolocation|web_search,web_search,correct,0.78
+llama3.2:3b,nearest restaurants available at this time,recommendation_locations,answer_question|geolocation|web_search,latest_news,wrong,0.73
+llama3.2:3b,alexa i want to know the best super market in this local area,recommendation_locations,answer_question|geolocation|web_search,web_search,correct,0.76
+llama3.2:3b,show me what shops are around me,recommendation_locations,answer_question|geolocation|web_search,geolocation,correct,0.67
+llama3.2:3b,find a shop that sells beer,recommendation_locations,answer_question|geolocation|web_search,web_search,correct,0.77
+llama3.2:3b,show me where the nearest restaurant is,recommendation_locations,answer_question|geolocation|web_search,web_search,correct,0.73
+llama3.2:3b,markets near by,recommendation_locations,answer_question|geolocation|web_search,web_search,correct,0.75
+llama3.2:3b,ask a restaurant in me area,recommendation_locations,answer_question|geolocation|web_search,web_search,correct,0.76
+llama3.2:3b,olly what movies are playing right now,recommendation_movies,answer_question|web_search,latest_news,wrong,0.77
+llama3.2:3b,movie times tonight,recommendation_movies,answer_question|web_search,tell_date,wrong,0.67
+llama3.2:3b,security awareness,recommendation_movies,answer_question|web_search,web_search,correct,0.73
+llama3.2:3b,show times for nearest theater,recommendation_movies,answer_question|web_search,web_search,correct,0.77
+llama3.2:3b,olly what movies are playing at carmike cinemas,recommendation_movies,answer_question|web_search,web_search,correct,0.82
+llama3.2:3b,i need a good chick flick any thoughts,recommendation_movies,answer_question|web_search,tell_joke,wrong,0.68
+llama3.2:3b,show me nearest theater,recommendation_movies,answer_question|web_search,web_search,correct,0.74
+llama3.2:3b,what movies are playing this week,recommendation_movies,answer_question|web_search,latest_news,wrong,0.77
+llama3.2:3b,is swat a good movie,recommendation_movies,answer_question|web_search,web_search,correct,0.78
+llama3.2:3b,can you tell me what movies are playing at the movies tonight,recommendation_movies,answer_question|web_search,latest_news,wrong,0.75
+llama3.2:3b,tickets,recommendation_movies,answer_question|web_search,list_processes,wrong,0.67
+llama3.2:3b,what do you suggest that i watch this weekend,recommendation_movies,answer_question|web_search,web_search,correct,0.77
+llama3.2:3b,it seems cold,weather_query,weather,tell_time,wrong,0.67
+llama3.2:3b,display the seven day forecast for this week,weather_query,weather,weather,correct,0.77
+llama3.2:3b,is it supposed to rain tonight,weather_query,weather,web_search,wrong,0.74
+llama3.2:3b,should i open the sun roof,weather_query,weather,stray_confirmation,wrong,0.81
+llama3.2:3b,are storms likely today,weather_query,weather,web_search,wrong,0.74
+llama3.2:3b,will it be warm tomorrow,weather_query,weather,web_search,wrong,0.75
+llama3.2:3b,is it going to be windy tomorrow,weather_query,weather,web_search,wrong,0.74
+llama3.2:3b,is it a yes or a no that tomorrow's temperature will be hot,weather_query,weather,stray_confirmation,wrong,0.75
+llama3.2:3b,can i go outing without any umbrella,weather_query,weather,weather,correct,0.75
+llama3.2:3b,will it rain on august fifteenth,weather_query,weather,web_search,wrong,0.8
+llama3.2:3b,tell me this week's weather forecast,weather_query,weather,weather,correct,0.72
+llama3.2:3b,is it forecasted to rain in the next two days,weather_query,weather,web_search,wrong,0.79
+llama3.1:8b,your volume is too high please repeat that lower,audio_volume_down,set_volume|volume_down,speak_text,wrong,2.03
+llama3.1:8b,can you make it a little quieter,audio_volume_down,set_volume|volume_down,set_volume,correct,1.67
+llama3.1:8b,turn the volume down a little please,audio_volume_down,set_volume|volume_down,set_volume,correct,1.52
+llama3.1:8b,slow down the speaker volume,audio_volume_down,set_volume|volume_down,set_volume,correct,1.49
+llama3.1:8b,please adjust the speakers to a lower more comfortable level,audio_volume_down,set_volume|volume_down,set_volume,correct,1.58
+llama3.1:8b,please lower music volume,audio_volume_down,set_volume|volume_down,set_volume,correct,1.51
+llama3.1:8b,lower the volume on the speakers,audio_volume_down,set_volume|volume_down,set_volume,correct,1.51
+llama3.1:8b,turn off the bass from the audio,audio_volume_down,set_volume|volume_down,set_volume,correct,1.53
+llama3.1:8b,it's really loud can you please turn the music down,audio_volume_down,set_volume|volume_down,set_volume,correct,1.59
+llama3.1:8b,please talk softer,audio_volume_down,set_volume|volume_down,speak_text,wrong,1.66
+llama3.1:8b,talk quieter please,audio_volume_down,set_volume|volume_down,speak_text,wrong,1.66
+llama3.1:8b,lower volume to half,audio_volume_down,set_volume|volume_down,set_volume,correct,1.5
+llama3.1:8b,mute enabled until i say so,audio_volume_mute,mute_volume,set_volume,wrong,1.51
+llama3.1:8b,turn the volume off,audio_volume_mute,mute_volume,mute_volume,correct,1.27
+llama3.1:8b,can you please stop speaking,audio_volume_mute,mute_volume,speak_text,wrong,1.72
+llama3.1:8b,silence volume on speakers,audio_volume_mute,mute_volume,mute_volume,correct,1.29
+llama3.1:8b,do not talk,audio_volume_mute,mute_volume,chitchat,wrong,1.32
+llama3.1:8b,please be silent until i tell you not to be,audio_volume_mute,mute_volume,mute_volume,correct,1.35
+llama3.1:8b,turn down the noise,audio_volume_mute,mute_volume,set_volume,wrong,1.5
+llama3.1:8b,off the speakers,audio_volume_mute,mute_volume,speak_text,wrong,1.65
+llama3.1:8b,stop making sounds for forty minutes,audio_volume_mute,mute_volume,set_volume,wrong,1.52
+llama3.1:8b,mute speaker,audio_volume_mute,mute_volume,mute_volume,correct,1.24
+llama3.1:8b,touch the mute button,audio_volume_mute,mute_volume,mute_volume,correct,1.26
+llama3.1:8b,stop it,audio_volume_mute,mute_volume,mute_volume,correct,1.25
+llama3.1:8b,set the default audio setting,audio_volume_other,read_volume|set_volume|volume_down|volume_up,set_volume,correct,1.51
+llama3.1:8b,set the average of the device,audio_volume_other,read_volume|set_volume|volume_down|volume_up,calculate,wrong,1.6
+llama3.1:8b,change the audio settings,audio_volume_other,read_volume|set_volume|volume_down|volume_up,set_volume,correct,1.49
+llama3.1:8b,adjust the volume,audio_volume_other,read_volume|set_volume|volume_down|volume_up,set_volume,correct,1.49
+llama3.1:8b,need to see volume settings,audio_volume_other,read_volume|set_volume|volume_down|volume_up,read_volume,correct,1.29
+llama3.1:8b,change volume to thirty five percent,audio_volume_other,read_volume|set_volume|volume_down|volume_up,set_volume,correct,1.52
+llama3.1:8b,give a pleasant sound,audio_volume_other,read_volume|set_volume|volume_down|volume_up,speak_text,wrong,1.72
+llama3.1:8b,change volume settings in the negative alexa,audio_volume_other,read_volume|set_volume|volume_down|volume_up,speak_text,wrong,1.92
+llama3.1:8b,change volume,audio_volume_other,read_volume|set_volume|volume_down|volume_up,set_volume,correct,1.45
+llama3.1:8b,change volume settings in the negative,audio_volume_other,read_volume|set_volume|volume_down|volume_up,set_volume,correct,1.51
+llama3.1:8b,volume settings please,audio_volume_other,read_volume|set_volume|volume_down|volume_up,read_volume,correct,1.4
+llama3.1:8b,show volume settings,audio_volume_other,read_volume|set_volume|volume_down|volume_up,read_volume,correct,1.33
+llama3.1:8b,i can't hear you can you say it again louder,audio_volume_up,set_volume|volume_up,speak_text,wrong,2.49
+llama3.1:8b,raise your volume,audio_volume_up,set_volume|volume_up,set_volume,correct,1.61
+llama3.1:8b,can you turn up your volume,audio_volume_up,set_volume|volume_up,set_volume,correct,1.62
+llama3.1:8b,increase volume to fifty percent,audio_volume_up,set_volume|volume_up,set_volume,correct,1.55
+llama3.1:8b,increase volume by two levels,audio_volume_up,set_volume|volume_up,set_volume,correct,1.54
+llama3.1:8b,speaker volume increase,audio_volume_up,set_volume|volume_up,set_volume,correct,1.52
+llama3.1:8b,unmute my sound,audio_volume_up,set_volume|volume_up,read_volume,wrong,1.31
+llama3.1:8b,get louder,audio_volume_up,set_volume|volume_up,set_volume,correct,1.51
+llama3.1:8b,raise the volume to fifty,audio_volume_up,set_volume|volume_up,set_volume,correct,1.55
+llama3.1:8b,change the speaker volume to sixty five percent,audio_volume_up,set_volume|volume_up,set_volume,correct,1.6
+llama3.1:8b,i need a high volume,audio_volume_up,set_volume|volume_up,set_volume,correct,1.55
+llama3.1:8b,i can't hear just increase the volume,audio_volume_up,set_volume|volume_up,set_volume,correct,1.56
+llama3.1:8b,is mary's birthday party tonight,calendar_query,upcoming_events,recall_memory,wrong,1.75
+llama3.1:8b,do i have a meeting this afternoon,calendar_query,upcoming_events,upcoming_events,correct,1.4
+llama3.1:8b,olly is there anything i should be reminded about,calendar_query,upcoming_events,upcoming_events,correct,1.39
+llama3.1:8b,do i have any appointments today,calendar_query,upcoming_events,upcoming_events,correct,1.37
+llama3.1:8b,tell me my schedule for later this afternoon,calendar_query,upcoming_events,upcoming_events,correct,1.42
+llama3.1:8b,is wyatt's birthday party at ten p. m.,calendar_query,upcoming_events,recall_memory,wrong,2.16
+llama3.1:8b,tell me all the pending reminders,calendar_query,upcoming_events,upcoming_events,correct,1.4
+llama3.1:8b,from four to six when do i have a free break,calendar_query,upcoming_events,schedule_event,wrong,2.11
+llama3.1:8b,do i have to do something later,calendar_query,upcoming_events,upcoming_events,correct,1.42
+llama3.1:8b,can you confirm that my meeting for tomorrow has been canceled,calendar_query,upcoming_events,stray_confirmation,wrong,1.47
+llama3.1:8b,is tomorrow a holiday,calendar_query,upcoming_events,research_topic,wrong,1.63
+llama3.1:8b,do i have anything planned today,calendar_query,upcoming_events,upcoming_events,correct,1.38
+llama3.1:8b,can you remind me to order the turkey three weeks before thanksgiving,calendar_set,desktop_notification|schedule_event,schedule_event,correct,2.24
+llama3.1:8b,please set a reminder for tuesdays at nine am,calendar_set,desktop_notification|schedule_event,schedule_event,correct,2.14
+llama3.1:8b,add date and time in calendar with these people,calendar_set,desktop_notification|schedule_event,schedule_event,correct,2.27
+llama3.1:8b,set an event for friday,calendar_set,desktop_notification|schedule_event,schedule_event,correct,1.89
+llama3.1:8b,thirteen minutes from now remind me to drive to the park,calendar_set,desktop_notification|schedule_event,schedule_event,correct,2.28
+llama3.1:8b,remind me every tuesday to go to the dry cleaners,calendar_set,desktop_notification|schedule_event,schedule_event,correct,2.02
+llama3.1:8b,set reminder for tomorrow at two p. m.,calendar_set,desktop_notification|schedule_event,schedule_event,correct,2.34
+llama3.1:8b,remind me tomorrow at two p. m.,calendar_set,desktop_notification|schedule_event,schedule_event,correct,2.32
+llama3.1:8b,please organize a meeting with my company workers,calendar_set,desktop_notification|schedule_event,open_app_or_website,wrong,1.66
+llama3.1:8b,set up a meeting with peter francis for monday at two p. m.,calendar_set,desktop_notification|schedule_event,schedule_event,correct,2.45
+llama3.1:8b,remind me clock that i have a event,calendar_set,desktop_notification|schedule_event,schedule_event,correct,1.89
+llama3.1:8b,if there is any free space please set a reminder for me to call my sister about a college fund between my meetings this evening,calendar_set,desktop_notification|schedule_event,desktop_contents,wrong,3.14
+llama3.1:8b,clock time,datetime_query,tell_date|tell_time,tell_time,correct,1.29
+llama3.1:8b,is it twentieth march today,datetime_query,tell_date|tell_time,tell_date,correct,1.3
+llama3.1:8b,time now in new york,datetime_query,tell_date|tell_time,weather,wrong,1.53
+llama3.1:8b,i want exact time in washington right now,datetime_query,tell_date|tell_time,weather,wrong,1.52
+llama3.1:8b,tell me the time in tokyo,datetime_query,tell_date|tell_time,weather,wrong,1.53
+llama3.1:8b,what day of the week is june twenty seventh on this year,datetime_query,tell_date|tell_time,tell_date,correct,1.89
+llama3.1:8b,what day of the week is halloween,datetime_query,tell_date|tell_time,research_topic,wrong,1.54
+llama3.1:8b,what day it is on twenty second april,datetime_query,tell_date|tell_time,tell_date,correct,1.62
+llama3.1:8b,what will the date be next wednesday,datetime_query,tell_date|tell_time,tell_date,correct,1.34
+llama3.1:8b,alarm clock,datetime_query,tell_date|tell_time,schedule_event,wrong,1.91
+llama3.1:8b,can you tell me the time right now,datetime_query,tell_date|tell_time,tell_time,correct,1.35
+llama3.1:8b,can you give me the time in new delhi,datetime_query,tell_date|tell_time,weather,wrong,1.56
+llama3.1:8b,are there any new emails received after four o'clock today,email_query,read_latest_email,read_latest_email,correct,1.73
+llama3.1:8b,what unread emails do i have,email_query,read_latest_email,read_latest_email,correct,1.36
+llama3.1:8b,check inbox for mail from sarah,email_query,read_latest_email,read_latest_email,correct,1.39
+llama3.1:8b,is there anything new in my gmail,email_query,read_latest_email,read_latest_email,correct,1.7
+llama3.1:8b,see my inbox for mail i received from sarah,email_query,read_latest_email,read_latest_email,correct,1.69
+llama3.1:8b,read email from julia,email_query,read_latest_email,read_latest_email,correct,1.38
+llama3.1:8b,what emails have i gotten since last night,email_query,read_latest_email,read_latest_email,correct,1.71
+llama3.1:8b,report what is new in my email inbox please,email_query,read_latest_email,read_latest_email,correct,1.42
+llama3.1:8b,alexa do i have any new emails,email_query,read_latest_email,read_latest_email,correct,1.41
+llama3.1:8b,check unread emails from amy,email_query,read_latest_email,read_latest_email,correct,1.61
+llama3.1:8b,has the university of greenwich emailed me,email_query,read_latest_email,lookup_contact_number,wrong,1.71
+llama3.1:8b,topic,email_query,read_latest_email,latest_news,wrong,1.5
+llama3.1:8b,fetch me the phone number of alexander,email_querycontact,lookup_contact_number|read_latest_email,lookup_contact_number,correct,1.7
+llama3.1:8b,how old is joanne,email_querycontact,lookup_contact_number|read_latest_email,lookup_contact_number,correct,1.63
+llama3.1:8b,look up bill information,email_querycontact,lookup_contact_number|read_latest_email,lookup_contact_number,correct,1.58
+llama3.1:8b,contact detail of paul,email_querycontact,lookup_contact_number|read_latest_email,lookup_contact_number,correct,1.66
+llama3.1:8b,may you please pull up information about a contact,email_querycontact,lookup_contact_number|read_latest_email,lookup_contact_number,correct,1.65
+llama3.1:8b,provide information about bill from my contact list,email_querycontact,lookup_contact_number|read_latest_email,lookup_contact_number,correct,1.73
+llama3.1:8b,please find a mail address of manoj and tell me,email_querycontact,lookup_contact_number|read_latest_email,lookup_contact_number,correct,1.76
+llama3.1:8b,alexa provide information about bill from my contact list,email_querycontact,lookup_contact_number|read_latest_email,lookup_contact_number,correct,1.69
+llama3.1:8b,tell me the contact details of my brother,email_querycontact,lookup_contact_number|read_latest_email,lookup_contact_number,correct,1.7
+llama3.1:8b,open the contact alex in phonebook,email_querycontact,lookup_contact_number|read_latest_email,open_app_or_website,wrong,1.71
+llama3.1:8b,how to reach hallway,email_querycontact,lookup_contact_number|read_latest_email,geolocation,wrong,1.37
+llama3.1:8b,where seth lives,email_querycontact,lookup_contact_number|read_latest_email,lookup_contact_number,correct,1.64
+llama3.1:8b,the email reply should state,email_sendemail,compose_email|send_email,read_latest_email,wrong,1.39
+llama3.1:8b,tell chris i will be late through email,email_sendemail,compose_email|send_email,compose_email,correct,2.02
+llama3.1:8b,reply to name,email_sendemail,compose_email|send_email,get_user_name,wrong,1.36
+llama3.1:8b,send this reply to received email,email_sendemail,compose_email|send_email,compose_email,correct,1.81
+llama3.1:8b,reply to john stating that i will attend the party,email_sendemail,compose_email|send_email,message_contact,wrong,2.11
+llama3.1:8b,i need to email susan and metion,email_sendemail,compose_email|send_email,compose_email,correct,2.06
+llama3.1:8b,email mom and ask how the weather is there,email_sendemail,compose_email|send_email,compose_email,correct,2.02
+llama3.1:8b,reply to dad write i will be late,email_sendemail,compose_email|send_email,compose_email,correct,1.93
+llama3.1:8b,please reply to my most recent email,email_sendemail,compose_email|send_email,read_latest_email,wrong,1.48
+llama3.1:8b,send a reply to mike with the answer four hundred and thirty from his email he sent this morning,email_sendemail,compose_email|send_email,compose_email,correct,2.65
+llama3.1:8b,email my sister about mom's birthday jane we should think about arranging the party at the park,email_sendemail,compose_email|send_email,compose_email,correct,1.89
+llama3.1:8b,i need this email sent now,email_sendemail,compose_email|send_email,send_email,correct,1.56
+llama3.1:8b,olly tell me my alarms,general_greet,chitchat,upcoming_events,wrong,1.41
+llama3.1:8b,hey what's today,general_greet,chitchat,tell_date,wrong,1.32
+llama3.1:8b,how was the day,general_greet,chitchat,tell_date,wrong,1.34
+llama3.1:8b,tell funny things,general_joke,tell_joke,tell_joke,correct,1.35
+llama3.1:8b,hey siri have you heard any funny jokes lately,general_joke,tell_joke,tell_joke,correct,1.43
+llama3.1:8b,tell me the funniest joke that was ever told,general_joke,tell_joke,tell_joke,correct,1.44
+llama3.1:8b,the joke of the day,general_joke,tell_joke,tell_joke,correct,1.38
+llama3.1:8b,have you heard any good jokes lately,general_joke,tell_joke,tell_joke,correct,1.41
+llama3.1:8b,joke of the day,general_joke,tell_joke,tell_joke,correct,1.4
+llama3.1:8b,make me happy,general_joke,tell_joke,chitchat,wrong,1.34
+llama3.1:8b,a priest walks into a bar,general_joke,tell_joke,chitchat,wrong,1.37
+llama3.1:8b,find me the best knock knock joke on the internet,general_joke,tell_joke,web_search,wrong,1.78
+llama3.1:8b,olly make me laugh,general_joke,tell_joke,tell_joke,correct,1.37
+llama3.1:8b,tell a joke that puts smile on my face,general_joke,tell_joke,tell_joke,correct,1.42
+llama3.1:8b,cheer me up,general_joke,tell_joke,tell_joke,correct,1.36
+llama3.1:8b,please shut the lights,iot_hue_lightoff,toggle_smart_light,toggle_smart_light,correct,1.57
+llama3.1:8b,no lights,iot_hue_lightoff,toggle_smart_light,toggle_smart_light,correct,1.56
+llama3.1:8b,please switch off the light,iot_hue_lightoff,toggle_smart_light,toggle_smart_light,correct,1.59
+llama3.1:8b,please turn off the lights in bedroom,iot_hue_lightoff,toggle_smart_light,toggle_smart_light,correct,1.7
+llama3.1:8b,switch off all lights,iot_hue_lightoff,toggle_smart_light,toggle_smart_light,correct,1.66
+llama3.1:8b,did i leave the light on in the garage,iot_hue_lightoff,toggle_smart_light,recall_memory,wrong,1.68
+llama3.1:8b,switch off main light,iot_hue_lightoff,toggle_smart_light,toggle_smart_light,correct,1.84
+llama3.1:8b,kindly switch off the light in the drawing hall,iot_hue_lightoff,toggle_smart_light,toggle_smart_light,correct,1.89
+llama3.1:8b,shut the lights off in my bedroom please,iot_hue_lightoff,toggle_smart_light,toggle_smart_light,correct,1.82
+llama3.1:8b,can you turn off one of my lights in my bathroom,iot_hue_lightoff,toggle_smart_light,toggle_smart_light,correct,1.82
+llama3.1:8b,olly it's too bright in here can you turn a light off,iot_hue_lightoff,toggle_smart_light,toggle_smart_light,correct,1.75
+llama3.1:8b,i'm going to sleep now,iot_hue_lightoff,toggle_smart_light,chitchat,wrong,1.48
+llama3.1:8b,it's dark in here,iot_hue_lighton,toggle_smart_light,speak_text,wrong,2.28
+llama3.1:8b,it's awfully dark here,iot_hue_lighton,toggle_smart_light,speak_text,wrong,2.19
+llama3.1:8b,light up the lights in the kitchen,iot_hue_lighton,toggle_smart_light,toggle_smart_light,correct,1.85
+llama3.1:8b,switch on the lights,iot_hue_lighton,toggle_smart_light,toggle_smart_light,correct,1.65
+llama3.1:8b,alexa please turn on the lights,iot_hue_lighton,toggle_smart_light,toggle_smart_light,correct,1.78
+llama3.1:8b,switch on all the lights,iot_hue_lighton,toggle_smart_light,toggle_smart_light,correct,1.86
+llama3.1:8b,lights out,iot_hue_lighton,toggle_smart_light,toggle_smart_light,correct,1.74
+llama3.1:8b,and the darkness has fallen,iot_hue_lighton,toggle_smart_light,tell_time,wrong,1.54
+llama3.1:8b,hey alexa turn on disco lights in my apartment and let the party begin,iot_hue_lighton,toggle_smart_light,speak_text,wrong,2.48
+llama3.1:8b,i can't see anything,iot_hue_lighton,toggle_smart_light,analyze_screen,wrong,1.62
+llama3.1:8b,put the disco lights on,iot_hue_lighton,toggle_smart_light,toggle_smart_light,correct,1.9
+llama3.1:8b,please turn on the lights in my house,iot_hue_lighton,toggle_smart_light,toggle_smart_light,correct,1.81
+llama3.1:8b,power off on,iot_wemo_off,toggle_smart_light,desktop_notification,wrong,1.68
+llama3.1:8b,turn off the t. v. in,iot_wemo_off,toggle_smart_light,desktop_notification,wrong,2.07
+llama3.1:8b,the wemo plug should be turned off on,iot_wemo_off,toggle_smart_light,toggle_smart_light,correct,1.8
+llama3.1:8b,turn off the rice cooker socket,iot_wemo_off,toggle_smart_light,toggle_smart_light,correct,1.81
+llama3.1:8b,please switch off on the wemo plug socket,iot_wemo_off,toggle_smart_light,toggle_smart_light,correct,1.83
+llama3.1:8b,switch off the wemo plug socket,iot_wemo_off,toggle_smart_light,toggle_smart_light,correct,1.93
+llama3.1:8b,disable my okug,iot_wemo_off,toggle_smart_light,open_app_or_website,wrong,1.91
+llama3.1:8b,can you turn off wemo plug socket,iot_wemo_off,toggle_smart_light,toggle_smart_light,correct,2.01
+llama3.1:8b,turn off my wemo socket,iot_wemo_off,toggle_smart_light,toggle_smart_light,correct,1.87
+llama3.1:8b,off all type of active devices,iot_wemo_off,toggle_smart_light,list_processes,wrong,1.41
+llama3.1:8b,turn off smart socket,iot_wemo_off,toggle_smart_light,toggle_smart_light,correct,1.73
+llama3.1:8b,turn off wemo plug in game room,iot_wemo_off,toggle_smart_light,toggle_smart_light,correct,2.04
+llama3.1:8b,turn on when plugged in else turn off,iot_wemo_on,toggle_smart_light,toggle_smart_light,correct,1.73
+llama3.1:8b,turn on the fan socket,iot_wemo_on,toggle_smart_light,toggle_smart_light,correct,1.7
+llama3.1:8b,turn on new smart socket,iot_wemo_on,toggle_smart_light,toggle_smart_light,correct,1.81
+llama3.1:8b,turn on the wemo plug socket to plug in my dongle,iot_wemo_on,toggle_smart_light,toggle_smart_light,correct,1.88
+llama3.1:8b,turn on living room radio,iot_wemo_on,toggle_smart_light,open_app_or_website,wrong,1.87
+llama3.1:8b,please turn on my wemo plug socket,iot_wemo_on,toggle_smart_light,toggle_smart_light,correct,1.84
+llama3.1:8b,turn on the rice cooker socket,iot_wemo_on,toggle_smart_light,toggle_smart_light,correct,1.79
+llama3.1:8b,start the laundry,iot_wemo_on,toggle_smart_light,open_app_or_website,wrong,1.81
+llama3.1:8b,on mobile charger plug,iot_wemo_on,toggle_smart_light,battery_status,wrong,1.45
+llama3.1:8b,if switch is on then turn on else turn off,iot_wemo_on,toggle_smart_light,toggle_smart_light,correct,1.8
+llama3.1:8b,turn on the wemo plug socket to connect my charger to it,iot_wemo_on,toggle_smart_light,toggle_smart_light,correct,2.01
+llama3.1:8b,power on wemo,iot_wemo_on,toggle_smart_light,open_app_or_website,wrong,2.53
+llama3.1:8b,generate a new inventory,lists_createoradd,remember_fact,organize_folder,wrong,1.84
+llama3.1:8b,hey put carrots on that,lists_createoradd,remember_fact,analyze_screen,wrong,1.82
+llama3.1:8b,remind me to order more soap,lists_createoradd,remember_fact,schedule_event,wrong,2.19
+llama3.1:8b,put clean dog at the top of the cleaning list,lists_createoradd,remember_fact,organize_folder,wrong,1.98
+llama3.1:8b,hey olly i need you to make a list of cricket players of indian team who played for the international team in two thousand and fourteen,lists_createoradd,remember_fact,research_topic,wrong,2.1
+llama3.1:8b,join this,lists_createoradd,remember_fact,compose_email,wrong,1.74
+llama3.1:8b,add paav bhaji in menu card,lists_createoradd,remember_fact,compose_email,wrong,2.11
+llama3.1:8b,i want sweet potato pie from a local bakery,lists_createoradd,remember_fact,open_app_or_website,wrong,1.87
+llama3.1:8b,make me a new checklist,lists_createoradd,remember_fact,remember_fact,correct,2.44
+llama3.1:8b,include this,lists_createoradd,remember_fact,compose_email,wrong,1.77
+llama3.1:8b,i need more milk,lists_createoradd,remember_fact,compose_email,wrong,1.91
+llama3.1:8b,current,lists_createoradd,remember_fact,tell_time,wrong,1.49
+llama3.1:8b,do i have any lists for the upcoming week,lists_query,recall_memory,recall_memory,correct,2.01
+llama3.1:8b,i have all details about pda's,lists_query,recall_memory,research_topic,wrong,1.83
+llama3.1:8b,android,lists_query,recall_memory,open_app_or_website,wrong,1.81
+llama3.1:8b,what else is missing in the diary,lists_query,recall_memory,recall_memory,correct,1.81
+llama3.1:8b,my health planning,lists_query,recall_memory,research_topic,wrong,1.8
+llama3.1:8b,important house information,lists_query,recall_memory,desktop_contents,wrong,1.59
+llama3.1:8b,olly what do i need to get done today,lists_query,recall_memory,upcoming_events,wrong,1.66
+llama3.1:8b,let me know what is remaining on my query,lists_query,recall_memory,recall_memory,correct,1.96
+llama3.1:8b,check the notes app and give me details of all the lists,lists_query,recall_memory,recall_memory,correct,1.94
+llama3.1:8b,tell me that list i wrote two days ago,lists_query,recall_memory,recall_memory,correct,2.04
+llama3.1:8b,java,lists_query,recall_memory,open_app_or_website,wrong,1.81
+llama3.1:8b,buying clothes,lists_query,recall_memory,latest_news,wrong,1.77
+llama3.1:8b,please delete this file,lists_remove,recall_memory|remember_fact,open_app_or_website,wrong,1.89
+llama3.1:8b,i won't be getting an oil change for my car today,lists_remove,recall_memory|remember_fact,speak_text,wrong,2.5
+llama3.1:8b,remove table from furniture,lists_remove,recall_memory|remember_fact,organize_folder,wrong,2.0
+llama3.1:8b,tell me something interesting on the message list,lists_remove,recall_memory|remember_fact,research_topic,wrong,1.81
+llama3.1:8b,replace,lists_remove,recall_memory|remember_fact,organize_folder,wrong,1.74
+llama3.1:8b,get rid of peas,lists_remove,recall_memory|remember_fact,organize_folder,wrong,1.91
+llama3.1:8b,remove lunch with company workers on thursday,lists_remove,recall_memory|remember_fact,schedule_event,wrong,2.3
+llama3.1:8b,delete last entry,lists_remove,recall_memory|remember_fact,list_processes,wrong,1.85
+llama3.1:8b,delete my to do's for this week,lists_remove,recall_memory|remember_fact,recall_memory,correct,1.79
+llama3.1:8b,cut red peppers from groceries,lists_remove,recall_memory|remember_fact,organize_folder,wrong,1.84
+llama3.1:8b,it's make me good lucking guy inside very very horkersd wo,lists_remove,recall_memory|remember_fact,chitchat,wrong,1.73
+llama3.1:8b,erase all,lists_remove,recall_memory|remember_fact,desktop_notification,wrong,1.84
+llama3.1:8b,pull up political news today from c. n. n.,news_query,latest_news,latest_news,correct,2.26
+llama3.1:8b,is there a way to check if there is any new news stories to read,news_query,latest_news,latest_news,correct,1.86
+llama3.1:8b,if there news about up politics what is that,news_query,latest_news,latest_news,correct,1.83
+llama3.1:8b,get news from b. b. c.,news_query,latest_news,latest_news,correct,1.97
+llama3.1:8b,is there any current news on the presidential election,news_query,latest_news,latest_news,correct,1.85
+llama3.1:8b,set environmental news notification,news_query,latest_news,desktop_notification,wrong,1.84
+llama3.1:8b,tell me some braking news in new york,news_query,latest_news,latest_news,correct,1.78
+llama3.1:8b,find me info on cars,news_query,latest_news,research_topic,wrong,1.7
+llama3.1:8b,news articles on a particular subject,news_query,latest_news,latest_news,correct,1.83
+llama3.1:8b,donald trump,news_query,latest_news,answer_question,wrong,1.83
+llama3.1:8b,olly what's happened in the news today,news_query,latest_news,latest_news,correct,1.83
+llama3.1:8b,find news about brexit,news_query,latest_news,latest_news,correct,1.8
+llama3.1:8b,please look up exchange between us and mexco,qa_currency,answer_question|crypto_price|web_search,web_search,correct,2.01
+llama3.1:8b,find exchange rate for u. s. d. to euro,qa_currency,answer_question|crypto_price|web_search,crypto_price,correct,1.93
+llama3.1:8b,exchange rate from cad to u. s. d.,qa_currency,answer_question|crypto_price|web_search,crypto_price,correct,1.76
+llama3.1:8b,dollar to euro exchange rate,qa_currency,answer_question|crypto_price|web_search,crypto_price,correct,1.78
+llama3.1:8b,olly what is the exchange rate between the us dollar and the aus dollar,qa_currency,answer_question|crypto_price|web_search,web_search,correct,2.07
+llama3.1:8b,alexa tell me the exchange rate of ten dollar to euro,qa_currency,answer_question|crypto_price|web_search,web_search,correct,2.12
+llama3.1:8b,show me current exchange rate between euros and other currencies,qa_currency,answer_question|crypto_price|web_search,web_search,correct,1.95
+llama3.1:8b,one dolla equals how much inr,qa_currency,answer_question|crypto_price|web_search,calculate,wrong,1.97
+llama3.1:8b,please give me detail of one yen equals dollar,qa_currency,answer_question|crypto_price|web_search,crypto_price,correct,1.77
+llama3.1:8b,can you tell me the exchange rate for canadian currency,qa_currency,answer_question|crypto_price|web_search,web_search,correct,1.97
+llama3.1:8b,convert currency calculator,qa_currency,answer_question|crypto_price|web_search,calculate,wrong,1.71
+llama3.1:8b,and the pound is doing how badly against the euro,qa_currency,answer_question|crypto_price|web_search,crypto_price,correct,1.84
+llama3.1:8b,what does tense mean,qa_definition,answer_question|web_search,answer_question,correct,1.73
+llama3.1:8b,definition xy,qa_definition,answer_question|web_search,answer_question,correct,1.77
+llama3.1:8b,give me the description about watch,qa_definition,answer_question|web_search,answer_question,correct,1.76
+llama3.1:8b,tell me the definition of arrow,qa_definition,answer_question|web_search,answer_question,correct,1.72
+llama3.1:8b,define this object,qa_definition,answer_question|web_search,analyze_screen,wrong,1.47
+llama3.1:8b,what does the word hypocrisy mean,qa_definition,answer_question|web_search,answer_question,correct,1.76
+llama3.1:8b,what does a geranium look like,qa_definition,answer_question|web_search,analyze_screen,wrong,1.75
+llama3.1:8b,try out in wikipedia,qa_definition,answer_question|web_search,answer_question,correct,1.86
+llama3.1:8b,give me the description about smartphone,qa_definition,answer_question|web_search,answer_question,correct,1.79
+llama3.1:8b,what does potato mean,qa_definition,answer_question|web_search,answer_question,correct,1.72
+llama3.1:8b,do you know the definition of school,qa_definition,answer_question|web_search,answer_question,correct,1.82
+llama3.1:8b,hey what is the definition of passive,qa_definition,answer_question|web_search,answer_question,correct,1.75
+llama3.1:8b,tell me the highest mountain in the world,qa_factoid,answer_question|research_topic|web_search,answer_question,correct,1.96
+llama3.1:8b,which country's have a border to india,qa_factoid,answer_question|research_topic|web_search,research_topic,correct,1.98
+llama3.1:8b,what brand hair spray does donald trump use,qa_factoid,answer_question|research_topic|web_search,web_search,correct,1.97
+llama3.1:8b,please tell who invented telephone and what is the date,qa_factoid,answer_question|research_topic|web_search,answer_question,correct,1.93
+llama3.1:8b,how old is emma watson newest boyfriend,qa_factoid,answer_question|research_topic|web_search,latest_news,wrong,1.95
+llama3.1:8b,how tall was abraham lincoln,qa_factoid,answer_question|research_topic|web_search,answer_question,correct,1.85
+llama3.1:8b,alexa give me everything you know about bob dean,qa_factoid,answer_question|research_topic|web_search,web_search,correct,1.81
+llama3.1:8b,how old is cher,qa_factoid,answer_question|research_topic|web_search,answer_question,correct,1.77
+llama3.1:8b,what does celebrity do,qa_factoid,answer_question|research_topic|web_search,web_search,correct,1.79
+llama3.1:8b,which ocean touches at our continent,qa_factoid,answer_question|research_topic|web_search,research_topic,correct,1.98
+llama3.1:8b,find route,qa_factoid,answer_question|research_topic|web_search,open_app_or_website,wrong,1.83
+llama3.1:8b,is steph curry married,qa_factoid,answer_question|research_topic|web_search,answer_question,correct,1.88
+llama3.1:8b,if a pencil cost four dollars and a book ten dollars cost how much i should pay if i buy two pencil and three book,qa_maths,answer_question|calculate,calculate,correct,2.32
+llama3.1:8b,multiply one thousand by twelve,qa_maths,answer_question|calculate,calculate,correct,1.84
+llama3.1:8b,solve this equation one plus one,qa_maths,answer_question|calculate,calculate,correct,1.76
+llama3.1:8b,tell me the answer for two plus two,qa_maths,answer_question|calculate,calculate,correct,1.83
+llama3.1:8b,calculate two multiplied by two,qa_maths,answer_question|calculate,calculate,correct,1.85
+llama3.1:8b,google,qa_maths,answer_question|calculate,web_search,wrong,1.66
+llama3.1:8b,solution,qa_maths,answer_question|calculate,web_search,wrong,1.66
+llama3.1:8b,ten percentages of hundred,qa_maths,answer_question|calculate,calculate,correct,1.86
+llama3.1:8b,if i have fifty dollars and spend twenty four how many dollars will i have left,qa_maths,answer_question|calculate,calculate,correct,1.92
+llama3.1:8b,is equal to,qa_maths,answer_question|calculate,calculate,correct,1.75
+llama3.1:8b,please solve this math,qa_maths,answer_question|calculate,calculate,correct,1.7
+llama3.1:8b,can you help me find the answer to this question,qa_maths,answer_question|calculate,answer_question,correct,1.79
+llama3.1:8b,current price of google please,qa_stock,latest_news|stock_price,crypto_price,wrong,1.73
+llama3.1:8b,check stock price for dinky donuts,qa_stock,latest_news|stock_price,stock_price,correct,1.91
+llama3.1:8b,please tell me when i can become rich if i invested in dow stocks today and what will be the return after five years,qa_stock,latest_news|stock_price,stock_price,correct,1.95
+llama3.1:8b,how strong is the dollar compared to the peso,qa_stock,latest_news|stock_price,crypto_price,wrong,1.78
+llama3.1:8b,stock prices at walmart,qa_stock,latest_news|stock_price,stock_price,correct,1.71
+llama3.1:8b,give me the opening stock price of sony,qa_stock,latest_news|stock_price,stock_price,correct,1.78
+llama3.1:8b,keep me updated on stock market prices,qa_stock,latest_news|stock_price,stock_price,correct,1.81
+llama3.1:8b,stock,qa_stock,latest_news|stock_price,stock_price,correct,1.63
+llama3.1:8b,give the stock price details of motorolla,qa_stock,latest_news|stock_price,stock_price,correct,1.77
+llama3.1:8b,were the stocks rising or declining,qa_stock,latest_news|stock_price,stock_price,correct,1.8
+llama3.1:8b,stock company name,qa_stock,latest_news|stock_price,stock_price,correct,1.79
+llama3.1:8b,how high is the south n. p.,qa_stock,latest_news|stock_price,answer_question,wrong,1.94
+llama3.1:8b,what events are in me area,recommendation_events,answer_question|latest_news|web_search,upcoming_events,wrong,1.52
+llama3.1:8b,are there any events coming up,recommendation_events,answer_question|latest_news|web_search,upcoming_events,wrong,1.55
+llama3.1:8b,local area events,recommendation_events,answer_question|latest_news|web_search,latest_news,correct,1.79
+llama3.1:8b,is there some play can i go tonight in the city,recommendation_events,answer_question|latest_news|web_search,latest_news,correct,1.96
+llama3.1:8b,can you tell me what kind of show can i go tonight in miami,recommendation_events,answer_question|latest_news|web_search,latest_news,correct,1.87
+llama3.1:8b,are there dog shows going on near new york city,recommendation_events,answer_question|latest_news|web_search,latest_news,correct,2.01
+llama3.1:8b,both young drivers and provisional drivers crash more often than other drivers because they have not yet had the wide range of experiences they need to drive safely by themselves research has shown that driving experience is a major factor in reducing road crashes and that the safest time for young drivers is when they are driving under supervision while learning,recommendation_events,answer_question|latest_news|web_search,research_topic,wrong,2.23
+llama3.1:8b,are there any events happening in town,recommendation_events,answer_question|latest_news|web_search,latest_news,correct,1.87
+llama3.1:8b,show me where i can find a hamburger,recommendation_events,answer_question|latest_news|web_search,web_search,correct,1.9
+llama3.1:8b,what can i do tonight in the city,recommendation_events,answer_question|latest_news|web_search,latest_news,correct,1.73
+llama3.1:8b,searching on holidays in my location,recommendation_events,answer_question|latest_news|web_search,web_search,correct,1.95
+llama3.1:8b,anything unique to do in the city today,recommendation_events,answer_question|latest_news|web_search,latest_news,correct,1.75
+llama3.1:8b,guide me to the restaurant,recommendation_locations,answer_question|geolocation|web_search,open_app_or_website,wrong,1.99
+llama3.1:8b,best reviews restaurant in south sacramento,recommendation_locations,answer_question|geolocation|web_search,latest_news,wrong,2.13
+llama3.1:8b,can you find me a furniture store near me,recommendation_locations,answer_question|geolocation|web_search,open_app_or_website,wrong,2.02
+llama3.1:8b,where can i shop as a local tourist,recommendation_locations,answer_question|geolocation|web_search,latest_news,wrong,2.1
+llama3.1:8b,tell me chinese restaurants in the area,recommendation_locations,answer_question|geolocation|web_search,web_search,correct,2.06
+llama3.1:8b,nearest restaurants available at this time,recommendation_locations,answer_question|geolocation|web_search,web_search,correct,2.08
+llama3.1:8b,alexa i want to know the best super market in this local area,recommendation_locations,answer_question|geolocation|web_search,web_search,correct,2.09
+llama3.1:8b,show me what shops are around me,recommendation_locations,answer_question|geolocation|web_search,web_search,correct,1.85
+llama3.1:8b,find a shop that sells beer,recommendation_locations,answer_question|geolocation|web_search,web_search,correct,1.98
+llama3.1:8b,show me where the nearest restaurant is,recommendation_locations,answer_question|geolocation|web_search,web_search,correct,1.84
+llama3.1:8b,markets near by,recommendation_locations,answer_question|geolocation|web_search,web_search,correct,1.86
+llama3.1:8b,ask a restaurant in me area,recommendation_locations,answer_question|geolocation|web_search,web_search,correct,1.91
+llama3.1:8b,olly what movies are playing right now,recommendation_movies,answer_question|web_search,latest_news,wrong,1.94
+llama3.1:8b,movie times tonight,recommendation_movies,answer_question|web_search,latest_news,wrong,1.89
+llama3.1:8b,security awareness,recommendation_movies,answer_question|web_search,research_topic,wrong,1.81
+llama3.1:8b,show times for nearest theater,recommendation_movies,answer_question|web_search,open_app_or_website,wrong,1.99
+llama3.1:8b,olly what movies are playing at carmike cinemas,recommendation_movies,answer_question|web_search,latest_news,wrong,2.19
+llama3.1:8b,i need a good chick flick any thoughts,recommendation_movies,answer_question|web_search,latest_news,wrong,1.95
+llama3.1:8b,show me nearest theater,recommendation_movies,answer_question|web_search,open_app_or_website,wrong,1.94
+llama3.1:8b,what movies are playing this week,recommendation_movies,answer_question|web_search,latest_news,wrong,1.96
+llama3.1:8b,is swat a good movie,recommendation_movies,answer_question|web_search,latest_news,wrong,1.86
+llama3.1:8b,can you tell me what movies are playing at the movies tonight,recommendation_movies,answer_question|web_search,latest_news,wrong,2.0
+llama3.1:8b,tickets,recommendation_movies,answer_question|web_search,latest_news,wrong,1.74
+llama3.1:8b,what do you suggest that i watch this weekend,recommendation_movies,answer_question|web_search,research_topic,wrong,2.01
+llama3.1:8b,it seems cold,weather_query,weather,weather,correct,1.7
+llama3.1:8b,display the seven day forecast for this week,weather_query,weather,weather,correct,1.82
+llama3.1:8b,is it supposed to rain tonight,weather_query,weather,weather,correct,1.75
+llama3.1:8b,should i open the sun roof,weather_query,weather,open_app_or_website,wrong,1.99
+llama3.1:8b,are storms likely today,weather_query,weather,weather,correct,1.72
+llama3.1:8b,will it be warm tomorrow,weather_query,weather,weather,correct,1.73
+llama3.1:8b,is it going to be windy tomorrow,weather_query,weather,weather,correct,1.8
+llama3.1:8b,is it a yes or a no that tomorrow's temperature will be hot,weather_query,weather,web_search,wrong,2.17
+llama3.1:8b,can i go outing without any umbrella,weather_query,weather,weather,correct,1.75
+llama3.1:8b,will it rain on august fifteenth,weather_query,weather,web_search,wrong,1.98
+llama3.1:8b,tell me this week's weather forecast,weather_query,weather,weather,correct,1.75
+llama3.1:8b,is it forecasted to rain in the next two days,weather_query,weather,weather,correct,2.13

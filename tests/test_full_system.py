@@ -18,7 +18,7 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 from core.planner import MasterPlanner
-from core.task_dag_engine import TaskDAGEngine
+from core.multi_step import split_compound
 from agents.computer_agent import ComputerAgent
 from agents.comms_agent import CommunicationAgent
 from agents.audio_summarizer_agent import AudioSummarizerAgent
@@ -52,16 +52,29 @@ class TestFullSystemArchitecture:
         except Exception:
             pass
 
-    def test_task_dag_engine_multi_step_execution(self):
-        """Verifies TaskDAGEngine runs multi-step goal including computer step without AttributeError."""
-        cmd = "search Python 3.14 features and then summarize notes and save output"
-        dag_engine = TaskDAGEngine(self.planner)
-        assert dag_engine.is_multi_step_goal(cmd) is True
-        
-        res = dag_engine.execute_dag(cmd, user_approved=True)
+    def test_multi_step_execution_reports_what_actually_happened(self):
+        """This test used to assert `success is True` for a command whose first
+        step needs the network, which the suite blocks.
+
+        It was one of two tests enforcing `TaskDAGEngine`'s unconditional
+        `"success": True` — the other was in `test_100_ruthless.py`. Between
+        them they made the defect look tested. ROADMAP Phase 10 deleted the
+        engine; this asserts the property the old test was missing.
+        """
+        cmd = "what time is it and then tell me the date"
+        assert len(split_compound(cmd)) == 2
+
+        res = self.planner.process_command(cmd)["execution_result"]
+        assert res.get("multi_step") is True
         assert res.get("success") is True
-        assert res.get("multi_step_dag") is True
-        assert res.get("steps_count") >= 2
+        assert res.get("steps_completed") == 2
+
+        # And the half that matters: a step that cannot succeed is not reported
+        # as though it had.
+        failing = "summarize no_such_file_xyzzy.pdf and then tell me the time"
+        res = self.planner.process_command(failing)["execution_result"]
+        assert res.get("success") is False
+        assert res.get("steps_completed") == 0
 
     def test_communication_agent_no_fake_simulation(self):
         """Verifies send_email evaluates real credentials or returns real error (not fake simulation)."""

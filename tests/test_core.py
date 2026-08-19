@@ -12,7 +12,7 @@ if str(PROJECT_ROOT) not in sys.path:
 
 from core.security import classify_action_risk, evaluate_action_permission
 from core.tool_registry import ToolRegistry
-from core.task_dag_engine import TaskDAGEngine, TaskNode
+from core.multi_step import split_compound
 from core.planner import MasterPlanner
 from core.autonomy import AutonomyDaemon
 
@@ -34,14 +34,10 @@ class TestCoreSubsystem(unittest.TestCase):
         self.assertIsInstance(tools, list)
         self.assertGreater(len(tools), 0)
 
-    def test_task_dag_engine_topological_sort(self):
-        planner = MasterPlanner()
-        engine = TaskDAGEngine(planner_ref=planner)
-        node_a = TaskNode(step_id=1, agent_type="computer", action="search_memory", prompt="docs")
-        node_b = TaskNode(step_id=2, agent_type="document", action="summarize_document", prompt="ref")
-        nodes = engine.parse_command_to_dag("search memory and then summarize document")
-        self.assertIsInstance(nodes, list)
-        self.assertGreater(len(nodes), 0)
+    def test_multi_step_split_keeps_the_order_asked_for(self):
+        """`TaskDAGEngine` was deleted 2026-08-18 — ROADMAP Phase 10."""
+        steps = split_compound("search memory and then summarize document")
+        self.assertEqual(steps, ["search memory", "summarize document"])
 
     def test_planner_decomposition(self):
         planner = MasterPlanner()

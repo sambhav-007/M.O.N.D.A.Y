@@ -45,7 +45,7 @@ from agents.coder_agent import CoderAgent
 from agents.vision_agent import VisionAgent
 from agents.public_api_agent import PublicApiAgent
 from agents.audio_summarizer_agent import AudioSummarizerAgent
-from core.task_dag_engine import TaskDAGEngine
+from core.multi_step import run_steps, split_compound
 
 from core.cognitive import CognitiveResponseDict, TriModelCognitiveEngine
 from core.contacts import ContactMixin
@@ -215,7 +215,6 @@ class MasterPlanner(EmailMixin, ContactMixin, Tier2Mixin):
         self.vision_agent = VisionAgent()
         self.public_api_agent = PublicApiAgent()
         self.audio_summarizer_agent = AudioSummarizerAgent()
-        self.task_dag_engine = TaskDAGEngine(self)
         self.tool_registry = ToolRegistry()
 
         # Phase 3: the skill router. Built after the agents exist, because the
@@ -229,6 +228,8 @@ class MasterPlanner(EmailMixin, ContactMixin, Tier2Mixin):
         registry = build_builtin_registry(self)
         self.router = Router(registry, llm=LlmStage(registry))
         self.last_routing_decision = None
+        #: Set while a plan is running, so a step is never split again.
+        self._in_multi_step = False
         self.autonomy_daemon = AutonomyDaemon()
         self.autonomy_daemon.start()
 
@@ -398,17 +399,47 @@ class MasterPlanner(EmailMixin, ContactMixin, Tier2Mixin):
             else:
                 return self._resolve_clarification(cmd)
 
-        # Step 0.5: Dynamic Multi-Step Task DAG Engine Check
-        if self.task_dag_engine.is_multi_step_goal(cmd):
-            dag_result = self.task_dag_engine.execute_dag(cmd, user_approved=user_approved)
-            self.memory_agent.auto_store_conversation_turn(cmd, str(dag_result.get("message", "")))
-            dag_result = _prepend_notice(dag_result, abandon_notice)
-            return {
-                "user_command": cmd,
-                "intent_classification": {"predicted_intent": "multi_step_dag", "confidence": 1.0, "llm_fallback": False, "clo": "CLO04"},
-                "rl_routing": {"strategy": "dag_engine", "clo": "CLO05"},
-                "execution_result": dag_result,
-            }
+        # Step 0.5: more than one step, if the user asked for more than one.
+        #
+        # Each step re-enters this method, which is the whole design: a step is
+        # subject to the moral firewall, the classifier, stage 1's slot sanity,
+        # stage 3's proposal gate, the Tier-2 gate, the audit log and the spoken
+        # form without any of them being restated. `TaskDAGEngine` restated them
+        # and got them wrong — it dispatched on substrings, reported
+        # `success: True` for two failed steps, and on "kill notepad and then
+        # tell me the time" it armed the Tier-2 gate, cancelled it with step 2,
+        # killed nothing and called that a success.
+        #
+        # `_in_multi_step` stops a step from being split again. A step cannot be
+        # compound (it was produced by splitting) but the guard is cheap and the
+        # failure it prevents is unbounded recursion.
+        if not self._in_multi_step:
+            steps = split_compound(cmd)
+            if len(steps) > 1:
+                self._in_multi_step = True
+                try:
+                    plan_result = run_steps(
+                        steps,
+                        lambda one: self.process_command(
+                            one, user_approved=user_approved
+                        ).get("execution_result", {}),
+                    )
+                finally:
+                    self._in_multi_step = False
+
+                self.memory_agent.auto_store_conversation_turn(
+                    cmd, str(plan_result.get("message", ""))
+                )
+                plan_result = _prepend_notice(plan_result, abandon_notice)
+                return {
+                    "user_command": cmd,
+                    "intent_classification": {
+                        "predicted_intent": "multi_step", "confidence": 1.0,
+                        "llm_fallback": False, "clo": "CLO04",
+                    },
+                    "rl_routing": {"strategy": "multi_step", "clo": "CLO05"},
+                    "execution_result": plan_result,
+                }
 
         # Step 1: Component 2.1 Intent Classifier
         intent, confidence, fallback = predict_intent(self.classifier, cmd)

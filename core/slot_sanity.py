@@ -77,6 +77,18 @@ _MAX_SYMBOL_WORDS = 3
 _QUESTION_OPENERS = {"how", "what", "why", "when", "where", "which", "who"}
 
 
+def looks_like_a_path(value: str) -> bool:
+    """Whether this names a file, by shape — an extension or a separator.
+
+    Shape only: it says nothing about whether the file exists. Public because
+    `core/skills_builtin.py` needs the same question answered for
+    `summarize_document`, and two spellings of "is this a filename?" would drift
+    the way everything else in this repository has drifted when duplicated.
+    """
+    value = (value or "").strip()
+    return bool(_FILE_EXTENSION.search(value) or _PATH_SEPARATOR.search(value))
+
+
 def _words(value: str) -> list:
     return [w for w in re.split(r"\s+", value.strip()) if w]
 
@@ -136,11 +148,7 @@ def implausible(
 
         # ── 3. a sentence where a filename belongs ──────────────────────────
         if name.lower() in _PATH_SLOTS:
-            looks_like_a_file = (
-                _FILE_EXTENSION.search(value)
-                or _PATH_SEPARATOR.search(value)
-                or _exists(value)
-            )
+            looks_like_a_file = looks_like_a_path(value) or _exists(value)
             if not looks_like_a_file and len(words) >= 3:
                 return (
                     f"{name}={value!r} names no file — no extension, no path, "

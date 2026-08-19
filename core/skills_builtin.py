@@ -17,6 +17,8 @@ tranches. The chain it replaced is gone — see `core/planner.py`.
 
 from __future__ import annotations
 
+from pathlib import Path
+
 import re
 from datetime import datetime
 from typing import Any, Dict
@@ -24,6 +26,7 @@ from typing import Any, Dict
 from agents.memory_agent import is_machine_written
 from core.contracts import AgentResult, RecordStored, SystemQuery
 from core.skills import Skill, SkillRegistry
+from core.slot_sanity import looks_like_a_path
 from core.skills_comms import register_comms_skills
 from core.skills_live import register_live_skills
 from core.skills_system import register_system_skills
@@ -531,6 +534,21 @@ def build_builtin_registry(planner: Any) -> SkillRegistry:
                 "summarize notes.pdf",
                 error="NO_DOCUMENT",
             ).as_dict()
+
+        # Something shaped like a filename that is not on disk. The agent below
+        # falls back to treating its argument as raw text — which is right for
+        # "summarize this: <text>" and wrong here: `summarize no_such_file.pdf`
+        # reported "✓ Summarised text snippet (1 words → 5 key points)", having
+        # summarised the filename. Same defect as the demonstrative above, one
+        # step further along, and found by ROADMAP Phase 10's tests.
+        if looks_like_a_path(target) and not Path(target).expanduser().exists():
+            return AgentResult.failed(
+                f"I can't find '{target}'. Give me a path that exists, or paste "
+                f"the text and I'll summarise that.",
+                error="DOCUMENT_NOT_FOUND",
+                data={"path": target},
+            ).as_dict()
+
         return planner.document_agent.summarize_document(target)
 
     registry.register(Skill(

@@ -11,6 +11,7 @@ and belongs to Phase 14.
 
 | model | n | correct | wrong | answered instead | declined | accuracy | p50 | p95 |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|
-| `llama3.2:3b` | 8 | 7 | 1 | 0 | 0 | **87.5%** | 2.0s | 2.3s |
+| `llama3.2:3b` | 339 | 224 | 106 | 8 | 1 | **66.1%** | 0.7s | 0.9s |
+| `llama3.1:8b` | 339 | 218 | 121 | 0 | 0 | **64.3%** | 1.8s | 2.2s |
 
 Regenerate with `py -3.12 -m reports.stage3_selection --model <name>`.

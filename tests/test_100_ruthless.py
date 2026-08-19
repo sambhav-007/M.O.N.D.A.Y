@@ -20,7 +20,7 @@ if str(PROJECT_ROOT) not in sys.path:
 
 from core.planner import MasterPlanner, TriModelCognitiveEngine
 from core.security import evaluate_action_permission, classify_action_risk
-from core.task_dag_engine import TaskDAGEngine
+from core.multi_step import run_steps, split_compound
 from core.tool_registry import ToolRegistry
 from agents.computer_agent import ComputerAgent
 from agents.comms_agent import CommunicationAgent
@@ -154,30 +154,29 @@ class TestRuthlessAdversarialSuite:
         assert "1..0 " in fake_powershell.last_command or "1..0}" in fake_powershell.last_command \
             or "1..0 |" in fake_powershell.last_command
 
-    # ── Category 2: Task DAG Engine & Core Systems (15 Tests) ────────────────────
+    # ── Category 2: Multi-step execution & Core Systems ─────────────────────────
+    # `TaskDAGEngine` was deleted on 2026-08-18 (ROADMAP Phase 10). These four
+    # are its tests, rewritten against `core/multi_step.py`. The fifth —
+    # `test_task_dag_engine_execute_dag`, which asserted `success is True` for
+    # "search python news and then summarize notes" — is further down and is
+    # the reason the defect survived: it did not check that anything happened,
+    # only that the engine claimed it had.
 
-    def test_dag_engine_is_multi_step_goal_positive(self):
-        """Verifies multi-step compound prompt detection."""
-        dag = TaskDAGEngine(self.planner)
-        assert dag.is_multi_step_goal("search AI news and then summarize and save output") is True
+    def test_multi_step_splits_a_compound_command(self):
+        """An explicit sequencing connective means more than one step."""
+        assert len(split_compound("search AI news and then summarize the results")) == 2
 
-    def test_dag_engine_is_multi_step_goal_negative(self):
+    def test_multi_step_leaves_a_single_command_alone(self):
         """Verifies single-step prompt detection."""
-        dag = TaskDAGEngine(self.planner)
-        assert dag.is_multi_step_goal("what is the weather") is False
+        assert split_compound("what is the weather") == ["what is the weather"]
 
-    def test_dag_engine_build_dag_node_count(self):
-        """Verifies DAG node creation count matches compound steps."""
-        dag = TaskDAGEngine(self.planner)
-        nodes = dag.parse_command_to_dag("organize downloads and then search news and save report")
-        assert len(nodes) >= 2
+    def test_multi_step_does_not_split_on_a_bare_and(self):
+        """`remember milk and eggs` is one command containing a conjunction."""
+        assert split_compound("remember milk and eggs") == ["remember milk and eggs"]
 
-    def test_dag_engine_topological_execution_order(self):
-        """Verifies step indices increase monotonically."""
-        dag = TaskDAGEngine(self.planner)
-        nodes = dag.parse_command_to_dag("search tech news and then summarize notes and save file")
-        step_indices = [n.step_id for n in nodes]
-        assert step_indices == sorted(step_indices)
+    def test_multi_step_preserves_the_order_it_was_asked_in(self):
+        steps = split_compound("organize downloads and then tell me the time")
+        assert steps == ["organize downloads", "tell me the time"]
 
     def test_tool_registry_singleton_instance(self):
         """Verifies ToolRegistry registration retains tools."""
@@ -707,11 +706,24 @@ class TestRuthlessAdversarialSuite:
         res = daemon.scan_and_organize_downloads()
         assert "processed" in res
 
-    def test_task_dag_engine_execute_dag(self):
-        """Verifies multi-step DAG execution pipeline."""
-        dag = TaskDAGEngine(self.planner)
-        res = dag.execute_dag("search python news and then summarize notes", user_approved=True)
-        assert res.get("success") is True
+    def test_multi_step_success_means_every_step_succeeded(self):
+        """This test used to assert `success is True` for a two-step command
+        whose steps could not work, which is why the old engine's unconditional
+        `"success": True` survived as long as it did. A test that checks only
+        that something claimed to work checks nothing."""
+        calls = []
+
+        def _execute(command):
+            calls.append(command)
+            ok = command == "first"
+            return {"success": ok, "message": command,
+                    "error": "" if ok else "SECOND_FAILED"}
+
+        result = run_steps(["first", "second"], _execute)
+        assert result["success"] is False
+        assert result["error"] == "SECOND_FAILED"
+        assert result["steps_completed"] == 1
+        assert calls == ["first", "second"]
 
     def test_coder_agent_generate_script_filesystem(self):
         """Verifies script generation for file search."""
