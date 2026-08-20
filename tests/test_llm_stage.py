@@ -902,13 +902,25 @@ def test_the_planner_hands_the_stage_what_the_memory_agent_found(planner, monkey
 # from the second — `available()` would say "not pulled" and go quiet where it
 # used to work.
 def test_the_best_available_model_is_preferred():
-    assert _first_present(PREFERRED_MODELS, ["llama3.2:3b", "llama3.1:8b"]) == "llama3.1:8b"
+    """"Best" is what the eval says, not what is largest.
+
+    `reports/stage3_selection.py` on 339 commands: the 3B scores 66.1% at
+    p50 0.7s, the 8B 64.3% at p50 1.8s. The 8B fits on this machine — Ollama
+    puts all 29 layers on the 6 GiB card — and fitting is not helping.
+    """
+    assert _first_present(PREFERRED_MODELS, ["llama3.2:3b", "llama3.1:8b"]) == "llama3.2:3b"
+    assert PREFERRED_MODELS[0] == "llama3.2:3b"
 
 
-def test_a_smaller_model_is_used_when_the_bigger_one_is_absent():
+def test_another_model_is_used_when_the_preferred_one_is_absent():
     """The regression this avoids: stage 3 going silent on a machine where it
-    worked, because the default moved to a model that machine never pulled."""
+    worked, because the default moved to a model that machine never pulled.
+
+    Both directions, because the preference order has now moved twice.
+    """
     assert _first_present(PREFERRED_MODELS, ["llama3.2:3b"]) == "llama3.2:3b"
+    assert _first_present(PREFERRED_MODELS, ["llama3.1:8b"]) == "llama3.1:8b"
+    assert _first_present(PREFERRED_MODELS, ["llama3.2:1b"]) == "llama3.2:1b"
 
 
 def test_a_deliberate_quantisation_still_counts():
@@ -962,7 +974,7 @@ def test_an_unnamed_model_resolves_against_the_server(registry, monkeypatch):
     stage = LlmStage(registry, model="")
 
     assert stage.available() is True
-    assert stage.model == "llama3.1:8b"
+    assert stage.model == "llama3.2:3b"
 
 
 def test_a_server_with_no_preferred_model_says_what_it_wanted(registry, monkeypatch):
@@ -980,5 +992,5 @@ def test_a_server_with_no_preferred_model_says_what_it_wanted(registry, monkeypa
     stage = LlmStage(registry, model="")
 
     assert stage.available() is False
-    assert "llama3.1:8b" in stage.unavailable_reason
+    assert PREFERRED_MODELS[0] in stage.unavailable_reason
     assert "mistral:7b" in stage.unavailable_reason

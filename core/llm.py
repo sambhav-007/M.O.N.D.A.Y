@@ -49,19 +49,27 @@ from typing import Any, Dict, List, Optional, Sequence
 
 from core.skills import Skill, SkillRegistry
 
-#: Preference order, best first, resolved against what the server actually has.
+#: Preference order, resolved against what the server actually reports. A single
+#: hard-coded name cannot be right for every machine: one that pulled only the
+#: 8B should still get stage 3 rather than silence, and one with no GPU cannot
+#: load an 8B at all. So the *first of these the server has* is used.
 #:
-#: A single hard-coded default cannot be right for both machines this has to run
-#: on. The development machine has a 6.0 GiB RTX 4050 and Ollama puts all 29
-#: layers of an 8B on it; a machine with no GPU cannot load one at all. Naming
-#: only the 8B would take stage 3 away from the second machine — `available()`
-#: would report "not pulled" and go quiet where it used to work — and naming
-#: only the 3B leaves the first machine on a model it has outgrown.
+#: **The 3B is first because it measured better, not because it is safer.**
+#: `reports/stage3_selection.py`, 339 real utterances that stages 1 and 2 miss:
 #:
-#: So the *first of these the server reports* is used. Earlier comments here
-#: claimed a 3B was the ceiling; that was measured against system RAM, and what
-#: binds a local model is VRAM. See ROADMAP Phase 8.
-PREFERRED_MODELS = ("llama3.1:8b", "llama3.2:3b", "llama3.2:1b")
+#:     llama3.2:3b   224/339   66.1%   p50 0.7s   p95 0.9s
+#:     llama3.1:8b   218/339   64.3%   p50 1.8s   p95 2.2s
+#:
+#: The 8B was briefly first, on a comparison that was wrong: the eval drew its
+#: sample with one RNG walked across intents, so excluding three utterances from
+#: one intent reshuffled every intent sorted after it. Fixed there; the numbers
+#: above are from the clean run. An 8B does *fit* on this machine — Ollama puts
+#: all 29 layers on the 6 GiB RTX 4050 — which is worth keeping distinct from
+#: whether it helps. It fits and it did not help.
+#:
+#: Anyone re-testing on their own hardware:
+#:     py -3.12 -m reports.stage3_selection --model llama3.2:3b --model llama3.1:8b
+PREFERRED_MODELS = ("llama3.2:3b", "llama3.1:8b", "llama3.2:1b")
 
 #: An explicit choice wins outright and is never second-guessed — including when
 #: the named model is absent, because "that model is not pulled" is a more useful

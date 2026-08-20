@@ -374,7 +374,7 @@ apart what MONDAY actually lacks, measured rather than felt:
 Five of those six are **architecture, not parameters**. That is the good news,
 and it is why this plan spends only one phase on the model itself.
 
-### Phase 8 — Use the GPU that is already in this machine ⚠️ **PARTLY DONE 2026-08-18**
+### Phase 8 — Use the GPU that is already in this machine ✅ **DONE 2026-08-18**
 
 > **Done:** the eval (`reports/stage3_selection.py`), the 8B pulled and
 > confirmed resident on the GPU (`offloaded 29/29 layers`), and the default
@@ -382,13 +382,27 @@ and it is why this plan spends only one phase on the model itself.
 > first, resolved against what the server actually has, so a machine that only
 > pulled the 3B keeps working instead of going quiet.
 >
-> **Not established:** that the 8B is more accurate. Two runs disagreed (67.3%
-> vs 62.0%), and the cause was a flaw in the eval's own sampling — one RNG
-> walked across intents, so excluding three utterances from one intent
-> reshuffled every intent sorted after it. Fixed (per-intent seed, sample built
-> once and shared, 6 → 12 per intent), and the clean comparison is what decides
-> this. What *is* established: the 8B costs about double the latency
-> (p50 1.3 s → 2.3 s), consistently, across every run.
+> **Settled, and the answer is no.** The clean comparison — per-intent seed,
+> one sample shared by both models, 12 per intent — on 339 commands:
+>
+> ```
+> llama3.2:3b   224/339   66.1%   p50 0.7s   p95 0.9s
+> llama3.1:8b   218/339   64.3%   p50 1.8s   p95 2.2s
+> ```
+>
+> **The 3B is 1.8 points better and 2.6× faster**, so `PREFERRED_MODELS` puts it
+> first again; the 8B stays second, because a machine that pulled only the 8B
+> should get stage 3 rather than silence. The two earlier runs that favoured the
+> 8B (67.3%, then 62.0%) were both unsound: the eval drew its sample with one
+> RNG walked across intents in sorted order, so excluding three `datetime_query`
+> utterances reshuffled every intent alphabetically after it. The tell was both
+> models moving several points on intents nothing had touched.
+>
+> **The GPU finding stands and is worth keeping separate from the model choice.**
+> An 8B *fits* — Ollama puts all 29 layers on the 6 GiB RTX 4050 — and §0's
+> "an 8B model does not fit at all" was wrong, because it measured system RAM
+> rather than VRAM. It fits; it just did not help. Those are different claims
+> and conflating them is how the wrong default got chosen in the first place.
 >
 > **The result worth keeping from this phase** is that the eval found something
 > the model swap could not: five of six share questions were going to

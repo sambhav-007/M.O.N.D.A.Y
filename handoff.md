@@ -1054,6 +1054,44 @@ matching more, so `tests/test_slot_sanity.py` carries both halves.
 
 **864 → 899 passing.**
 
+### 2026-08-18 (late) — the 8B was measured properly, and lost
+
+`PREFERRED_MODELS` is `("llama3.2:3b", "llama3.1:8b", "llama3.2:1b")` again.
+
+The clean run of `reports/stage3_selection.py` — per-intent seed, one sample
+shared by both models, 12 per intent — on 339 real utterances that stages 1 and
+2 miss:
+
+```
+llama3.2:3b   224/339   66.1%   p50 0.7s   p95 0.9s
+llama3.1:8b   218/339   64.3%   p50 1.8s   p95 2.2s
+```
+
+**1.8 points worse and 2.6× slower.** I had reported the opposite earlier in the
+day and withdrew it twice; both earlier runs were unsound for the same reason,
+which is worth writing down because it is easy to repeat: `build_set` drew its
+sample with **one** `random.Random` walked across intents in sorted order, so
+excluding three `datetime_query` utterances reshuffled the draw for every intent
+alphabetically after it. Two models then differed on intents whose descriptions
+nobody had touched, which is the tell. The seed is per intent now and the sample
+is built once and shared.
+
+**Keep two claims apart.** An 8B *fits* on this machine — `offloaded 29/29
+layers`, 4.1 GiB of a 6.0 GiB RTX 4050 — and ROADMAP §0's "an 8B model does not
+fit at all" was wrong because it measured system RAM instead of VRAM. That
+finding stands. Whether it *helps* is a different question with a different
+answer: it does not. Conflating the two is how the 8B briefly became the default.
+
+**What actually moved the number in Phase 8 was free.** Sixteen skill
+descriptions rewritten to say what they *exclude* took the same 3B from 59.1% to
+64.3% — more than the model swap, at no latency cost. The tool schema is
+generated from those strings and nothing supplements them, so they are the
+model's entire view of what MONDAY can do. That is where the next gain is, not
+in a bigger model.
+
+The 8B stays second in the list rather than being removed: a machine that pulled
+only the 8B should get stage 3 rather than silence.
+
 ## 9. WhatsApp (added 2026-08-08)
 
 WhatsApp has **no API a desktop script may send through**. The deep link
