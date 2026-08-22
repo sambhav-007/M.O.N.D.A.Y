@@ -15,6 +15,7 @@ Sizes after mapping (en-US, 16,521 utterances in, 10,686 kept):
     browser              3,845   qa · weather · news · recommendation
     communication        3,325   email · calendar
     desktop_automation   1,760   audio volume · datetime · hue/wemo
+                                 (+ alarms from 2026-08-18, see below)
     memory_query           793   lists
     llm_fallback           829   general_quirky
     chitchat               134   general_greet · general_joke
@@ -91,6 +92,12 @@ MASSIVE_TO_MONDAY: Dict[str, str] = {
     "lists_createoradd": "memory_query",
     "lists_query": "memory_query",
     "lists_remove": "memory_query",
+    # Timers and alarms, built in ROADMAP Phase 11 (`core/timers.py`). These
+    # three were refused for "no alarm or timer exists" until 2026-08-18, which
+    # was true and is the reason they were built.
+    "alarm_set": "desktop_automation",
+    "alarm_query": "desktop_automation",
+    "alarm_remove": "desktop_automation",
     "general_greet": "chitchat",
     # MONDAY answers this live from jokeapi.dev.
     "general_joke": "chitchat",
@@ -106,19 +113,28 @@ MASSIVE_TO_MONDAY: Dict[str, str] = {
 # every one of MASSIVE's 60 intents is either mapped or explicitly refused —
 # a new MASSIVE release adding an intent should fail a test, not be ignored.
 MASSIVE_DROPPED: Dict[str, str] = {
-    "alarm_set": "no alarm or timer exists",
-    "alarm_query": "no alarm or timer exists",
-    "alarm_remove": "no alarm or timer exists",
     "calendar_remove": "events can be added and read, not deleted",
     "cooking_recipe": "no recipe route; would train browser on a capability MONDAY does not claim",
     "cooking_query": "same",
     "iot_cleaning": "no robot-vacuum route, unlike the hue/wemo intents above",
     "iot_coffee": "no coffee-machine route",
-    "music_query": "no music control; 'open spotify' is a launcher command, not this",
+    "music_query": (
+        "media keys can play, pause and skip what is already open; they cannot "
+        "answer 'what song is this'"
+    ),
     "music_likeness": "no music control",
     "music_dislikeness": "no music control",
     "music_settings": "no music control",
-    "play_music": "no playback control",
+    # Reworded 2026-08-18: MONDAY has media keys now, so "no playback control"
+    # became half wrong. The accurate refusal is narrower and is the reason this
+    # stays refused: `play_music` is overwhelmingly "play <artist>", and a
+    # play/pause key presses play on whatever is already open. Training 2.1 to
+    # send "play some jazz" there would manufacture exactly the confident wrong
+    # action ROADMAP Phase 9 was built to stop.
+    "play_music": (
+        "media keys control what is already playing; nothing here can choose "
+        "what plays"
+    ),
     "play_radio": "no playback control",
     "play_podcasts": "no playback control",
     "play_audiobook": "no playback control",

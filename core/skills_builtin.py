@@ -30,6 +30,7 @@ from core.slot_sanity import looks_like_a_path
 from core.skills_comms import register_comms_skills
 from core.skills_live import register_live_skills
 from core.skills_system import register_system_skills
+from core.skills_timers import register_timer_skills
 
 
 def build_builtin_registry(planner: Any) -> SkillRegistry:
@@ -910,5 +911,6 @@ def build_builtin_registry(planner: Any) -> SkillRegistry:
     register_live_skills(registry, planner)      # tranche 4 — live data
     register_system_skills(registry, planner)    # tranche 5 — desktop, tools
     register_comms_skills(registry, planner)     # tranche 6 — email, WhatsApp
+    register_timer_skills(registry, planner)     # tranche 7 — timers, media keys
 
     return registry

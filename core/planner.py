@@ -46,6 +46,7 @@ from agents.vision_agent import VisionAgent
 from agents.public_api_agent import PublicApiAgent
 from agents.audio_summarizer_agent import AudioSummarizerAgent
 from core.multi_step import run_steps, split_compound
+from core.timers import TimerService
 
 from core.cognitive import CognitiveResponseDict, TriModelCognitiveEngine
 from core.contacts import ContactMixin
@@ -215,6 +216,13 @@ class MasterPlanner(EmailMixin, ContactMixin, Tier2Mixin):
         self.vision_agent = VisionAgent()
         self.public_api_agent = PublicApiAgent()
         self.audio_summarizer_agent = AudioSummarizerAgent()
+
+        # Timers (ROADMAP Phase 11). Built before the registry, because the
+        # skills bind to this instance. `on_fire` is injected rather than
+        # imported by `core/timers.py`, so that module knows nothing about
+        # notifications and a test can watch a timer fire without a popup
+        # appearing on the developer's screen.
+        self.timer_service = TimerService(on_fire=self._announce_timer)
         self.tool_registry = ToolRegistry()
 
         # Phase 3: the skill router. Built after the agents exist, because the
@@ -232,6 +240,10 @@ class MasterPlanner(EmailMixin, ContactMixin, Tier2Mixin):
         self._in_multi_step = False
         self.autonomy_daemon = AutonomyDaemon()
         self.autonomy_daemon.start()
+
+        # Anything that came due while MONDAY was closed is reported as missed,
+        # not fired late and not silently dropped. `start()` returns them.
+        self.missed_timers = self.timer_service.start()
 
         # Multi-Turn Conversation State Machine
         self.pending_clarification: Optional[Dict[str, Any]] = None
@@ -568,6 +580,20 @@ class MasterPlanner(EmailMixin, ContactMixin, Tier2Mixin):
         if len(trimmed) > self.MAX_CONTEXT_REPLY_CHARS:
             trimmed = trimmed[: self.MAX_CONTEXT_REPLY_CHARS].rstrip() + "…"
         self.recent_turns.append({"role": "assistant", "content": trimmed})
+
+    def _announce_timer(self, timer: Any) -> None:
+        """What happens when a timer comes due: a popup, and a spoken line.
+
+        Deliberately tolerant of failure — a notification that cannot be shown
+        must not take down the tick thread, which is holding every *other*
+        pending timer.
+        """
+        try:
+            self.comms_agent.send_desktop_notification(
+                "M.O.N.D.A.Y.", f"{timer.label} — time's up."
+            )
+        except Exception:  # noqa: BLE001
+            pass
 
     def _announce_cancelled_gate(self, pending: Dict[str, Any]) -> str:
         """Records and describes an approval gate abandoned for a new command.

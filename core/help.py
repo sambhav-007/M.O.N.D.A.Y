@@ -111,6 +111,15 @@ Type these in plain English. Every example below works as written.
    Spacebar (in the app)    push-to-talk
    just talk over me        I stop speaking and listen
 
+⏰  TIMERS & MEDIA
+   set a timer for 10 minutes    also: remind me in 15 mins
+   set an alarm for 7am          wake me up at 6:30
+   what alarms do i have         cancel my timers
+   next song · pause · previous  the media keys, for whatever
+                                 app is already playing
+   Timers ring only while I'm running — I'll tell you if one
+   passed while I was closed.
+
 🔍  DIAGNOSTICS
    history                  the action audit log
    /help                    this menu

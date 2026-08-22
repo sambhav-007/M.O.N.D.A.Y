@@ -17,7 +17,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from core.config import STAGING_DIR
-from core.contracts import AgentResult, HttpResponse
+from core.contracts import AgentResult, HttpResponse, TaskQueued
 from core.security import evaluate_action_permission, log_action
 
 
@@ -718,29 +718,63 @@ class CommunicationAgent:
             "speech": "Opened the chat.",
         }
 
+    #: The popup script. Note that it reads its two strings from the environment
+    #: rather than having them pasted into it: this used to be an f-string, and
+    #: a notification body containing `"); ...; ("` broke out of the quotes and
+    #: ran as PowerShell. `notify me <text>` is user-facing and a timer label
+    #: reaches here too, so the body is attacker-controlled in the only sense
+    #: that matters — it is not written by this code.
+    _NOTIFY_SCRIPT = (
+        '[reflection.assembly]::loadwithpartialname("System.Windows.Forms");'
+        '[System.Windows.Forms.MessageBox]::Show('
+        '$env:MONDAY_NOTIFY_BODY, $env:MONDAY_NOTIFY_TITLE)'
+    )
+
     def send_desktop_notification(self, title: str, message: str) -> Dict[str, Any]:
+        """Shows a desktop notification popup.
+
+        Reports that the popup was *launched*, which is what can be checked. The
+        MessageBox is modal and waits for a human to click OK, so waiting for it
+        to exit would hang the assistant on a dialog nobody may be looking at.
         """
-        Triggers a desktop notification popup.
-        """
+        import os
+        import subprocess
+        import sys
+
+        if sys.platform != "win32":
+            # This used to fall through to the success return below, so a Linux
+            # or macOS run reported "✓ Notification displayed" having displayed
+            # nothing at all.
+            log_action("send_notification", title, 1, "failed", self.name)
+            return AgentResult.failed(
+                f"Desktop notifications are Windows-only here; nothing was shown "
+                f"on {sys.platform}.",
+                error="NOTIFY_UNSUPPORTED_PLATFORM",
+                data={"title": title, "platform": sys.platform},
+            ).as_dict()
+
         try:
-            # Platform specific notification attempt
-            import sys, subprocess
-            if sys.platform == "win32":
-                # PowerShell notification popup
-                ps_script = (
-                    f'[reflection.assembly]::loadwithpartialname("System.Windows.Forms");'
-                    f'[System.Windows.Forms.MessageBox]::Show("{message}", "{title}")'
-                )
-                # Run in background non-blocking
-                subprocess.Popen(["powershell", "-Command", ps_script])
-            log_action("send_notification", title, 1, "success", self.name)
-            return {
-                "success": True,
-                "title": title,
-                "message": f"✓ Notification displayed: '{title}'",
-            }
-        except Exception as e:
-            return {"success": False, "error": str(e)}
+            environment = dict(os.environ)
+            environment["MONDAY_NOTIFY_TITLE"] = str(title)
+            environment["MONDAY_NOTIFY_BODY"] = str(message)
+            popup = subprocess.Popen(
+                ["powershell", "-NoProfile", "-Command", self._NOTIFY_SCRIPT],
+                env=environment,
+            )
+        except Exception as exc:  # noqa: BLE001
+            log_action("send_notification", title, 1, "failed", self.name)
+            return AgentResult.failed(
+                f"I couldn't show that notification: {exc}",
+                error="NOTIFY_FAILED",
+                data={"title": title},
+            ).as_dict()
+
+        log_action("send_notification", title, 1, "success", self.name)
+        return AgentResult.ok(
+            f"✓ Notification shown: '{title}'",
+            evidence=TaskQueued(worker="powershell", detail=f"notification popup, pid {popup.pid}"),
+            data={"title": title, "body": str(message), "pid": popup.pid},
+        ).as_dict()
 
     def schedule_calendar_event(self, title: str, start_time: str, duration_mins: int = 30) -> Dict[str, Any]:
         """Schedules a calendar event and persists it to data/calendar.json."""

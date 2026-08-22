@@ -1092,6 +1092,56 @@ in a bigger model.
 The 8B stays second in the list rather than being removed: a machine that pulled
 only the 8B should get stage 3 rather than silence.
 
+### 2026-08-18 (later) — timers, alarms, media keys (Phase 11, tranche 1)
+
+`core/timers.py` and `core/skills_timers.py`. Both categories were dropped from
+the corpus for not existing: `datagen/massive.py` refuses an intent MONDAY
+cannot serve, and three of its entries read "no alarm or timer exists". The way
+to recover those rows was to build the thing, so this tranche did, and moved the
+mapping in the same commit — a corpus entry ahead of a capability trains 2.1 on
+a promise.
+
+```
+alarm_set     254 rows   39.8%   (previously not in the corpus at all)
+alarm_query   182 rows   26.4%
+alarm_remove  113 rows   23.0%
+```
+
+**What is honest about a timer here:** it is a thread in this process. It rings
+while MONDAY runs and not otherwise, the confirmation says so, and one that came
+due while the app was closed is reported as **missed** rather than fired late or
+dropped. `data/timers.json` is what makes that possible across a restart.
+
+**Media keys are keystrokes, not a music player.** `KeypressSent` is the whole
+claim: a key was sent, and nothing here can see which app received it or whether
+anything was playing. "Play some jazz" therefore still refuses — `play_music`
+stays in `MASSIVE_DROPPED` with a reason rewritten to say precisely that.
+
+**Two defects found on the way, both on the critical path for this work:**
+
+1. **`send_desktop_notification` built a PowerShell command by f-string.** A
+   body containing `"); …; ("` broke out and executed — demonstrated before
+   fixing. `notify me <text>` is user-facing and a timer label flows there too.
+   The strings travel as environment variables now and never enter the script.
+   The same function also returned `success: True` on non-Windows having shown
+   nothing, and carried no evidence.
+2. **The cached classifier never noticed the corpus had changed.**
+   `get_trained_classifier` retrained only when `intent_classifier.joblib` was
+   *missing*, so regenerating the corpus (which this tranche did) left a model
+   trained on the old one loaded silently — the new capability would be in the
+   patterns and invisible to 2.1. It stores a content fingerprint now and
+   retrains on a mismatch. Same shape as the stale
+   `intent_classifier_comparison.csv` that `tests/test_evidence_index.py` exists
+   for.
+
+**Corpus regenerated:** MASSIVE re-derived (11,180 rows, up from 10,631),
+`datagen.generate` re-run (17,488 rows), 2.1 retrained automatically by the
+fingerprint check. **Coverage 35.1%** — the same figure as before the tranche,
+but not the same measurement: 549 rows entered the denominator, so the honest
+comparison is per intent, and the alarm rows went from absent to routed.
+
+**921 → 973 passing.**
+
 ## 9. WhatsApp (added 2026-08-08)
 
 WhatsApp has **no API a desktop script may send through**. The deep link

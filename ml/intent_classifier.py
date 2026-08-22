@@ -700,19 +700,55 @@ def _write_comparison_artefacts(
 
 
 # ── Public API ─────────────────────────────────────────────────────────────────
+def corpus_fingerprint(df: "pd.DataFrame") -> str:
+    """A content hash of the training data, for detecting a stale model.
+
+    Content rather than mtime on purpose: a `git checkout` rewrites mtimes
+    without changing a byte, and a corpus regenerated to identical content
+    should not force a retrain.
+    """
+    import hashlib
+
+    digest = hashlib.sha256()
+    digest.update(str(len(df)).encode())
+    for command, intent in zip(df["command"], df["intent"]):
+        digest.update(str(command).encode("utf-8", "replace"))
+        digest.update(b"\x00")
+        digest.update(str(intent).encode("utf-8", "replace"))
+        digest.update(b"\n")
+    return digest.hexdigest()
+
+
 def get_trained_classifier() -> Pipeline:
-    """Returns a trained intent-classifier pipeline (uses best model found)."""
+    """Returns a trained intent-classifier pipeline (uses best model found).
+
+    Retrains when the corpus has changed, not only when the artefact is absent.
+    The old version checked `model_path.exists()` and nothing else, so
+    regenerating the corpus left a model trained on the previous one loaded
+    silently — a new capability would appear in the patterns and be invisible to
+    the classifier, and the published accuracy would describe a corpus that no
+    longer existed. `reports/intent_classifier_comparison.csv` went stale that
+    way once already (see `tests/test_evidence_index.py`).
+    """
     model_dir = PROJECT_ROOT / "models"
     model_dir.mkdir(parents=True, exist_ok=True)
     model_path = model_dir / "intent_classifier.joblib"
+    stamp_path = model_dir / "intent_classifier.corpus.txt"
+
+    df = build_synthetic_dataset()
+    fingerprint = corpus_fingerprint(df)
 
     if model_path.exists():
         try:
-            return joblib.load(model_path)
-        except Exception:
-            pass
+            trained_on = stamp_path.read_text(encoding="utf-8").strip()
+        except Exception:  # noqa: BLE001 — no stamp means a pre-2026-08-18 model
+            trained_on = ""
+        if trained_on == fingerprint:
+            try:
+                return joblib.load(model_path)
+            except Exception:
+                pass
 
-    df = build_synthetic_dataset()
     X, y = df["command"].tolist(), df["intent"].tolist()
     X_train, _, y_train, _ = train_test_split(X, y, test_size=0.2, random_state=42, stratify=y)
     pipeline = build_pipelines()[PRODUCTION_MODEL]
@@ -720,6 +756,7 @@ def get_trained_classifier() -> Pipeline:
 
     try:
         joblib.dump(pipeline, model_path)
+        stamp_path.write_text(fingerprint, encoding="utf-8")
     except Exception as e:
         warnings.warn(f"Could not save model artifact to {model_path}: {e}")
 

@@ -529,6 +529,36 @@ becomes this loop's substrate or it is deleted — not both.
 
 **Two days, and the highest-value two days on this list.**
 
+### Phase 11 — Give it more hands 🚧 **TRANCHE 1 DONE 2026-08-18**
+
+> **Timers, alarms and media keys.** Both categories were on the wrong side of
+> `datagen/massive.py`'s own rule — an utterance is kept only if MONDAY can
+> serve it — so three alarm intents and five music ones were being discarded for
+> having nowhere to go. The alarm intents are mapped now, in the same commit as
+> the capability, because a corpus entry ahead of a capability trains the
+> classifier on a promise.
+>
+> ```
+> alarm_set     254 rows   39.8%   (was: not in the corpus at all)
+> alarm_query   182 rows   26.4%
+> alarm_remove  113 rows   23.0%
+> ```
+>
+> **Music stays refused, and its reason is sharper.** "No playback control" was
+> half wrong once media keys existed. The accurate refusal is narrower: media
+> keys control what is *already* open and cannot choose what plays, and
+> `play_music` is overwhelmingly "play <artist>". Mapping it would train 2.1 to
+> answer that with a play/pause key, which presses play on whatever happens to
+> be open — the confident wrong action Phase 9 exists to prevent.
+>
+> **Two defects found on the way**, both on the critical path:
+> `send_desktop_notification` interpolated its message straight into a
+> PowerShell command string, so a notification body containing `"); …; ("` ran
+> as PowerShell — and `notify me <text>` is user-facing. And
+> `get_trained_classifier` retrained only when the model file was *missing*, so
+> regenerating the corpus left a model trained on the previous one loaded
+> silently. It carries a content fingerprint now.
+
 ### Phase 11 — Give it more hands
 
 `reports/massive_coverage.md` is a measured backlog of things people say to an

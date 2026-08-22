@@ -1,4 +1,7 @@
 text,intent,source,massive_intent
+wake me up at five am this week,desktop_automation,massive,alarm_set
+wake me up at nine am on friday,desktop_automation,massive,alarm_set
+set an alarm for two hours from now,desktop_automation,massive,alarm_set
 quiet,desktop_automation,massive,audio_volume_mute
 olly quiet,desktop_automation,massive,audio_volume_mute
 stop,desktop_automation,massive,audio_volume_mute
@@ -37,12 +40,20 @@ what's the time in australia,desktop_automation,massive,datetime_query
 tell me the time in moscow,desktop_automation,massive,datetime_query
 tell me the time in g. m. t. plus five,desktop_automation,massive,datetime_convert
 olly tell me the time in g. m. t. plus five,desktop_automation,massive,datetime_convert
+cancel my seven am alarm,desktop_automation,massive,alarm_remove
+stop seven am alarm,desktop_automation,massive,alarm_remove
+what alarms i have set,desktop_automation,massive,alarm_query
+please list active alarms,desktop_automation,massive,alarm_query
+tell me about my alarms,desktop_automation,massive,alarm_query
 what's happening in football today,browser,massive,news_query
 set lights brightness higher,desktop_automation,massive,iot_hue_lightup
 make lights brightener,desktop_automation,massive,iot_hue_lightup
 please raise the lights to max,desktop_automation,massive,iot_hue_lightup
 tell me today's date,desktop_automation,massive,datetime_query
 what date is it today,desktop_automation,massive,datetime_query
+set an alarm for twelve,desktop_automation,massive,alarm_set
+set an alarm forty minutes from now,desktop_automation,massive,alarm_set
+set alarm for eight every weekday,desktop_automation,massive,alarm_set
 is it raining,browser,massive,weather_query
 is it going to rain,browser,massive,weather_query
 is it currently snowing,browser,massive,weather_query
@@ -76,6 +87,9 @@ dim the lights,desktop_automation,massive,iot_hue_lightdim
 olly dim the lights,desktop_automation,massive,iot_hue_lightdim
 how are you,chitchat,massive,general_greet
 hey hey,chitchat,massive,general_greet
+set alarm at ten am,desktop_automation,massive,alarm_set
+set alarm tomorrow at six am,desktop_automation,massive,alarm_set
+set wake up thursday seven am,desktop_automation,massive,alarm_set
 tell me the latest technology news,browser,massive,news_query
 tell me latest technology news,browser,massive,news_query
 tell me some business news,browser,massive,news_query
@@ -94,6 +108,11 @@ do you know any joke,chitchat,massive,general_joke
 what is the time,desktop_automation,massive,datetime_query
 tell me the time,desktop_automation,massive,datetime_query
 what time is it,desktop_automation,massive,datetime_query
+delete the alarm i just set,desktop_automation,massive,alarm_remove
+remove the alarm,desktop_automation,massive,alarm_remove
+show me the alarms i set,desktop_automation,massive,alarm_query
+do i have any alarms,desktop_automation,massive,alarm_query
+show alarms,desktop_automation,massive,alarm_query
 how's the weather like in beijing,browser,massive,weather_query
 tell me the weather in shanghai,browser,massive,weather_query
 please make the lights reading friendly,desktop_automation,massive,iot_hue_lightchange
@@ -114,6 +133,13 @@ turn on the rice cooker socket,desktop_automation,massive,iot_wemo_on
 turn off the rice cooker socket,desktop_automation,massive,iot_wemo_off
 what time is it in las vegas,desktop_automation,massive,datetime_query
 what time is it in beijing,desktop_automation,massive,datetime_query
+set an alarm at six in the morning,desktop_automation,massive,alarm_set
+set an alarm for four in the afternoon,desktop_automation,massive,alarm_set
+olly alert me at three p. m. to go to the concert,desktop_automation,massive,alarm_set
+alert me at three p. m. to go to the concert,desktop_automation,massive,alarm_set
+do i have an alarm set for morning flight,desktop_automation,massive,alarm_query
+did i set an alarm to wake up in the morning,desktop_automation,massive,alarm_query
+are there any alarms,desktop_automation,massive,alarm_query
 is it raining in barcelona,browser,massive,weather_query
 will it rain today,browser,massive,weather_query
 what's going on outside,browser,massive,weather_query
@@ -195,6 +221,9 @@ will there be snow tomorrow,browser,massive,weather_query
 what day of the week is the twenty second march,desktop_automation,massive,datetime_query
 twenty ninth march comes on what day,desktop_automation,massive,datetime_query
 what day of the week is first april,desktop_automation,massive,datetime_query
+what's my next alarm,desktop_automation,massive,alarm_query
+please tell me my alarms,desktop_automation,massive,alarm_query
+what time will my alarm go off today,desktop_automation,massive,alarm_query
 can you tell me the time,desktop_automation,massive,datetime_query
 what is the current time,desktop_automation,massive,datetime_query
 what is the current date,desktop_automation,massive,datetime_query
@@ -218,14 +247,21 @@ switch the smart plug socket,desktop_automation,massive,iot_wemo_on
 if it is noon in virginia what time is it in california,desktop_automation,massive,datetime_convert
 what is the time difference between eastern time and pacific time,desktop_automation,massive,datetime_convert
 will it be warm tomorrow,browser,massive,weather_query
+remove the first alarm,desktop_automation,massive,alarm_remove
 can you change the light colors in the house,desktop_automation,massive,iot_hue_lightchange
 can you shuffle the light colors in the house,desktop_automation,massive,iot_hue_lightchange
 can you change the light colors into dark in the house,desktop_automation,massive,iot_hue_lightchange
+what alarms do i have set,desktop_automation,massive,alarm_query
+read me my alarms,desktop_automation,massive,alarm_query
+what time are my alarms set for,desktop_automation,massive,alarm_query
 can you tell me a joke,chitchat,massive,general_joke
 tell me a funny joke,chitchat,massive,general_joke
 change my room lights to blue,desktop_automation,massive,iot_hue_lightchange
 change my room lights to some romantic color,desktop_automation,massive,iot_hue_lightchange
 change my room lights so that i can get a good sleep,desktop_automation,massive,iot_hue_lightchange
+set an alarm for me at eight am,desktop_automation,massive,alarm_set
+make an alarm for four p. m.,desktop_automation,massive,alarm_set
+make me a wake up alarm for eight forty five am,desktop_automation,massive,alarm_set
 what are the latest news,browser,massive,news_query
 what are the breaking news,browser,massive,news_query
 what are the heartthrob news,browser,massive,news_query
@@ -286,6 +322,10 @@ what's the time in denver,desktop_automation,massive,datetime_query
 silence please,desktop_automation,massive,audio_volume_mute
 speakers off,desktop_automation,massive,audio_volume_mute
 quiet please,desktop_automation,massive,audio_volume_mute
+confirm the alarm time,desktop_automation,massive,alarm_query
+what alarms are set,desktop_automation,massive,alarm_query
+which alarms do i have,desktop_automation,massive,alarm_query
+do i have an alarm set,desktop_automation,massive,alarm_query
 by proper formula,browser,massive,weather_query
 by get marks,browser,massive,weather_query
 by our scores,browser,massive,weather_query
@@ -302,11 +342,23 @@ by switch off,desktop_automation,massive,iot_hue_lightoff
 by remote sensor,desktop_automation,massive,iot_hue_lightoff
 what are the latest world news,browser,massive,news_query
 please tell me some international news,browser,massive,news_query
+set an alarm for nine am,desktop_automation,massive,alarm_set
+set a wake up call for ten am,desktop_automation,massive,alarm_set
+i need a reminder alarm at one,desktop_automation,massive,alarm_set
+make an alarm for three p. m.,desktop_automation,massive,alarm_set
+turn on an alarm for nine am,desktop_automation,massive,alarm_set
+set an alarm for one p. m.,desktop_automation,massive,alarm_set
 what's the funniest joke,chitchat,massive,general_joke
 tell me a dirty joke,chitchat,massive,general_joke
 please increase the volume of the music hips don't lie,desktop_automation,massive,audio_volume_up
 turn the lights off in the living room,desktop_automation,massive,iot_hue_lightoff
 please set the lights off in the living room,desktop_automation,massive,iot_hue_lightoff
+how many alarms are listed,desktop_automation,massive,alarm_query
+do i have any alarms set for tomorrow,desktop_automation,massive,alarm_query
+what's the alarm situation for tomorrow,desktop_automation,massive,alarm_query
+turn off eight am alarm,desktop_automation,massive,alarm_remove
+cancel my eight am alarm,desktop_automation,massive,alarm_remove
+get rid of my eight am alarm,desktop_automation,massive,alarm_remove
 light color change,desktop_automation,massive,iot_hue_lightchange
 change light color,desktop_automation,massive,iot_hue_lightchange
 change color of lights,desktop_automation,massive,iot_hue_lightchange
@@ -334,12 +386,18 @@ how warm is it now,browser,massive,weather_query
 turn up sound,desktop_automation,massive,audio_volume_up
 turn down volume,desktop_automation,massive,audio_volume_down
 volume louder please,desktop_automation,massive,audio_volume_up
+start alarm,desktop_automation,massive,alarm_set
+set alarm to begin,desktop_automation,massive,alarm_set
+change alarm to start at midnight,desktop_automation,massive,alarm_set
 what will the weather be like a week from now,browser,massive,weather_query
 on tuesday what is the weather supposed to be,browser,massive,weather_query
 what is the weekend weather forecast,browser,massive,weather_query
 set mute for twenty minutes,desktop_automation,massive,audio_volume_mute
 unmute after,desktop_automation,massive,audio_volume_up
 bring back talking after,desktop_automation,massive,audio_volume_up
+i want to wake up at six am tomorrow please,desktop_automation,massive,alarm_set
+please set the alarm for next morning to seven am,desktop_automation,massive,alarm_set
+please ring the wake up alarm at eight am next saturday,desktop_automation,massive,alarm_set
 what day of the week is thanksgiving,desktop_automation,massive,datetime_query
 what is the last day of the month,desktop_automation,massive,datetime_query
 what is the time central,desktop_automation,massive,datetime_query
@@ -356,6 +414,9 @@ what will be the highest temperature this week,browser,massive,weather_query
 slightly raise the light,desktop_automation,massive,iot_hue_lightup
 increase the light a little,desktop_automation,massive,iot_hue_lightup
 make the light more visible,desktop_automation,massive,iot_hue_lightup
+can you tell me what alarms i have set,desktop_automation,massive,alarm_query
+do i have any alarms set for today,desktop_automation,massive,alarm_query
+i need to set an alarm how many do i have set,desktop_automation,massive,alarm_query
 turn off room lights,desktop_automation,massive,iot_hue_lightoff
 control lights turn off room lights,desktop_automation,massive,iot_hue_lightoff
 how is the current weather in california,browser,massive,weather_query
@@ -408,6 +469,9 @@ please read me the last news from boston tribute,browser,massive,news_query
 can i know the breaking news from c. n. n.,browser,massive,news_query
 hi,chitchat,massive,general_greet
 hello,chitchat,massive,general_greet
+create an alarm at four o'clock tomorrow morning,desktop_automation,massive,alarm_set
+make an alarm to wake me up after five hours,desktop_automation,massive,alarm_set
+schedule an alarm to wake me up after three hours,desktop_automation,massive,alarm_set
 give weather stat for the week,browser,massive,weather_query
 display weather for the week,browser,massive,weather_query
 summarize week's weather details,browser,massive,weather_query
@@ -456,6 +520,9 @@ mild or heavy weather,browser,massive,weather_query
 show me the highest weather this week,browser,massive,weather_query
 is summer going on,browser,massive,weather_query
 what are the chances of hail this week,browser,massive,weather_query
+confirm alarm for tomorrow morning,desktop_automation,massive,alarm_query
+what time is the alarm set for tomorrow,desktop_automation,massive,alarm_query
+confirm my alarm settings,desktop_automation,massive,alarm_query
 i want to know the latest local news of the city,browser,massive,news_query
 mute sound on speakers please,desktop_automation,massive,audio_volume_mute
 ok google mute sound on speakers please,desktop_automation,massive,audio_volume_mute
@@ -479,6 +546,11 @@ tell me the latest news from b. b. c. sports,browser,massive,news_query
 what is the latest gossip of hollywood going on,browser,massive,news_query
 what is latest gossip of holywood going on,browser,massive,news_query
 what are the b. b. c. poll predictions for the upcoming us elections,browser,massive,news_query
+cancel wake up calls for this week,desktop_automation,massive,alarm_remove
+stop wake up calls for this week,desktop_automation,massive,alarm_remove
+what alarms are set right now,desktop_automation,massive,alarm_query
+what alarms will wake me up tomorrow,desktop_automation,massive,alarm_query
+are there any alarms set right now,desktop_automation,massive,alarm_query
 i would like a joke,chitchat,massive,general_joke
 give me a joke,chitchat,massive,general_joke
 a joke please,chitchat,massive,general_joke
@@ -488,6 +560,9 @@ lights brighter,desktop_automation,massive,iot_hue_lightup
 dim lights,desktop_automation,massive,iot_hue_lightdim
 weather forecast,browser,massive,weather_query
 weather today,browser,massive,weather_query
+my set alarms,desktop_automation,massive,alarm_query
+alarm settings,desktop_automation,massive,alarm_query
+my alarms,desktop_automation,massive,alarm_query
 turn off smart socket,desktop_automation,massive,iot_wemo_off
 wemo plug socket off,desktop_automation,massive,iot_wemo_off
 turn off light in bedroom,desktop_automation,massive,iot_hue_lightoff
@@ -498,8 +573,13 @@ what time is it in cleveland ohio,desktop_automation,massive,datetime_query
 what time is it in honolulu,desktop_automation,massive,datetime_query
 news nineteen,browser,massive,news_query
 news from state paper,browser,massive,news_query
+set alarm for eight am,desktop_automation,massive,alarm_set
+alarm set eight am,desktop_automation,massive,alarm_set
 tell me what time it is right now,desktop_automation,massive,datetime_query
 what time are we looking at right now,desktop_automation,massive,datetime_query
+turn off the alarm for tomorrow morning,desktop_automation,massive,alarm_remove
+turn off the six am alarm for wednesday,desktop_automation,massive,alarm_remove
+turn off any morning alarms after friday,desktop_automation,massive,alarm_remove
 make the house lights amber at six p. m.,desktop_automation,massive,iot_hue_lightchange
 turn the lights blue at three p. m.,desktop_automation,massive,iot_hue_lightchange
 give me some lavender toned light,desktop_automation,massive,iot_hue_lightchange
@@ -513,10 +593,18 @@ please tell me the current time in new york,desktop_automation,massive,datetime_
 please turn lights off,desktop_automation,massive,iot_hue_lightoff
 turn the lights off to my room,desktop_automation,massive,iot_hue_lightoff
 please tell me what time it is,desktop_automation,massive,datetime_query
+remove my morning alarm,desktop_automation,massive,alarm_remove
+please delete my morning alarm,desktop_automation,massive,alarm_remove
+olly please delete my morning alarm,desktop_automation,massive,alarm_remove
+please remove my alarm,desktop_automation,massive,alarm_remove
 dim the lights a bit,desktop_automation,massive,iot_hue_lightdim
 please lower the lights a little bit,desktop_automation,massive,iot_hue_lightdim
 lower the lights a little more,desktop_automation,massive,iot_hue_lightdim
 change the volume of the speakers,desktop_automation,massive,audio_volume_other
+phones,desktop_automation,massive,alarm_remove
+set my alarm for seven am,desktop_automation,massive,alarm_set
+turn my morning alarm on,desktop_automation,massive,alarm_set
+set my alarm please,desktop_automation,massive,alarm_set
 what is the time in london right now,desktop_automation,massive,datetime_query
 if it's eight p. m. on the east coast what time is it in sacramento california,desktop_automation,massive,datetime_convert
 what is the time difference between here and japan,desktop_automation,massive,datetime_convert
@@ -528,6 +616,9 @@ what's the weather like right now in new york,browser,massive,weather_query
 is the weather bad in new york right now,browser,massive,weather_query
 will you please mute my speakers,desktop_automation,massive,audio_volume_mute
 sound off,desktop_automation,massive,audio_volume_mute
+set the alarm for five o'clock in the morning,desktop_automation,massive,alarm_set
+set my alarm for six thirty in the morning tomorrow,desktop_automation,massive,alarm_set
+i want the alarm set for six,desktop_automation,massive,alarm_set
 please turn the lights up,desktop_automation,massive,iot_hue_lightup
 please increase the brightness in this room,desktop_automation,massive,iot_hue_lightup
 increase the brightness of the lights,desktop_automation,massive,iot_hue_lightup
@@ -560,6 +651,9 @@ turn this room light off,desktop_automation,massive,iot_hue_lightoff
 could you turn the light off,desktop_automation,massive,iot_hue_lightoff
 turn off my smart plug socket,desktop_automation,massive,iot_wemo_off
 please turn on my smart plug socket,desktop_automation,massive,iot_wemo_on
+delete my alarm for eight am,desktop_automation,massive,alarm_remove
+remove my alarm for tomorrow morning,desktop_automation,massive,alarm_remove
+please turn off my alarm for this evening,desktop_automation,massive,alarm_remove
 will the weather be bad on sunday,browser,massive,weather_query
 what is the weather going to be this weekend,browser,massive,weather_query
 pull up today's news from c. n. n.,browser,massive,news_query
@@ -580,6 +674,9 @@ dim the lights in the living room,desktop_automation,massive,iot_hue_lightdim
 dim the living room lights,desktop_automation,massive,iot_hue_lightdim
 change the media room lights from purple to green,desktop_automation,massive,iot_hue_lightchange
 brighten the lights on the front porch,desktop_automation,massive,iot_hue_lightup
+is my work alarm set for tomorrow,desktop_automation,massive,alarm_query
+what alarms do i have set for thursday,desktop_automation,massive,alarm_query
+is my school alarm set,desktop_automation,massive,alarm_query
 what news do you have today,browser,massive,news_query
 what's on the new york time,browser,massive,news_query
 what's on the news today,browser,massive,news_query
@@ -633,6 +730,9 @@ today date,desktop_automation,massive,datetime_query
 tell me the date,desktop_automation,massive,datetime_query
 is it going to rain later today,browser,massive,weather_query
 tell me the humidity level downtown today,browser,massive,weather_query
+put alarm on,desktop_automation,massive,alarm_set
+set alarm at five thirty am,desktop_automation,massive,alarm_set
+place alarm at five o'clock morning,desktop_automation,massive,alarm_set
 what is the news this morning,browser,massive,news_query
 what is the breaking news for the day,browser,massive,news_query
 please tell me current events for the day,communication,massive,calendar_query
@@ -653,6 +753,7 @@ give a pleasant sound,desktop_automation,massive,audio_volume_other
 comfortably adjust sound,desktop_automation,massive,audio_volume_other
 find today's wapo articles about trump,browser,massive,news_query
 find new trump articles but not from fox news,browser,massive,news_query
+twelve am removed,desktop_automation,massive,alarm_remove
 what is the latest local news for the greenville area,browser,massive,news_query
 is there a article on polar bears,browser,massive,news_query
 if it's ten p. m. in california what time is it in alabama,desktop_automation,massive,datetime_convert
@@ -666,6 +767,9 @@ olly say something funny,chitchat,massive,general_joke
 what is the current time in new york,desktop_automation,massive,datetime_query
 present time in new york,desktop_automation,massive,datetime_query
 check weather update for lagos this week,browser,massive,weather_query
+disable alarm for three p. m.,desktop_automation,massive,alarm_remove
+disable my three p. m. alarm,desktop_automation,massive,alarm_remove
+cancel my three p. m. alarm,desktop_automation,massive,alarm_remove
 find me a nice restaurant for dinner,browser,massive,recommendation_locations
 convert new york time to london,desktop_automation,massive,datetime_convert
 olly i want blue lighting,desktop_automation,massive,iot_hue_lightchange
@@ -703,6 +807,9 @@ what's the funniest joke you know,chitchat,massive,general_joke
 find me the best knock knock joke on the internet,chitchat,massive,general_joke
 give me the weather detail of fifteenth march,browser,massive,weather_query
 what will be the weather on monday this week,browser,massive,weather_query
+when is my alarm set for,desktop_automation,massive,alarm_query
+how many alarms do i have,desktop_automation,massive,alarm_query
+is my alarm set for tomorrow morning,desktop_automation,massive,alarm_query
 if it's five am in berlin what time is it here,desktop_automation,massive,datetime_convert
 tell me the current time in central time,desktop_automation,massive,datetime_query
 what's going on in the world right now,browser,massive,news_query
@@ -751,6 +858,8 @@ how's weather today,browser,massive,weather_query
 is weather normal today,browser,massive,weather_query
 it is hot today is not it,browser,massive,weather_query
 it is very hot today is not it,browser,massive,weather_query
+what alarms do i have scheduled for tomorrow,desktop_automation,massive,alarm_query
+what alarms are set in the morning,desktop_automation,massive,alarm_query
 is the eighteenth a monday or a sunday,desktop_automation,massive,datetime_query
 what day is easter,desktop_automation,massive,datetime_query
 fifty thousand two hundred and seventeenth,desktop_automation,massive,datetime_query
@@ -810,6 +919,9 @@ please turn up the volume,desktop_automation,massive,audio_volume_up
 please turn down the volume,desktop_automation,massive,audio_volume_down
 volume control please,desktop_automation,massive,audio_volume_other
 tell me the time in canberra,desktop_automation,massive,datetime_query
+what alarms do i got,desktop_automation,massive,alarm_query
+let me see my alarms,desktop_automation,massive,alarm_query
+what alarms do i have,desktop_automation,massive,alarm_query
 shut up,desktop_automation,massive,audio_volume_mute
 silence,desktop_automation,massive,audio_volume_mute
 be quiet,desktop_automation,massive,audio_volume_mute
@@ -817,6 +929,9 @@ when is halloween,desktop_automation,massive,datetime_query
 when is easter in the year two thousand and eighteen,desktop_automation,massive,datetime_query
 turn the lights on,desktop_automation,massive,iot_hue_lighton
 adjust the light,desktop_automation,massive,iot_hue_lightchange
+remove the alarm for tomorrow,desktop_automation,massive,alarm_remove
+change the alarm weekly settings,desktop_automation,massive,alarm_remove
+set the alarm off,desktop_automation,massive,alarm_remove
 weather,browser,massive,weather_query
 what's it like outside,browser,massive,weather_query
 what's it like in chicago,browser,massive,weather_query
@@ -839,6 +954,9 @@ what is the highest rated joke today,chitchat,massive,general_joke
 can you change the living room lights to a softer color,desktop_automation,massive,iot_hue_lightchange
 choose a brighter color for reading,desktop_automation,massive,iot_hue_lightchange
 can you make a red shade of light in the living room,desktop_automation,massive,iot_hue_lightchange
+what alarms did i set,desktop_automation,massive,alarm_query
+review the alarms i have,desktop_automation,massive,alarm_query
+list all the alarms,desktop_automation,massive,alarm_query
 get me the news from fox news,browser,massive,news_query
 open the site bbcnews dot com,browser,massive,news_query
 turn off living room lights,desktop_automation,massive,iot_hue_lightoff
@@ -899,6 +1017,9 @@ set notification from world news,browser,massive,news_query
 can you tell me the latest news,browser,massive,news_query
 please provide world hot news,browser,massive,news_query
 what time is it in dallas,desktop_automation,massive,datetime_query
+check whether i have set any alarms for tomorrow morning,desktop_automation,massive,alarm_query
+what time is the alarm set for tomorrow morning,desktop_automation,massive,alarm_query
+is the alarm set for tomorrow morning,desktop_automation,massive,alarm_query
 please provide current time in india,desktop_automation,massive,datetime_query
 tell me current time in los angels,desktop_automation,massive,datetime_query
 tell me present time in malaysia,desktop_automation,massive,datetime_query
@@ -909,9 +1030,15 @@ any signs of rain,browser,massive,weather_query
 send me alert on any new topic on politics,browser,massive,news_query
 alert me if any topic relating to politics comes up,browser,massive,news_query
 once a new topic on politics comes up alert me,browser,massive,news_query
+set the time,desktop_automation,massive,alarm_set
+am or p. m.,desktop_automation,massive,alarm_query
+set the alarm tone,desktop_automation,massive,alarm_set
 raise the volume of the current music,desktop_automation,massive,audio_volume_up
 i need to hear the volume of the current music,desktop_automation,massive,audio_volume_up
 the volume of the music playing now should be raised,desktop_automation,massive,audio_volume_up
+show me my alarms,desktop_automation,massive,alarm_query
+olly show me my alarms,desktop_automation,massive,alarm_query
+what times do my alarms go off,desktop_automation,massive,alarm_query
 show me the latest news from the guardian,browser,massive,news_query
 what are the latest articles from yahoo news,browser,massive,news_query
 how many new articles have been posted at u. s. a. today in the past hour,browser,massive,news_query
@@ -921,6 +1048,8 @@ turn it up,desktop_automation,massive,audio_volume_up
 no no turn it down,desktop_automation,massive,audio_volume_down
 make all the lights in the house orange,desktop_automation,massive,iot_hue_lightchange
 change the light in the bathroom to yellow,desktop_automation,massive,iot_hue_lightchange
+do i have any alarms set,desktop_automation,massive,alarm_query
+are there any alarms going off today,desktop_automation,massive,alarm_query
 all lights has to be turned off during the day,desktop_automation,massive,iot_hue_lightoff
 turn all lights off during the day,desktop_automation,massive,iot_hue_lightoff
 during the daytime all lights has to be turned off,desktop_automation,massive,iot_hue_lightoff
@@ -930,12 +1059,18 @@ let me know the latest weather news,browser,massive,news_query
 when is the next time it will rain,browser,massive,weather_query
 how cold will it be next tuesday,browser,massive,weather_query
 will it snow tomorrow at noon,browser,massive,weather_query
+show me all scheduled alarms,desktop_automation,massive,alarm_query
+how many alarms are currently set,desktop_automation,massive,alarm_query
+i want to see all set alarms,desktop_automation,massive,alarm_query
 what is the time difference between new york and lagos,desktop_automation,massive,datetime_convert
 the time difference between lagos and new york is what,desktop_automation,massive,datetime_convert
 find me any news from so clean the last six hours,browser,massive,news_query
 what is so clean news for the last six hours,browser,massive,news_query
 so clean news in past six hours is what,browser,massive,news_query
 facebook launches disputed tag to crack down on fake news,browser,massive,news_query
+remove alarm of seven thirty am on monday,desktop_automation,massive,alarm_remove
+remove tuesday alarm of nine am,desktop_automation,massive,alarm_remove
+remove six am alarm of whole week for future,desktop_automation,massive,alarm_remove
 increase the volume of the music to ninety,desktop_automation,massive,audio_volume_up
 the music volume should increase to ninety,desktop_automation,massive,audio_volume_up
 set the music volume to ninety,desktop_automation,massive,audio_volume_up
@@ -959,6 +1094,9 @@ lower volume by fifty percent,desktop_automation,massive,audio_volume_down
 could you speak a little more softly,desktop_automation,massive,audio_volume_up
 turn off the upstairs bathroom light,desktop_automation,massive,iot_hue_lightoff
 i want the light in the kitchen powered off,desktop_automation,massive,iot_hue_lightoff
+set alarm of only monday morning six am,desktop_automation,massive,alarm_set
+set alarm of every tuesday of march month morning eight am,desktop_automation,massive,alarm_set
+set alarm of whole week morning ten am in april month,desktop_automation,massive,alarm_set
 what is the minimum temperature of london,browser,massive,weather_query
 what will the weather conditions of lucknow on ninth february two thousand and seventeen,browser,massive,weather_query
 what is the highest temperature of delhi,browser,massive,weather_query
@@ -966,6 +1104,8 @@ what will be the condition of weather next seven days,browser,massive,weather_qu
 what will be the highest temperature in coming week,browser,massive,weather_query
 please confirm the weather for the thirteenth of this month,browser,massive,weather_query
 please tell me if there will be sun with no clouds on friday of this week,browser,massive,weather_query
+checkout today set alarm of ten am,desktop_automation,massive,alarm_query
+checkout today alarm of meeting,desktop_automation,massive,alarm_query
 lower the light of hall percent,desktop_automation,massive,iot_hue_lightdim
 dim the garden light by half,desktop_automation,massive,iot_hue_lightdim
 turn on when plugged in else turn off,desktop_automation,massive,iot_wemo_on
@@ -985,6 +1125,9 @@ please give me update of football,browser,massive,news_query
 please give me update of hockey,browser,massive,news_query
 convert two thousand three hundred and thirty from g. m. t. plus four hundred and thirty to g. m. t. two hundred,desktop_automation,massive,datetime_convert
 convert one thousand and thirty from g. m. t. plus two hundred and thirty to g. m. t. zero hundred,desktop_automation,massive,datetime_convert
+please set alarm at five p. m.,desktop_automation,massive,alarm_set
+wake me up at six am,desktop_automation,massive,alarm_set
+turn off the alarm,desktop_automation,massive,alarm_remove
 please dim the lights,desktop_automation,massive,iot_hue_lightdim
 is it cold weather there,browser,massive,weather_query
 i hope it is sunny weather there,browser,massive,weather_query
@@ -1030,6 +1173,9 @@ bring me the latest tech news,browser,massive,news_query
 bring me latest tech news,browser,massive,news_query
 did snap become public yet,browser,massive,news_query
 is snap doing good after the i. p. o.,browser,massive,news_query
+when does my alarm go off,desktop_automation,massive,alarm_query
+have i got any alarms set,desktop_automation,massive,alarm_query
+what alarms are on right now,desktop_automation,massive,alarm_query
 temperature this hour,browser,massive,weather_query
 weather report now,browser,massive,weather_query
 climate details now,browser,massive,weather_query
@@ -1045,6 +1191,7 @@ give me low lighting in the kitchen,desktop_automation,massive,iot_hue_lightdim
 put the disco lights on,desktop_automation,massive,iot_hue_lighton
 let's have a warm glow in the front room,desktop_automation,massive,iot_hue_lightchange
 how the weather today,browser,massive,weather_query
+put alarm at five am,desktop_automation,massive,alarm_set
 switch off bedroom light,desktop_automation,massive,iot_hue_lightoff
 put off the living room light,desktop_automation,massive,iot_hue_lightoff
 shift the balcony light to off,desktop_automation,massive,iot_hue_lightoff
@@ -1057,6 +1204,9 @@ get me match highlights,browser,massive,news_query
 lower the light to forty percent,desktop_automation,massive,iot_hue_lightdim
 decrease volume,desktop_automation,massive,audio_volume_down
 improve volume clarity,desktop_automation,massive,audio_volume_other
+set alarm at five am,desktop_automation,massive,alarm_set
+wake me up at five am,desktop_automation,massive,alarm_set
+alert me at five hours,desktop_automation,massive,alarm_set
 what is the weather for the next seven days,browser,massive,weather_query
 tell me about the weather this week,browser,massive,weather_query
 what is the weather for the school week,browser,massive,weather_query
@@ -1093,8 +1243,13 @@ today is sunny day or not,browser,massive,weather_query
 switch off main light,desktop_automation,massive,iot_hue_lightoff
 turn off lobby light,desktop_automation,massive,iot_hue_lightoff
 turn off garage light,desktop_automation,massive,iot_hue_lightoff
+have i set any alarm for today,desktop_automation,massive,alarm_query
+if there any alarm is set then let me know,desktop_automation,massive,alarm_query
+please remove the alarm which i set for today morning,desktop_automation,massive,alarm_remove
 let me know about the news of india pakistan match,browser,massive,news_query
 if there news about up politics what is that,browser,massive,news_query
+set alarm at six thirty am,desktop_automation,massive,alarm_set
+set alarm half an hour from my meal time,desktop_automation,massive,alarm_set
 tell me the election result of up which was to come today,browser,massive,news_query
 please change the volume to mute,desktop_automation,massive,audio_volume_mute
 set the average of the device,desktop_automation,massive,audio_volume_other
@@ -1150,6 +1305,8 @@ i want more light,desktop_automation,massive,iot_hue_lightup
 switch on all the lights,desktop_automation,massive,iot_hue_lighton
 do more light,desktop_automation,massive,iot_hue_lightup
 turn the volume down a little please,desktop_automation,massive,audio_volume_down
+is my wake up alarm set a six am,desktop_automation,massive,alarm_query
+set my alarm for six am tomorrow,desktop_automation,massive,alarm_set
 raise the light,desktop_automation,massive,iot_hue_lightup
 brighten more light,desktop_automation,massive,iot_hue_lightup
 are there going to be any showers tomorrow morning,browser,massive,weather_query
@@ -1174,6 +1331,9 @@ was anyone arrested at the protest today in chicago,browser,massive,news_query
 color of light should be dimmed bright,desktop_automation,massive,iot_hue_lightdim
 change house light from green to red,desktop_automation,massive,iot_hue_lightchange
 a little brighter thanks,desktop_automation,massive,iot_hue_lightup
+wake me up,desktop_automation,massive,alarm_set
+when is the next alarm,desktop_automation,massive,alarm_query
+remove my four am alarm,desktop_automation,massive,alarm_remove
 how is the weather outside,browser,massive,weather_query
 siri how is the weather outside,browser,massive,weather_query
 today get umbrella,browser,massive,weather_query
@@ -1182,12 +1342,18 @@ google news,browser,massive,news_query
 what day was it on my birth date,desktop_automation,massive,datetime_query
 was christmas one thousand nine hundred and seventy two on a weekend,desktop_automation,massive,datetime_query
 what's the date of the winter solstice two years from now,desktop_automation,massive,datetime_query
+open alarm,desktop_automation,massive,alarm_set
 could you tell me what time it is,desktop_automation,massive,datetime_query
 what is the current time right now,desktop_automation,massive,datetime_query
 i need to know the time right now what is it,desktop_automation,massive,datetime_query
 weather on monday,browser,massive,weather_query
 weather on tuesday,browser,massive,weather_query
 i'm going to sleep now,desktop_automation,massive,iot_hue_lightoff
+set an alarm for tomorrow at six in the morning,desktop_automation,massive,alarm_set
+get me up in half an hour,desktop_automation,massive,alarm_set
+turn off my alarm,desktop_automation,massive,alarm_remove
+snooze,desktop_automation,massive,alarm_remove
+change my alarm,desktop_automation,massive,alarm_remove
 show me the latest news about the elections,browser,massive,news_query
 what were the cities affected by the earthquake,browser,massive,news_query
 why is it snowing so much in my city,llm_fallback,massive,general_quirky
@@ -1207,6 +1373,9 @@ can you please turn off the light of my bed room,desktop_automation,massive,iot_
 olly can you please turn off the light of my bed room,desktop_automation,massive,iot_hue_lightoff
 turn off my wemo plug,desktop_automation,massive,iot_wemo_off
 turn on my wemo socket,desktop_automation,massive,iot_wemo_on
+make an alarm,desktop_automation,massive,alarm_set
+fix an alarm,desktop_automation,massive,alarm_set
+set an alarm,desktop_automation,massive,alarm_set
 hey share me some joke to make me happy,chitchat,massive,general_joke
 share me a joke,chitchat,massive,general_joke
 what day of the week was december four one thousand nine hundred and eighty two,desktop_automation,massive,datetime_query
@@ -1259,6 +1428,9 @@ show me the dim color,desktop_automation,massive,iot_hue_lightdim
 light color for study room,desktop_automation,massive,iot_hue_lightup
 tell me what the weather is doing in grand rapids mi right now,browser,massive,weather_query
 what's the weather doing in grand rapids mi now,browser,massive,weather_query
+wake me up at four am,desktop_automation,massive,alarm_set
+alarm for ten am,desktop_automation,massive,alarm_set
+set alarm for twelve weeks from today at eight am,desktop_automation,massive,alarm_set
 change my house lights color to blue,desktop_automation,massive,iot_hue_lightchange
 set color blue for all lights of my house,desktop_automation,massive,iot_hue_lightchange
 i need to change my house lights color to blue,desktop_automation,massive,iot_hue_lightchange
@@ -1297,6 +1469,9 @@ get me the time in london now,desktop_automation,massive,datetime_query
 display the local time of london at this moment,desktop_automation,massive,datetime_query
 what is the weather right now,browser,massive,weather_query
 is it raining right now,browser,massive,weather_query
+set alarm for six am tomorrow,desktop_automation,massive,alarm_set
+add an alarm for tomorrow morning at six am,desktop_automation,massive,alarm_set
+put an alarm and wake me up at six am tomorrow morning,desktop_automation,massive,alarm_set
 what is the current weather in new york city,browser,massive,weather_query
 tell me the current weather in new york city,browser,massive,weather_query
 i need to know current weather in new york city,browser,massive,weather_query
@@ -1338,6 +1513,9 @@ tell me what time is it,desktop_automation,massive,datetime_query
 tell me the time in india,desktop_automation,massive,datetime_query
 what could be the time in india,desktop_automation,massive,datetime_query
 let me know the time in india,desktop_automation,massive,datetime_query
+alarm status,desktop_automation,massive,alarm_query
+please check alarms,desktop_automation,massive,alarm_query
+what alarms are upcoming,desktop_automation,massive,alarm_query
 i need sport's news,browser,massive,news_query
 send tech news,browser,massive,news_query
 turn off the shed light,desktop_automation,massive,iot_hue_lightoff
@@ -1382,6 +1560,11 @@ olly please turn off the smart socket,desktop_automation,massive,iot_wemo_off
 please turn off the smart socket,desktop_automation,massive,iot_wemo_off
 please turn on the smart socket,desktop_automation,massive,iot_wemo_on
 can you turn off the smart socket,desktop_automation,massive,iot_wemo_off
+set an alarm for time,desktop_automation,massive,alarm_set
+set my alarm for time,desktop_automation,massive,alarm_set
+alarm set for time,desktop_automation,massive,alarm_set
+set my alarm for tuesday at six p. m.,desktop_automation,massive,alarm_set
+i need to set an alarm for next friday at noon,desktop_automation,massive,alarm_set
 please be quiet for the next two hours,desktop_automation,massive,audio_volume_mute
 mute yourself until five p. m.,desktop_automation,massive,audio_volume_mute
 i need you to be quiet until tomorrow,desktop_automation,massive,audio_volume_mute
@@ -1409,6 +1592,9 @@ what is tomorrows date,desktop_automation,massive,datetime_query
 what is tomorrow's date,desktop_automation,massive,datetime_query
 what is the weather like in seattle,browser,massive,weather_query
 tell me the weather in miami florida,browser,massive,weather_query
+set an alarm for tomorrow morning at eight,desktop_automation,massive,alarm_set
+please set the alarm for next friday at six thirty am,desktop_automation,massive,alarm_set
+need an alarm set for sunday at five in the morning,desktop_automation,massive,alarm_set
 turn off my wemo socket,desktop_automation,massive,iot_wemo_off
 disable wemo socket,desktop_automation,massive,iot_wemo_off
 is there any breaking news from c. n. n.,browser,massive,news_query
@@ -1436,6 +1622,9 @@ inform me about international news,browser,massive,news_query
 what is the latest international news,browser,massive,news_query
 turn off my bedside lamp please,desktop_automation,massive,iot_hue_lightoff
 please turn off the porch light,desktop_automation,massive,iot_hue_lightoff
+make an alarm for me at five am tomorrow,desktop_automation,massive,alarm_set
+set the alarm for two hours from now,desktop_automation,massive,alarm_set
+set an alarm for one hour from now,desktop_automation,massive,alarm_set
 is today march sixth,desktop_automation,massive,datetime_query
 current weather forecast,browser,massive,weather_query
 what is today,desktop_automation,massive,datetime_query
@@ -1481,6 +1670,9 @@ what is the entrepreneur saying about homelessness in the seattle times article,
 get news from b. b. c. news,browser,massive,news_query
 get news from reddit,browser,massive,news_query
 get news from c. n. n.,browser,massive,news_query
+would you please check to see if i've set my alarm for tomorrow morning,desktop_automation,massive,alarm_query
+how many alarms do i have set for morning hours between six and nine am,desktop_automation,massive,alarm_query
+did i remember to set a reminder alarm for my next doctor's appointment,desktop_automation,massive,alarm_query
 what is today date,desktop_automation,massive,datetime_query
 which date is today,desktop_automation,massive,datetime_query
 is it raining tonight,browser,massive,weather_query
@@ -1500,6 +1692,9 @@ shut the lights off,desktop_automation,massive,iot_hue_lightoff
 i do not like these colors in the house,desktop_automation,massive,iot_hue_lightchange
 change the colors please,desktop_automation,massive,iot_hue_lightchange
 want to have vibrant colors,desktop_automation,massive,iot_hue_lightchange
+wake me up at five hundred and thirty,desktop_automation,massive,alarm_set
+set an alarm for five hundred and thirty,desktop_automation,massive,alarm_set
+set an alarm for five thirty,desktop_automation,massive,alarm_set
 do you have a funny joke for me,chitchat,massive,general_joke
 do you know any good jokes,chitchat,massive,general_joke
 give me news from c. n. n.,browser,massive,news_query
@@ -1554,6 +1749,7 @@ make the lights in the house red,desktop_automation,massive,iot_hue_lightchange
 what day does easter fall on this year,desktop_automation,massive,datetime_query
 what day is december thirteenth,desktop_automation,massive,datetime_query
 what day does april sixteenth fall on,desktop_automation,massive,datetime_query
+how many alarms have i set,desktop_automation,massive,alarm_query
 mute the living room speakers,desktop_automation,massive,audio_volume_mute
 pause the music,desktop_automation,massive,audio_volume_mute
 stop playing,desktop_automation,massive,audio_volume_mute
@@ -1578,7 +1774,14 @@ new york time,desktop_automation,massive,datetime_query
 tell me which time is it in new york,desktop_automation,massive,datetime_query
 change light color to blue,desktop_automation,massive,iot_hue_lightchange
 olly change light color to blue,desktop_automation,massive,iot_hue_lightchange
+tell me my alarms,desktop_automation,massive,alarm_query
+what alarms have been set for me,desktop_automation,massive,alarm_query
+do i have alarms set,desktop_automation,massive,alarm_query
+do i have alarms set for today,desktop_automation,massive,alarm_query
 make me happy,chitchat,massive,general_joke
+cancel the alarm that is set for tomorrow at eight am,desktop_automation,massive,alarm_remove
+please cancel all alarms for tomorrow,desktop_automation,massive,alarm_remove
+please remove any alarms that i have set,desktop_automation,massive,alarm_remove
 increase the volume to seventy percent,desktop_automation,massive,audio_volume_up
 please turn off the lights in the kitchen,desktop_automation,massive,iot_hue_lightoff
 please turn off all of the lights in the house,desktop_automation,massive,iot_hue_lightoff
@@ -1614,6 +1817,8 @@ alexa turn off the lamp in the living room,desktop_automation,massive,iot_hue_li
 turn off the lamp in the living room,desktop_automation,massive,iot_hue_lightoff
 alexa turn off the fan in the master bedroom,desktop_automation,massive,iot_wemo_off
 alexa turn off the wemo socket in the kitchen,desktop_automation,massive,iot_wemo_off
+what time are my alarms,desktop_automation,massive,alarm_query
+is there an alarm for ten am,desktop_automation,massive,alarm_query
 turn office lights off,desktop_automation,massive,iot_hue_lightoff
 turn off the office lights,desktop_automation,massive,iot_hue_lightoff
 office lights off,desktop_automation,massive,iot_hue_lightoff
@@ -1625,6 +1830,10 @@ nighttime mode,desktop_automation,massive,iot_hue_lightdim
 what's happening in world news,browser,massive,news_query
 find and read to me world events happening today,browser,massive,news_query
 give me international news,browser,massive,news_query
+remove set alarm,desktop_automation,massive,alarm_remove
+delete scheduled alarm,desktop_automation,massive,alarm_remove
+cancel alarm,desktop_automation,massive,alarm_remove
+olly cancel alarm,desktop_automation,massive,alarm_remove
 new news tech,browser,massive,news_query
 trending tech news,browser,massive,news_query
 recent tech headlines,browser,massive,news_query
@@ -1659,6 +1868,9 @@ what's new in the news,browser,massive,news_query
 trending hot news topics,browser,massive,news_query
 olly trending hot news topics,browser,massive,news_query
 turn light off,desktop_automation,massive,iot_hue_lightoff
+reset alarm,desktop_automation,massive,alarm_remove
+what time is alarm set for,desktop_automation,massive,alarm_query
+next alarm,desktop_automation,massive,alarm_query
 change my light color to blue and please turn off the kitchen light,desktop_automation,massive,iot_hue_lightchange
 olly change my light color to blue and please turn off the kitchen light,desktop_automation,massive,iot_hue_lightchange
 lights off for the kids bedroom please then change the lights to my room to red,desktop_automation,massive,iot_hue_lightoff
@@ -1669,6 +1881,9 @@ i have not gotten my daily news yet can you please brief me a little bit,browser
 what is the latest headline news from this newsource,browser,massive,news_query
 what is the news from that newsource,browser,massive,news_query
 i want to know what is this newsource reporting,browser,massive,news_query
+please remove this alarm,desktop_automation,massive,alarm_remove
+i would like this alarm permanently removed,desktop_automation,massive,alarm_remove
+this alarm needs to be permanently silenced,desktop_automation,massive,alarm_remove
 let me hear a joke,chitchat,massive,general_joke
 please mute the sound,desktop_automation,massive,audio_volume_mute
 can you place the sound on mute,desktop_automation,massive,audio_volume_mute
@@ -1715,13 +1930,28 @@ how cold is it outside,browser,massive,weather_query
 lower your volume please,desktop_automation,massive,audio_volume_down
 speak louder please,desktop_automation,massive,audio_volume_up
 talk quieter please,desktop_automation,massive,audio_volume_down
+what time is my wake up alarm set for,desktop_automation,massive,alarm_query
+do i have any alarms for tomorrow morning,desktop_automation,massive,alarm_query
+when will my alarm go off in the morning,desktop_automation,massive,alarm_query
+remove my early alarms,desktop_automation,massive,alarm_remove
+delete my six am alarm,desktop_automation,massive,alarm_remove
+clear my nine am alarms,desktop_automation,massive,alarm_remove
 turn off the lights in the kitchen,desktop_automation,massive,iot_hue_lightoff
+i need to get going at eight am tomorrow set up an alarm thirty minutes before that,desktop_automation,massive,alarm_set
+mike will send me an email tomorrow can you please set up an alarm fifteen minutes after receiving that email,desktop_automation,massive,alarm_set
+if my package shows that it is for delivery tomorrow can you set up an alarm one hour after thank you,desktop_automation,massive,alarm_set
+do i have any alarms set for six am tomorrow,desktop_automation,massive,alarm_query
+show me my alarms i have set,desktop_automation,massive,alarm_query
+what alarms have i set for tomorrow,desktop_automation,massive,alarm_query
 turn my bedroom lights off,desktop_automation,massive,iot_hue_lightoff
 can you turn my bathroom lights off,desktop_automation,massive,iot_hue_lightoff
 lower the brightness of the lights,desktop_automation,massive,iot_hue_lightdim
 these lights are too bright please lower them,desktop_automation,massive,iot_hue_lightdim
 turn off the speakers,desktop_automation,massive,audio_volume_mute
 please mute the speakers,desktop_automation,massive,audio_volume_mute
+please set an alarm for seven hundred and thirty am tomorrow,desktop_automation,massive,alarm_set
+i'd like an alarm set for this saturday at ten,desktop_automation,massive,alarm_set
+set an eight hundred am alarm for next tuesday,desktop_automation,massive,alarm_set
 turn off on the socket,desktop_automation,massive,iot_wemo_off
 power off on,desktop_automation,massive,iot_wemo_off
 stop start the juice,desktop_automation,massive,iot_wemo_on
@@ -1734,11 +1964,15 @@ tell me if there's any new news on that topic,browser,massive,news_query
 remind me if anything else happens,communication,massive,calendar_set
 search for new stuff on that subject,browser,massive,news_query
 let me know if anything happens on that subject,browser,massive,news_query
+wake me up at this time,desktop_automation,massive,alarm_set
 remind me to do something then,communication,massive,calendar_set
+set a new alarm for that time,desktop_automation,massive,alarm_set
 what is the current state of the investigation into trump's ties with russia,browser,massive,news_query
 what are the latest updates with regard to trump's ties to russia,browser,massive,news_query
 how is the news media reacting to trump's potential ties with russia,browser,massive,news_query
 siri how is the news media reacting to trump's potential ties with russia,browser,massive,news_query
+set alarm for six am everyday,desktop_automation,massive,alarm_set
+set alarm for tomorrow morning at six am,desktop_automation,massive,alarm_set
 i want a lower light,desktop_automation,massive,iot_hue_lightdim
 lower lights please,desktop_automation,massive,iot_hue_lightdim
 what's the date tomorrow,desktop_automation,massive,datetime_query
@@ -1748,9 +1982,15 @@ dim the lights at the living room,desktop_automation,massive,iot_hue_lightdim
 turn off lights in my room,desktop_automation,massive,iot_hue_lightoff
 please turn off all the lights in the house,desktop_automation,massive,iot_hue_lightoff
 change color of the light to red outside the house,desktop_automation,massive,iot_hue_lightchange
+set alarm for noon tomorrow,desktop_automation,massive,alarm_set
+can you set the alarm for one hundred and thirty,desktop_automation,massive,alarm_set
+set alarm for sixth of june two thousand seventeen at five am,desktop_automation,massive,alarm_set
 let me know the weather for today,browser,massive,weather_query
 do you know if there is any rain today,browser,massive,weather_query
 tell me the weather for new york city,browser,massive,weather_query
+cancel all alarms,desktop_automation,massive,alarm_remove
+cancel alarm for tomorrow,desktop_automation,massive,alarm_remove
+cancel alarm for tenth of march two thousand seventeen,desktop_automation,massive,alarm_remove
 what is the weather like today,browser,massive,weather_query
 should we expect rain this afternoon,browser,massive,weather_query
 what was the weather report for today,browser,massive,weather_query
@@ -1765,6 +2005,8 @@ what is the current pacific time,desktop_automation,massive,datetime_query
 what is the current eastern time,desktop_automation,massive,datetime_query
 i need to hear a joke can you tell me one,chitchat,massive,general_joke
 please keep me up to date on technology please,browser,massive,news_query
+remove alarms set for tomorrow,desktop_automation,massive,alarm_remove
+remove all alarms set today,desktop_automation,massive,alarm_remove
 lower the lighting,desktop_automation,massive,iot_hue_lightdim
 dim the lights in my bedroom,desktop_automation,massive,iot_hue_lightdim
 dim the lighting in my living room,desktop_automation,massive,iot_hue_lightdim
@@ -1791,6 +2033,8 @@ what is the weather this week for miami,browser,massive,weather_query
 what is the forecast for the week,browser,massive,weather_query
 what is the weather in los angeles,browser,massive,weather_query
 what is the weather in austin,browser,massive,weather_query
+set an alarm for me for tomorrow at seven p. m.,desktop_automation,massive,alarm_set
+i need an alarm for sunday at eight am can you please set one for me,desktop_automation,massive,alarm_set
 find the latest article from chris hedges on truthdig,browser,massive,news_query
 olly what are the most recent headlines on c. n. n.,browser,massive,news_query
 what are the most recent headlines on c. n. n.,browser,massive,news_query
@@ -1812,6 +2056,8 @@ what's the weather like,browser,massive,weather_query
 ok google what's the weather like,browser,massive,weather_query
 turn off the lights in this room please,desktop_automation,massive,iot_hue_lightoff
 this room lights off,desktop_automation,massive,iot_hue_lightoff
+what time is my alarm set for,desktop_automation,massive,alarm_query
+what time i am waking up tomorrow,desktop_automation,massive,alarm_query
 what time is it in hong kong,desktop_automation,massive,datetime_query
 what is the time difference between my location and hong kong,desktop_automation,massive,datetime_convert
 tell me the top stories in the news,browser,massive,news_query
@@ -1838,6 +2084,8 @@ lights to fifty percent,desktop_automation,massive,iot_hue_lightchange
 decrease lighting,desktop_automation,massive,iot_hue_lightdim
 no lights in the kitchen,desktop_automation,massive,iot_hue_lightoff
 today's forecast,browser,massive,weather_query
+please set the alarm for eight p. m. wednesday evening,desktop_automation,massive,alarm_set
+at seven am tomorrow morning ring the alarm,desktop_automation,massive,alarm_set
 turn down the lights to medium,desktop_automation,massive,iot_hue_lightoff
 make it red in here,desktop_automation,massive,iot_hue_lightchange
 what will the weather be in chicago today,browser,massive,weather_query
@@ -1845,6 +2093,9 @@ what is the weather forecast for chicago,browser,massive,weather_query
 turn off my wemo plug socket,desktop_automation,massive,iot_wemo_off
 please turn on my wemo plug socket,desktop_automation,massive,iot_wemo_on
 turn off my wemo plug socket now,desktop_automation,massive,iot_wemo_off
+set an alarm for eight am,desktop_automation,massive,alarm_set
+please set my alarm for five p. m.,desktop_automation,massive,alarm_set
+i need an alarm for nine p. m.,desktop_automation,massive,alarm_set
 what will the weather be next week,browser,massive,weather_query
 is it going to be sunny this weekend,browser,massive,weather_query
 what is the ten day forecast,browser,massive,weather_query
@@ -1858,11 +2109,14 @@ what degree is it outside,browser,massive,weather_query
 can you turn the lights up,desktop_automation,massive,iot_hue_lightup
 can you put the lights on the high setting,desktop_automation,massive,iot_hue_lighton
 what time does the match start,desktop_automation,massive,datetime_query
+remove the latest alarm,desktop_automation,massive,alarm_remove
+change alarm setting,desktop_automation,massive,alarm_set
 increase lights please,desktop_automation,massive,iot_hue_lightup
 is the twenty second on a wednesday,desktop_automation,massive,datetime_query
 the twenty second is on what day of the week,desktop_automation,massive,datetime_query
 what day of the week does the twenty second fall on this month,desktop_automation,massive,datetime_query
 is it ten,desktop_automation,massive,datetime_query
+let me know when it is ten,desktop_automation,massive,alarm_set
 will it rain saturday,browser,massive,weather_query
 does the weather call for rain saturday,browser,massive,weather_query
 change the color of the lights to blue,desktop_automation,massive,iot_hue_lightchange
@@ -1876,7 +2130,11 @@ mute for volume,desktop_automation,massive,audio_volume_mute
 mute speaker,desktop_automation,massive,audio_volume_mute
 please quiet the speaker,desktop_automation,massive,audio_volume_mute
 quiet time,desktop_automation,massive,audio_volume_mute
+please set an alarm at seven am tomorrow morning,desktop_automation,massive,alarm_set
+send me a wake up alert at seven am tomorrow morning,desktop_automation,massive,alarm_set
+i would like a wake up alarm at seven am tomorrow,desktop_automation,massive,alarm_set
 please turn on all the outdoor lights,desktop_automation,massive,iot_hue_lighton
+please turn off the alarm,desktop_automation,massive,alarm_remove
 increase volume please,desktop_automation,massive,audio_volume_up
 play it louder,desktop_automation,massive,audio_volume_up
 what time is it right now in pacific time,desktop_automation,massive,datetime_query
@@ -1885,11 +2143,15 @@ what is the latest news on global warming,browser,massive,news_query
 get current news on government shutdown,browser,massive,news_query
 get latest news report on kidnapping in ny,browser,massive,news_query
 please lower music volume,desktop_automation,massive,audio_volume_down
+wake me at daybreak,desktop_automation,massive,alarm_set
+get me to alarm setting,desktop_automation,massive,alarm_set
 what is today's weather in springfield,browser,massive,weather_query
 what is the weather back home today,browser,massive,weather_query
 i said,llm_fallback,massive,general_quirky
 speak softer please,desktop_automation,massive,audio_volume_down
 it's quiet time,desktop_automation,massive,audio_volume_mute
+i need to get up at seven am,desktop_automation,massive,alarm_set
+is my alarm set for seven am,desktop_automation,massive,alarm_set
 turn room lights off now,desktop_automation,massive,iot_hue_lightoff
 turn house lights off,desktop_automation,massive,iot_hue_lightoff
 please turn off the lights in the bedroom,desktop_automation,massive,iot_hue_lightoff
@@ -1915,6 +2177,9 @@ please change time zone to canada,desktop_automation,massive,datetime_convert
 please change time zone to india,desktop_automation,massive,datetime_convert
 the joke of the day,chitchat,massive,general_joke
 will it be sunny,browser,massive,weather_query
+turn off all of my alarms,desktop_automation,massive,alarm_remove
+turn off my alarms,desktop_automation,massive,alarm_remove
+take off my alarms,desktop_automation,massive,alarm_remove
 change the lights in the living room to green and red,desktop_automation,massive,iot_hue_lightchange
 i want the light to be a little more red ish,desktop_automation,massive,iot_hue_lightchange
 can this room have green light,desktop_automation,massive,iot_hue_lightchange
@@ -1939,6 +2204,7 @@ turn on silent mode until my alarm goes off,desktop_automation,massive,audio_vol
 turn off sound,desktop_automation,massive,audio_volume_mute
 mute please,desktop_automation,massive,audio_volume_mute
 set volume to zero,desktop_automation,massive,audio_volume_mute
+what are the next three alarms set to go off,desktop_automation,massive,alarm_query
 what is the weather in london,browser,massive,weather_query
 what is the weather in beijing,browser,massive,weather_query
 what is the weather in this week,browser,massive,weather_query
@@ -1952,6 +2218,7 @@ brighter,desktop_automation,massive,iot_hue_lightup
 how is everything,chitchat,massive,general_greet
 i want to sleep,desktop_automation,massive,iot_hue_lightoff
 how about you,llm_fallback,massive,general_quirky
+set up an alarm clock at one p. m.,desktop_automation,massive,alarm_set
 remind me after ten minutes,communication,massive,calendar_set
 remind me at one p. m.,communication,massive,calendar_set
 what's the latest news about us election,browser,massive,news_query
@@ -1984,6 +2251,9 @@ how hot is it in miami,browser,massive,weather_query
 show me the weather for dallas,browser,massive,weather_query
 what's the current time in orlando floor,desktop_automation,massive,datetime_query
 tell me the time in london england,desktop_automation,massive,datetime_query
+set an alarm for seven am,desktop_automation,massive,alarm_set
+make an alarm for the morning,desktop_automation,massive,alarm_set
+create an alarm for five p. m.,desktop_automation,massive,alarm_set
 will it be warm on friday night,browser,massive,weather_query
 can you tell me the temperature for saturday night,browser,massive,weather_query
 will it be too cold for a dress on sunday,browser,massive,weather_query
@@ -1996,9 +2266,15 @@ make this a bit louder,desktop_automation,massive,audio_volume_up
 turn up the speakers,desktop_automation,massive,audio_volume_up
 be silent for thirty minutes,desktop_automation,massive,audio_volume_mute
 what is the current temperature in austin,browser,massive,weather_query
+olly i need an alarm set for five hundred and thirty am tomorrow,desktop_automation,massive,alarm_set
+i need an alarm set for five hundred and thirty am tomorrow,desktop_automation,massive,alarm_set
+i want an alarm for three today,desktop_automation,massive,alarm_set
+google set my alarm to go off in an hour,desktop_automation,massive,alarm_set
 turn on this socket,desktop_automation,massive,iot_wemo_on
 lights at percent,desktop_automation,massive,iot_hue_lightchange
 this is too bright,desktop_automation,massive,iot_hue_lightdim
+olly do i have an alarm set for tomorrow,desktop_automation,massive,alarm_query
+what alarms are set for this week,desktop_automation,massive,alarm_query
 what is the date and time for today,desktop_automation,massive,datetime_query
 is today's date the ninth,desktop_automation,massive,datetime_query
 what will the weather be like on date,browser,massive,weather_query
@@ -2027,8 +2303,17 @@ reddit popular,browser,massive,news_query
 latest news story,browser,massive,news_query
 what is the latest news on sprint,browser,massive,news_query
 can i get a recap of what is going on with sprint right now,browser,massive,news_query
+wake me up at seven am,desktop_automation,massive,alarm_set
+i need a six am wake up call,desktop_automation,massive,alarm_set
+get me up at eight am,desktop_automation,massive,alarm_set
 raise the lights,desktop_automation,massive,iot_hue_lightup
 raise the lights alexa,desktop_automation,massive,iot_hue_lightup
+set alarm for nine am,desktop_automation,massive,alarm_set
+please set an alarm for me,desktop_automation,massive,alarm_set
+set an alarm for me for tomorrow,desktop_automation,massive,alarm_set
+list alarms,desktop_automation,massive,alarm_query
+tell me about alarms,desktop_automation,massive,alarm_query
+please read me my alarms,desktop_automation,massive,alarm_query
 can you give me a weather report,browser,massive,weather_query
 disable smart socket,desktop_automation,massive,iot_wemo_off
 i want the smart socket off now,desktop_automation,massive,iot_wemo_off
@@ -2068,6 +2353,9 @@ south it going to be hot tomorrow,browser,massive,weather_query
 find me info on cars,browser,massive,news_query
 latest news on ortcars,browser,massive,news_query
 list current car stories,browser,massive,news_query
+i need to delete the alarm for church on sundays at eleven am,desktop_automation,massive,alarm_remove
+please remove the alarm that is set for weekdays at nine,desktop_automation,massive,alarm_remove
+i no longer need the daily five p. m. alarm,desktop_automation,massive,alarm_remove
 turn off lights,desktop_automation,massive,iot_hue_lightoff
 turn down lights,desktop_automation,massive,iot_hue_lightdim
 mute the music,desktop_automation,massive,audio_volume_mute
@@ -2088,6 +2376,8 @@ what are the scores for the two ucl games going on right now,browser,massive,new
 can you get me news from ny times,browser,massive,news_query
 read me the headlines from detroit news,browser,massive,news_query
 what is the headline from chicago tribune,browser,massive,news_query
+is the alarm to the backdoor set and ready to go,desktop_automation,massive,alarm_query
+what is the wake up time for my alarm i have set for the flight this weekend,desktop_automation,massive,alarm_query
 please turn up the light a little,desktop_automation,massive,iot_hue_lightup
 please turn the lights up to eight,desktop_automation,massive,iot_hue_lightup
 what is the correct time,desktop_automation,massive,datetime_query
@@ -2101,6 +2391,9 @@ what is the weather like now,browser,massive,weather_query
 change the house lights to pink,desktop_automation,massive,iot_hue_lightchange
 i would like the house lights to be pink,desktop_automation,massive,iot_hue_lightchange
 brighten up the lighting,desktop_automation,massive,iot_hue_lightup
+list current set alarms,desktop_automation,massive,alarm_query
+what alarms are currently set,desktop_automation,massive,alarm_query
+any alarms currently listed,desktop_automation,massive,alarm_query
 mute immediately,desktop_automation,massive,audio_volume_mute
 please mute the volume control,desktop_automation,massive,audio_volume_mute
 please increase the light,desktop_automation,massive,iot_hue_lightup
@@ -2108,6 +2401,9 @@ it is dark,desktop_automation,massive,iot_hue_lighton
 what will the weather be like in austin on march sixteenth,browser,massive,weather_query
 will there be any snow next week,browser,massive,weather_query
 will it rain on august fifteenth,browser,massive,weather_query
+please remove the alarm set for wednesday called kickball,desktop_automation,massive,alarm_remove
+please delete the wednesday evening alarm,desktop_automation,massive,alarm_remove
+kickball is over i do not need the alarm for kickball on wednesday evening any longer,desktop_automation,massive,alarm_remove
 turn lights off in living room,desktop_automation,massive,iot_hue_lightoff
 what is the most current local news,browser,massive,news_query
 read me titles for international news,browser,massive,news_query
@@ -2116,6 +2412,8 @@ i need to know what is the date today,desktop_automation,massive,datetime_query
 how much snow has maine received as of today,browser,massive,weather_query
 how much snow has fallen in maine since yesterday,browser,massive,weather_query
 what is the current forecast for maine,browser,massive,weather_query
+show me all of my active alarms,desktop_automation,massive,alarm_query
+show me the alarms that are set,desktop_automation,massive,alarm_query
 is it cold out,browser,massive,weather_query
 what is the temperature,browser,massive,weather_query
 what day does halloween fall on this year,desktop_automation,massive,datetime_query
@@ -2123,19 +2421,33 @@ what day is the twentieth this month,desktop_automation,massive,datetime_query
 make me laugh i want to hear a joke,chitchat,massive,general_joke
 what's the latest on trump,browser,massive,news_query
 what are the top news headlines right now,browser,massive,news_query
+i need you to set an alarm,desktop_automation,massive,alarm_set
+can you set an alarm for me,desktop_automation,massive,alarm_set
+set an alarm for nine p. m.,desktop_automation,massive,alarm_set
+alert me in three hours,desktop_automation,massive,alarm_set
 how many hours ahead is n. y. c.,desktop_automation,massive,datetime_query
+change my alarms to mountain time,desktop_automation,massive,alarm_set
 say the time,desktop_automation,massive,datetime_query
 show me a forecast,browser,massive,weather_query
 open the weather app,browser,massive,weather_query
+are there any alarms for today,desktop_automation,massive,alarm_query
+how many alarms are set,desktop_automation,massive,alarm_query
+show me the list of alarms,desktop_automation,massive,alarm_query
 what's the weather right now,browser,massive,weather_query
 olly what's the weather right now,browser,massive,weather_query
 tell me what's happening in european politics,browser,massive,news_query
 i want to know who is at the top of the english premier league at the moment,browser,massive,news_query
 give me the latest population statistics for donald trump,browser,massive,news_query
+please wake me up at eight am,desktop_automation,massive,alarm_set
+set my alarm for eight am,desktop_automation,massive,alarm_set
+alarm me at eight am,desktop_automation,massive,alarm_set
 what is the weather like in iowa,browser,massive,weather_query
 is it hot outside right now i'm hawaii,browser,massive,weather_query
 stop it,desktop_automation,massive,audio_volume_mute
 please be silent,desktop_automation,massive,audio_volume_mute
+please set an alarm at six am,desktop_automation,massive,alarm_set
+set an alarm at six am,desktop_automation,massive,alarm_set
+could you please set an alarm at six am,desktop_automation,massive,alarm_set
 c. n. n.,browser,massive,news_query
 b. b. c.,browser,massive,news_query
 can you turn off the lights,desktop_automation,massive,iot_hue_lightoff
@@ -2153,6 +2465,11 @@ raise living room lights half way,desktop_automation,massive,iot_hue_lightup
 raise lights to full power,desktop_automation,massive,iot_hue_lightup
 make the lights less bright,desktop_automation,massive,iot_hue_lightdim
 please darken the lights,desktop_automation,massive,iot_hue_lightdim
+remove all of my alarms,desktop_automation,massive,alarm_remove
+remove my wake up alarm,desktop_automation,massive,alarm_remove
+olly remove my wake up alarm,desktop_automation,massive,alarm_remove
+get rid of my current alarms,desktop_automation,massive,alarm_remove
+olly get rid of my current alarms,desktop_automation,massive,alarm_remove
 when is the next holiday,desktop_automation,massive,datetime_query
 how many days are in this month,desktop_automation,massive,datetime_query
 news updates,browser,massive,news_query
@@ -2185,26 +2502,41 @@ what day is the fifth,desktop_automation,massive,datetime_query
 turn the lights off in my bed room,desktop_automation,massive,iot_hue_lightoff
 turn the kitchen lights off,desktop_automation,massive,iot_hue_lightoff
 turn the living rooms lights off,desktop_automation,massive,iot_hue_lightoff
+what time is my alarm set for tomorrow morning,desktop_automation,massive,alarm_query
+i need to set an alarm tomorrow at one thousand two hundred p. m. to remind me to take my medication,desktop_automation,massive,alarm_set
+i want to set an alarm when i'm driving home tomorrow to remember to stop at the store and get food,desktop_automation,massive,alarm_set
 please shut off the kitchen lights,desktop_automation,massive,iot_hue_lightoff
 turn off overhead light,desktop_automation,massive,iot_hue_lightoff
 turn up the volume on my speakers,desktop_automation,massive,audio_volume_up
 i want volume on my speakers,desktop_automation,massive,audio_volume_up
 mute my speakers for a minute here i need to make a call,desktop_automation,massive,audio_volume_mute
 was it windy yesterday,browser,massive,weather_query
+please put on an alarm for eight am,desktop_automation,massive,alarm_set
+please set my alarm clock for eight am,desktop_automation,massive,alarm_set
+i need an alarm set for eight am,desktop_automation,massive,alarm_set
 what's happening today,browser,massive,news_query
 what's the latest headline,browser,massive,news_query
+just to confirm you set the alarm to go off at eight hundred,desktop_automation,massive,alarm_query
 political news,browser,massive,news_query
 what happened yesterday,browser,massive,news_query
 newest world news,browser,massive,news_query
 what is the weather going to be like today in tucson,browser,massive,weather_query
 is it going to rain in the next few days in tucson,browser,massive,weather_query
 what will the high be tomorrow in tucson,browser,massive,weather_query
+which alarms are set in the phone,desktop_automation,massive,alarm_query
+is there an alarm at four am,desktop_automation,massive,alarm_query
 please turn off my smart plug socket,desktop_automation,massive,iot_wemo_off
 turn my smart plug socket on,desktop_automation,massive,iot_wemo_on
 convert current time from g. m. t. to e. s. t.,desktop_automation,massive,datetime_convert
 convert current time from ist to e. s. t.,desktop_automation,massive,datetime_convert
 please subscribe me to updates about us breaking news,browser,massive,news_query
 i want to know everything that breaks about the dam breaking in california,browser,massive,news_query
+what alarm time had you set,desktop_automation,massive,alarm_query
+what time have you set the alarm,desktop_automation,massive,alarm_query
+let me know the alarm time,desktop_automation,massive,alarm_query
+do i currently have any alarms set,desktop_automation,massive,alarm_query
+what alarms do i have set right now,desktop_automation,massive,alarm_query
+is my reminder alarm set for dance class,desktop_automation,massive,alarm_query
 what will be the temperature today for miami florida,browser,massive,weather_query
 tell me the percentage of the chance of rain in seattle washington for today,browser,massive,weather_query
 tell me how many inches of snow did new york city get today,browser,massive,weather_query
@@ -2213,6 +2545,9 @@ when is it suppose to be above fifty again,browser,massive,weather_query
 hey olly tell my today's top news,browser,massive,news_query
 hey olly what is in the world news right now,browser,massive,news_query
 hey siri what is in the world news right now,browser,massive,news_query
+remind me about my alarms today,desktop_automation,massive,alarm_query
+what alarms did i set today,desktop_automation,massive,alarm_query
+let me know about any alarms set today,desktop_automation,massive,alarm_query
 show me what time it is,desktop_automation,massive,datetime_query
 please turn up the lights in this room,desktop_automation,massive,iot_hue_lightup
 overhead lights on please,desktop_automation,massive,iot_hue_lighton
@@ -2247,6 +2582,9 @@ hey olly what's the time,desktop_automation,massive,datetime_query
 what is the time in boston,desktop_automation,massive,datetime_query
 what is the current time in boston,desktop_automation,massive,datetime_query
 tell me the time in boston,desktop_automation,massive,datetime_query
+remove the alarm set for four hundred am,desktop_automation,massive,alarm_remove
+disable all alarms set for today,desktop_automation,massive,alarm_remove
+snooze all today's alarms permanently,desktop_automation,massive,alarm_remove
 power on wemo,desktop_automation,massive,iot_wemo_on
 turn my plug on,desktop_automation,massive,iot_wemo_on
 cut wemo power please,desktop_automation,massive,iot_wemo_off
@@ -2313,6 +2651,7 @@ should i bring a jacket with me tonight,browser,massive,weather_query
 am i going to need to bring an umbrella to work today,browser,massive,weather_query
 can i wear shorts out while shopping today,browser,massive,weather_query
 what are the upcoming reminders,communication,massive,calendar_query
+could you tell me about the alerts i have set,desktop_automation,massive,alarm_query
 speak louder,desktop_automation,massive,audio_volume_up
 raise speaker volume,desktop_automation,massive,audio_volume_up
 make the light in here redder,desktop_automation,massive,iot_hue_lightchange
@@ -2327,6 +2666,9 @@ will there be rain tomorrow in rome,browser,massive,weather_query
 is the weather cloudy tonight,browser,massive,weather_query
 turn off my room lights,desktop_automation,massive,iot_hue_lightoff
 turn all the lights off,desktop_automation,massive,iot_hue_lightoff
+set an alarm for ten o'clock tomorrow morning,desktop_automation,massive,alarm_set
+wake me up at ten,desktop_automation,massive,alarm_set
+i need to get up at ten tomorrow,desktop_automation,massive,alarm_set
 turn off the lights in my room,desktop_automation,massive,iot_hue_lightoff
 turn off the lights now,desktop_automation,massive,iot_hue_lightoff
 is it too cold to go swimming,browser,massive,weather_query
@@ -2353,7 +2695,10 @@ any funny jokes,chitchat,massive,general_joke
 what is the current time in london,desktop_automation,massive,datetime_query
 connect to lights,desktop_automation,massive,iot_hue_lightup
 raise volume to level seven on music player,desktop_automation,massive,audio_volume_up
+review set alarms,desktop_automation,massive,alarm_query
+review all alarms,desktop_automation,massive,alarm_query
 how is it outside today,browser,massive,weather_query
+remove my earliest alarm for tomorrow,desktop_automation,massive,alarm_remove
 what is the weather next week in pasadena ca,browser,massive,weather_query
 what will the weather be tomorrow,browser,massive,weather_query
 will the weather be hot or cold tomorrow,browser,massive,weather_query
@@ -2386,6 +2731,7 @@ stop the audio,desktop_automation,massive,audio_volume_mute
 what's the weather this week,browser,massive,weather_query
 will it rain at all this week,browser,massive,weather_query
 give me the weekly weather near me,browser,massive,weather_query
+wake me up at nine am,desktop_automation,massive,alarm_set
 what day is the twenty second,desktop_automation,massive,datetime_query
 what's the forecast for this week,browser,massive,weather_query
 what day will it be sunny,browser,massive,weather_query
@@ -2397,6 +2743,8 @@ dim all interior lights,desktop_automation,massive,iot_hue_lightdim
 romantic light setting please,desktop_automation,massive,iot_hue_lightchange
 unmute,desktop_automation,massive,audio_volume_up
 is it going to rain at one p. m. today,browser,massive,weather_query
+what time will my alarm wake me up,desktop_automation,massive,alarm_query
+do i have an alarm set for today,desktop_automation,massive,alarm_query
 what is the current time in delhi,desktop_automation,massive,datetime_query
 give me the local time of london,desktop_automation,massive,datetime_query
 check latest news,browser,massive,news_query
@@ -2404,6 +2752,9 @@ recent headlines,browser,massive,news_query
 world local news,browser,massive,news_query
 what is the first friday of next month,desktop_automation,massive,datetime_query
 how many saturdays are in march,desktop_automation,massive,datetime_query
+have i set any alarms in the morning,desktop_automation,massive,alarm_query
+at what time is my alarm set,desktop_automation,massive,alarm_query
+postpone my alarm by fifteen minutes,desktop_automation,massive,alarm_set
 will i need a jacket today,browser,massive,weather_query
 what is the current forecast for minneapolis,browser,massive,weather_query
 answer email from,browser,massive,weather_query
@@ -2416,6 +2767,9 @@ tell me this week's weather forecast,browser,massive,weather_query
 what is the weather going to be like this week,browser,massive,weather_query
 give me the weather forecast for this week,browser,massive,weather_query
 will it be raining on thursday,browser,massive,weather_query
+set an alarm for seven thirty am,desktop_automation,massive,alarm_set
+wake me up at eight o'clock,desktop_automation,massive,alarm_set
+remind me at six thirty p. m.,desktop_automation,massive,alarm_set
 what is the latest news on donald trump,browser,massive,news_query
 what are the latest crime statistics for me area,browser,massive,news_query
 change the color of my lights to something random,desktop_automation,massive,iot_hue_lightchange
@@ -2431,6 +2785,7 @@ hey what time is it in london now,desktop_automation,massive,datetime_query
 hey olly what time is it in london now,desktop_automation,massive,datetime_query
 is it forecasted to rain in the next two days,browser,massive,weather_query
 is it sunny,browser,massive,weather_query
+disable the alarm at ten am,desktop_automation,massive,alarm_remove
 current date,desktop_automation,massive,datetime_query
 what time is it relative to new york,desktop_automation,massive,datetime_query
 could you please tell me what the current time is,desktop_automation,massive,datetime_query
@@ -2447,6 +2802,9 @@ olly what is the weather forecast for today,browser,massive,weather_query
 what is the weather forecast for today,browser,massive,weather_query
 how close is it to eight p. m.,desktop_automation,massive,datetime_query
 what time is it in switzerland,desktop_automation,massive,datetime_query
+can you tell me about the alarm called bed,desktop_automation,massive,alarm_query
+what's my next scheduled alarm,desktop_automation,massive,alarm_query
+what's the description for the alarm at eleven am,desktop_automation,massive,alarm_query
 when is the next warm day,browser,massive,weather_query
 how soon can we expect rain,browser,massive,weather_query
 olly what are the headlines from the la times,browser,massive,news_query
@@ -2460,6 +2818,7 @@ turn up media volume,desktop_automation,massive,audio_volume_up
 adjust media volume up,desktop_automation,massive,audio_volume_up
 made media volume louder,desktop_automation,massive,audio_volume_up
 update on april the giraffe,browser,massive,news_query
+list all of my alarms,desktop_automation,massive,alarm_query
 weather fulton missouri,browser,massive,weather_query
 what is the weather near me this week,browser,massive,weather_query
 show me this week's forecast,browser,massive,weather_query
@@ -2477,12 +2836,19 @@ can you turn up the volume,desktop_automation,massive,audio_volume_up
 please turn up the speaker volume,desktop_automation,massive,audio_volume_up
 what is the time in chicago,desktop_automation,massive,datetime_query
 is the time different in moscow,desktop_automation,massive,datetime_query
+ask them to remember always to lock the door and keep a careful watch on their keys,desktop_automation,massive,alarm_remove
+teach children to never answer the door when home alone,desktop_automation,massive,alarm_remove
+show them where the keys to internal locks are located in case they have to exit your home quickly,desktop_automation,massive,alarm_remove
 set a notification for sports game,communication,massive,calendar_set
 add a new notifier for the g. p. s. on my car,browser,massive,news_query
 tell me the time in japan,desktop_automation,massive,datetime_query
+what alarms are coming up,desktop_automation,massive,alarm_query
+please tell me about upcoming alarms,desktop_automation,massive,alarm_query
+show me the alarms i've set,desktop_automation,massive,alarm_query
 will there be any seventy degree days next week,browser,massive,weather_query
 turn on kitchen light,desktop_automation,massive,iot_wemo_on
 turn on living room radio,desktop_automation,massive,iot_wemo_on
+tell me when it is five p. m.,desktop_automation,massive,alarm_set
 will the temperature be in the today,browser,massive,weather_query
 will the sky be overcast,browser,massive,weather_query
 find information on today's stocks,browser,massive,news_query
@@ -2518,6 +2884,9 @@ please make the lights blue,desktop_automation,massive,iot_hue_lightchange
 change the lights to my favorite color,desktop_automation,massive,iot_hue_lightchange
 mute the speakers,desktop_automation,massive,audio_volume_mute
 set the speakers to mute,desktop_automation,massive,audio_volume_mute
+set an alarm for six thirty am,desktop_automation,massive,alarm_set
+set alarm for one hour from now,desktop_automation,massive,alarm_set
+set an alarm for thursday at seven p. m.,desktop_automation,massive,alarm_set
 do not talk,desktop_automation,massive,audio_volume_mute
 give me the news on n. b. c. alexa,browser,massive,news_query
 read me the news from nsnbc,browser,massive,news_query
@@ -2525,6 +2894,7 @@ the news from c. b. s. alexa,browser,massive,news_query
 what is the weather in columbus,browser,massive,weather_query
 c. n. n. news,browser,massive,news_query
 current time in,desktop_automation,massive,datetime_query
+please list all my alarms,desktop_automation,massive,alarm_query
 when is trumps next press conference,browser,massive,news_query
 what are the current stock prices for google,browser,massive,qa_stock
 fire in columbus ohio,browser,massive,news_query
@@ -2535,8 +2905,13 @@ is my golf game going to get rained out,browser,massive,weather_query
 is it hot and muggy or warm and humid in the bayou today,browser,massive,weather_query
 what's the weather in chicago,browser,massive,weather_query
 do you know the weather,browser,massive,weather_query
+set an alarm for five am,desktop_automation,massive,alarm_set
+please set an alarm for ten p. m.,desktop_automation,massive,alarm_set
+can you set an alarm for seven am,desktop_automation,massive,alarm_set
 what is the weather like tomorrow,browser,massive,weather_query
 is it going to be nice tomorrow,browser,massive,weather_query
+remind me at five p. m.,desktop_automation,massive,alarm_set
+reminder,desktop_automation,massive,alarm_set
 answer,llm_fallback,massive,general_quirky
 unmute my sound,desktop_automation,massive,audio_volume_up
 please turn my speakers on google,desktop_automation,massive,audio_volume_up
@@ -2548,9 +2923,17 @@ please show me the local weather,browser,massive,weather_query
 what day of the week is the twenty first of may,desktop_automation,massive,datetime_query
 what date is easter sunday this year,desktop_automation,massive,datetime_query
 what day is halloween this year,desktop_automation,massive,datetime_query
+cancel my alarm for tomorrow morning,desktop_automation,massive,alarm_remove
+do not wake me up tomorrow,desktop_automation,massive,alarm_remove
+do not wake me up on weekends,desktop_automation,massive,alarm_remove
+please we're the following alarm,desktop_automation,massive,alarm_set
+set alarm for eight am tomorrow,desktop_automation,massive,alarm_set
+set an alarm for tomorrow monday at eight am,desktop_automation,massive,alarm_set
 will the temperature be above freezing on wednesday,browser,massive,weather_query
 is the weekend going to be nice,browser,massive,weather_query
 what is your best joke,chitchat,massive,general_joke
+list my different alarm,desktop_automation,massive,alarm_query
+what are my alarms,desktop_automation,massive,alarm_query
 set to mute,desktop_automation,massive,audio_volume_mute
 be mute,desktop_automation,massive,audio_volume_mute
 set notification for news on the stock market,browser,massive,qa_stock
@@ -2558,6 +2941,8 @@ turn on notification for all news on the stock market,browser,massive,qa_stock
 notify me of the latest news on the stock market,browser,massive,qa_stock
 volume down,desktop_automation,massive,audio_volume_down
 adjust the volume,desktop_automation,massive,audio_volume_other
+set the alarm for nine am on weekends,desktop_automation,massive,alarm_set
+the set alarm for nine p. m. on thursday night,desktop_automation,massive,alarm_set
 today is what day,desktop_automation,massive,datetime_query
 switch the lights to blue,desktop_automation,massive,iot_hue_lightchange
 what time is it in chicago,desktop_automation,massive,datetime_query
@@ -2565,6 +2950,8 @@ is it noon in paris,desktop_automation,massive,datetime_query
 turn down the lights in the living room,desktop_automation,massive,iot_hue_lightdim
 tell me what the latest news is,browser,massive,news_query
 check the latest news,browser,massive,news_query
+hey google tell me what alarms are set for me,desktop_automation,massive,alarm_query
+list all of my upcoming alarms,desktop_automation,massive,alarm_query
 i want a nerd joke,chitchat,massive,general_joke
 deactivate the socket,desktop_automation,massive,iot_wemo_off
 i would love the wemo socket to not be active right now,desktop_automation,massive,iot_wemo_off
@@ -2590,8 +2977,11 @@ tell me the time in this time zone,desktop_automation,massive,datetime_query
 please tell me the news in polk county florida,browser,massive,news_query
 i want to listen to a joke,chitchat,massive,general_joke
 can you tell me a nice joke,chitchat,massive,general_joke
+please tell me what alarms are on,desktop_automation,massive,alarm_query
 what day of the week is june twenty seventh on this year,desktop_automation,massive,datetime_query
 what day does my birthday fall on this year june twenty seventh,desktop_automation,massive,datetime_query
+wake me up at six thirty,desktop_automation,massive,alarm_set
+set the alarm,desktop_automation,massive,alarm_set
 do i need a jacket,browser,massive,weather_query
 can i go out in shorts,browser,massive,weather_query
 will i need to be warm,browser,massive,weather_query
@@ -2634,6 +3024,12 @@ what time is it now in new york,desktop_automation,massive,datetime_query
 how many hours distance is between my location and new york,desktop_automation,massive,datetime_convert
 show me the time now in boston,desktop_automation,massive,datetime_query
 activate the wemo plug socket,desktop_automation,massive,iot_wemo_on
+wake me up in thirty minutes,desktop_automation,massive,alarm_set
+set an alarm for eight p. m.,desktop_automation,massive,alarm_set
+set an alarm for five minutes from now,desktop_automation,massive,alarm_set
+is my alarm set,desktop_automation,massive,alarm_query
+can you set my alarm,desktop_automation,massive,alarm_set
+please set my alarm,desktop_automation,massive,alarm_set
 shut down the sound,desktop_automation,massive,audio_volume_mute
 cut off noise,desktop_automation,massive,audio_volume_mute
 mute the volume,desktop_automation,massive,audio_volume_mute
@@ -2648,6 +3044,9 @@ tell me the weather in utah,browser,massive,weather_query
 how is the weather in utah right now,browser,massive,weather_query
 how is it outside,browser,massive,weather_query
 what is the current temperature,browser,massive,weather_query
+remove my six am alarm,desktop_automation,massive,alarm_remove
+remove my eight p. m. alarm and set it to seven p. m.,desktop_automation,massive,alarm_remove
+add a five am alarm in place of my nine p. m. alarm,desktop_automation,massive,alarm_set
 light settings,desktop_automation,massive,iot_hue_lightchange
 change color,desktop_automation,massive,iot_hue_lightchange
 search to find current local time and time zone,desktop_automation,massive,datetime_query
@@ -2679,10 +3078,14 @@ what is the date and month today,desktop_automation,massive,datetime_query
 temperature in augusta ga,browser,massive,weather_query
 ten day forecast for baltimore,browser,massive,weather_query
 temperature outside,browser,massive,weather_query
+turn off my first alarm,desktop_automation,massive,alarm_remove
+turn off all alarms,desktop_automation,massive,alarm_remove
 what will the date be next wednesday,desktop_automation,massive,datetime_query
 what day is the fifteenth,desktop_automation,massive,datetime_query
 this weeks weather forecast,browser,massive,weather_query
 this week's weather forecast,browser,massive,weather_query
+turn on my first scheduled alarm,desktop_automation,massive,alarm_set
+turn on an alarm for three thirty p. m. today,desktop_automation,massive,alarm_set
 what day is christmas,desktop_automation,massive,datetime_query
 what will the weather be on friday,browser,massive,weather_query
 will it rain now,browser,massive,weather_query
@@ -2710,6 +3113,8 @@ hello i want to turn off my wemo plug,desktop_automation,massive,iot_wemo_off
 what were the winning powerball numbers last night,browser,massive,news_query
 who won the presidential election this year,browser,massive,qa_factoid
 tell me about martin luther king junior,browser,massive,qa_factoid
+remove my work alarm,desktop_automation,massive,alarm_remove
+remove finlee's bedtime alarm,desktop_automation,massive,alarm_remove
 what day of the week is the twenty fifth,desktop_automation,massive,datetime_query
 what day of the week is the twenty sixth,desktop_automation,massive,datetime_query
 i need you to have the volume louder,desktop_automation,massive,audio_volume_up
@@ -2729,6 +3134,8 @@ increase the bright of the light,desktop_automation,massive,iot_hue_lightup
 increase the light,desktop_automation,massive,iot_hue_lightup
 what is the time for the eastern time zone,desktop_automation,massive,datetime_query
 if i was in the eastern time zone what time would it be,desktop_automation,massive,datetime_convert
+what times are my alarms set for,desktop_automation,massive,alarm_query
+what days are my alarms set for,desktop_automation,massive,alarm_query
 do i need a jacket this afternoon,browser,massive,weather_query
 will i need an umbrella this week,browser,massive,weather_query
 is it storming right now,browser,massive,weather_query
@@ -2754,6 +3161,8 @@ what is the weather for this week,browser,massive,weather_query
 is it rainy in my area,browser,massive,weather_query
 what's the weather now,browser,massive,weather_query
 status of weather,browser,massive,weather_query
+alarm time for twelve p. m.,desktop_automation,massive,alarm_set
+set my alarm for twelve p. m.,desktop_automation,massive,alarm_set
 alexa please turn down the lights in the living room,desktop_automation,massive,iot_hue_lightdim
 please turn down the lights in the living room,desktop_automation,massive,iot_hue_lightdim
 please turn down the lights to fifty percent in the den,desktop_automation,massive,iot_hue_lightdim
@@ -2761,6 +3170,8 @@ alexa please turn down the lights in the house,desktop_automation,massive,iot_hu
 on mobile charger plug,desktop_automation,massive,iot_wemo_on
 on all the button on dashboard,desktop_automation,massive,iot_wemo_on
 off all type of active devices,desktop_automation,massive,iot_wemo_off
+make a new alarm,desktop_automation,massive,alarm_set
+i need an alarm,desktop_automation,massive,alarm_set
 give me music news,browser,massive,news_query
 tell me about the latest politics news,browser,massive,news_query
 what is the latest news for fashion,browser,massive,news_query
@@ -2773,10 +3184,16 @@ replace color from light to dark,desktop_automation,massive,iot_hue_lightchange
 latest news from jersey,browser,massive,news_query
 change the volume level to nineteen please,desktop_automation,massive,audio_volume_up
 turn wemo on,desktop_automation,massive,iot_wemo_on
+set new alarm on five am,desktop_automation,massive,alarm_set
+please create a new alarm,desktop_automation,massive,alarm_set
+six am alarm please,desktop_automation,massive,alarm_set
 what was the weather for the week,browser,massive,weather_query
 how is this week's weather,browser,massive,weather_query
 it seems cold,browser,massive,weather_query
 do i need a coat,browser,massive,weather_query
+new alarm for six am,desktop_automation,massive,alarm_set
+create an alarm for six am,desktop_automation,massive,alarm_set
+set an alarm for six am,desktop_automation,massive,alarm_set
 what is the forecast for saturday,browser,massive,weather_query
 olly please read me today's news,browser,massive,news_query
 olly what's happened in the news today,browser,massive,news_query
@@ -2785,10 +3202,21 @@ the time,desktop_automation,massive,datetime_query
 it's dark in here,desktop_automation,massive,iot_hue_lighton
 turn corner light on,desktop_automation,massive,iot_hue_lighton
 turn all lights on,desktop_automation,massive,iot_hue_lighton
+olly cancel alarms,desktop_automation,massive,alarm_remove
+siri cancel yoga alarms,desktop_automation,massive,alarm_remove
+olly cancel yoga alarms,desktop_automation,massive,alarm_remove
+siri cancel all soccer practice alarms,desktop_automation,massive,alarm_remove
+olly cancel all soccer practice alarms,desktop_automation,massive,alarm_remove
 olly what time is it in denver,desktop_automation,massive,datetime_query
 olly turn the volume up,desktop_automation,massive,audio_volume_up
 do i need a raincoat day after,browser,massive,weather_query
 what will be the weather day after,browser,massive,weather_query
+is there any alarm after five am,desktop_automation,massive,alarm_query
+remove alarm if any,desktop_automation,massive,alarm_remove
+i don't want any alarms,desktop_automation,massive,alarm_remove
+check if any alarm is there after five am,desktop_automation,massive,alarm_query
+remove all alarms if any,desktop_automation,massive,alarm_remove
+check if default alarm is set,desktop_automation,massive,alarm_query
 is it hot or cold outside,browser,massive,weather_query
 people canceling iowa vacations over congressman's words,browser,massive,news_query
 d. e. a. guam prescription drug abuse on the rise,browser,massive,news_query
@@ -2806,6 +3234,8 @@ it's too bright in here can you turn a light off,desktop_automation,massive,iot_
 olly it's too bright in here can you turn a light off,desktop_automation,massive,iot_hue_lightoff
 turn the light off in the living room,desktop_automation,massive,iot_hue_lightoff
 olly turn the light off in the living room,desktop_automation,massive,iot_hue_lightoff
+call me at six am,desktop_automation,massive,alarm_set
+i wanna get up at six am,desktop_automation,massive,alarm_set
 please give me today's date,desktop_automation,massive,datetime_query
 darken the room a bit,desktop_automation,massive,iot_hue_lightdim
 lower the intensity of light,desktop_automation,massive,iot_hue_lightdim
@@ -2814,6 +3244,9 @@ do i need to bring an umbrella to manila this afternoon,browser,massive,weather_
 please take me to wall street journal,browser,massive,news_query
 show me more about the presidential election,browser,massive,news_query
 show me articles about the new iphone eight,browser,massive,news_query
+can you set my alarm for seven thirty am,desktop_automation,massive,alarm_set
+please wake me up at seven thirty am,desktop_automation,massive,alarm_set
+set a continuous alarm without the option to snooze for seven am please,desktop_automation,massive,alarm_set
 what's the weather for the entire week,browser,massive,weather_query
 what will the weather be like for this week,browser,massive,weather_query
 what kind of weather should i expect this week,browser,massive,weather_query
@@ -2837,6 +3270,7 @@ turn my lights down to a lower level of brightness,desktop_automation,massive,io
 kindly switch off the light in the drawing hall,desktop_automation,massive,iot_hue_lightoff
 eight am manila time is what in eastern time,desktop_automation,massive,datetime_convert
 convert eight am manila time to new york time,desktop_automation,massive,datetime_convert
+what alarms do i have set for today,desktop_automation,massive,alarm_query
 should i bring warm clothes,browser,massive,weather_query
 olly do i need sunscreen,browser,massive,weather_query
 get me the most recent news,browser,massive,news_query
@@ -2861,6 +3295,7 @@ umbrella later,browser,massive,weather_query
 show latest news about migration,browser,massive,news_query
 show todays news about migration,browser,massive,news_query
 show b. b. c. report on migration,browser,massive,news_query
+did you set the alarm for five am,desktop_automation,massive,alarm_query
 please turn the lights off in the bathroom,desktop_automation,massive,iot_hue_lightoff
 siri please turn the lights off in the bathroom,desktop_automation,massive,iot_hue_lightoff
 turn lights off in kitchen,desktop_automation,massive,iot_hue_lightoff
@@ -2890,6 +3325,8 @@ show b. b. c. report of migrations,browser,massive,news_query
 what is the time in geneva,desktop_automation,massive,datetime_query
 i want to know what the latest news,browser,massive,news_query
 what's the temperature out now,browser,massive,weather_query
+fix alarm,desktop_automation,massive,alarm_set
+alarm set,desktop_automation,massive,alarm_set
 can you turn it up a little,desktop_automation,massive,audio_volume_up
 can you make it a little quieter,desktop_automation,massive,audio_volume_down
 olly get me the popular news from b. b. c.,browser,massive,news_query
@@ -2906,6 +3343,7 @@ turn up your volume,desktop_automation,massive,audio_volume_up
 cut the lights off,desktop_automation,massive,iot_hue_lightoff
 what is happening in the world right now check b. b. c.,browser,massive,news_query
 increase brightness in the room,desktop_automation,massive,iot_hue_lightup
+set the alarm for five am,desktop_automation,massive,alarm_set
 show me yesterdays weather,browser,massive,weather_query
 show weather,browser,massive,weather_query
 what is the weather like in miami florida today,browser,massive,weather_query
@@ -2914,6 +3352,10 @@ how are things in the world,browser,massive,news_query
 time zone between india and us,desktop_automation,massive,datetime_convert
 time between us and canada,desktop_automation,massive,datetime_convert
 time difference between u. k. and us,desktop_automation,massive,datetime_convert
+what alarms do you have set,desktop_automation,massive,alarm_query
+are there any alarms set,desktop_automation,massive,alarm_query
+provide me the alarm times you have set,desktop_automation,massive,alarm_query
+alexa provide me the alarm times you have set,desktop_automation,massive,alarm_query
 normal temperature,browser,massive,weather_query
 low cooling condition,browser,massive,weather_query
 can you tell me the time right now,desktop_automation,massive,datetime_query
@@ -2937,6 +3379,7 @@ which day of week is the twenty fourth,desktop_automation,massive,datetime_query
 when does twenty fourth come in the next week,desktop_automation,massive,datetime_query
 is twenty fourth on tuesday,desktop_automation,massive,datetime_query
 close the light,desktop_automation,massive,iot_hue_lightoff
+set alarm six am,desktop_automation,massive,alarm_set
 google search the topic,browser,massive,news_query
 what happened with it,browser,massive,news_query
 what's the latest on the travel ban,browser,massive,news_query
@@ -2960,6 +3403,8 @@ socket off,desktop_automation,massive,iot_wemo_off
 please turn socket off,desktop_automation,massive,iot_wemo_off
 turn off lights of kitchen,desktop_automation,massive,iot_hue_lightoff
 switch off all lights,desktop_automation,massive,iot_hue_lightoff
+remove all alarm of sunday,desktop_automation,massive,alarm_remove
+remove alarm of six am on tuesday,desktop_automation,massive,alarm_remove
 read me the latest new york times headlines,browser,massive,news_query
 what are the top stories on c. n. n.,browser,massive,news_query
 what's happening on b. b. c. news today,browser,massive,news_query
@@ -2975,6 +3420,9 @@ will it be cold enough for mittens later tonight,browser,massive,weather_query
 put out the lights,desktop_automation,massive,iot_hue_lightoff
 is it going to be hot in two hours,browser,massive,weather_query
 is it going to rain later,browser,massive,weather_query
+remove seven am alarm,desktop_automation,massive,alarm_remove
+delete my eight p. m. alarm,desktop_automation,massive,alarm_remove
+get rid of the five p. m. alarm,desktop_automation,massive,alarm_remove
 what are the headlines on the new york times,browser,massive,news_query
 do i need umbrella for night,browser,massive,weather_query
 can i go without coat now,browser,massive,weather_query
@@ -3004,6 +3452,8 @@ alexa please turn on the lights,desktop_automation,massive,iot_hue_lighton
 olly brighten the lights,desktop_automation,massive,iot_hue_lightup
 brighten the lights in living room,desktop_automation,massive,iot_hue_lightup
 how many sunday having this month,desktop_automation,massive,datetime_query
+set my alarm for six am,desktop_automation,massive,alarm_set
+i need you to get me up at six am,desktop_automation,massive,alarm_set
 change the color of lights,desktop_automation,massive,iot_hue_lightchange
 olly rotate the light colors,desktop_automation,massive,iot_hue_lightchange
 olly activate a different light color,desktop_automation,massive,iot_hue_lightchange
@@ -3016,6 +3466,8 @@ is it too hot for pants,browser,massive,weather_query
 how many hours remaining to reach midnight in city,desktop_automation,massive,datetime_query
 how many hours gone from midnight on city,desktop_automation,massive,datetime_query
 how many hours remaining for mid noon,desktop_automation,massive,datetime_query
+can you please remove the alarm,desktop_automation,massive,alarm_remove
+will you turn the alarm off for me,desktop_automation,massive,alarm_remove
 what is the latest news on the health care reform,browser,massive,news_query
 what is the latest poll on the public view of president trump,browser,massive,news_query
 should i take an umbrella today,browser,massive,weather_query
@@ -3025,10 +3477,15 @@ what time can i call from pennsylvania and it will be business hours in australi
 please put all the lights,desktop_automation,massive,iot_hue_lightup
 please make arrangements to make the hall so brighter,desktop_automation,massive,iot_hue_lightup
 what is the current time in our home town,desktop_automation,massive,datetime_query
+did i set my house alarm,desktop_automation,massive,alarm_query
+what alarms are set in the house,desktop_automation,massive,alarm_query
+tell me if my alarm is set for the morning,desktop_automation,massive,alarm_query
+please arrange to wake me up at three am alarm,desktop_automation,massive,alarm_set
 tell joke,chitchat,massive,general_joke
 provide a joke,chitchat,massive,general_joke
 what is the time difference between here and there,desktop_automation,massive,datetime_convert
 turn up the sound,desktop_automation,massive,audio_volume_up
+turn on my alarm,desktop_automation,massive,alarm_set
 turn the room light off,desktop_automation,massive,iot_hue_lightoff
 turn off the room light,desktop_automation,massive,iot_hue_lightoff
 what day is the twenty second of may,desktop_automation,massive,datetime_query
@@ -3043,6 +3500,8 @@ notification regarding the new government policies,browser,massive,news_query
 is weather cloudy,browser,massive,weather_query
 if it is raining i will not go for job,browser,massive,weather_query
 am i going to need to put on sunscreen lotion today,browser,massive,weather_query
+please let me know the morning alarm time for weekdays,desktop_automation,massive,alarm_query
+please let me know the alarm kept for tuesday's meeting,desktop_automation,massive,alarm_query
 please let me know the current time at london,desktop_automation,massive,datetime_query
 love to jake for financial support,llm_fallback,massive,general_quirky
 thanks to ally for the photos,llm_fallback,massive,general_quirky
@@ -3058,6 +3517,9 @@ what are the news headlines,browser,massive,news_query
 what is happening with brexit today,browser,massive,news_query
 has the budget been voted on yet,browser,massive,news_query
 did ben and jen get back together,browser,massive,news_query
+set alarm at two am,desktop_automation,massive,alarm_set
+set alarm on twenty fifth may at five p. m.,desktop_automation,massive,alarm_set
+set alarm at nine am on next sunday,desktop_automation,massive,alarm_set
 increase the brightness of lights bedroom,desktop_automation,massive,iot_hue_lightup
 please set the brightness of lightness appropriately in kitchen,desktop_automation,massive,iot_hue_lightup
 brighten of lights in living room,desktop_automation,massive,iot_hue_lightup
@@ -3080,17 +3542,24 @@ what is the weather forecast,browser,massive,weather_query
 is it going to be nice out this week,browser,massive,weather_query
 more bright,desktop_automation,massive,iot_hue_lightup
 increase light,desktop_automation,massive,iot_hue_lightup
+report alarm settings,desktop_automation,massive,alarm_query
+tell me when the next alarms are for,desktop_automation,massive,alarm_query
 reduce volume,desktop_automation,massive,audio_volume_down
 reduce light intensity,desktop_automation,massive,iot_hue_lightdim
 lessen the light glow,desktop_automation,massive,iot_hue_lightdim
 set the time zone to g. m. t.,desktop_automation,massive,datetime_convert
 change the time zone from irish time zone to moscow time zone,desktop_automation,massive,datetime_convert
+just see for me the alarms that you have set today morning,desktop_automation,massive,alarm_query
 temperature now,browser,massive,weather_query
+wake me at seven am,desktop_automation,massive,alarm_set
+alarm ten am,desktop_automation,massive,alarm_set
+alarm five p. m.,desktop_automation,massive,alarm_set
 darken,desktop_automation,massive,iot_hue_lightdim
 turn off the fan,desktop_automation,massive,iot_wemo_off
 turn on the geyser,desktop_automation,massive,iot_wemo_on
 turn off the t. v. in,desktop_automation,massive,iot_wemo_off
 will the weather today be cloudy,browser,massive,weather_query
+ensure i have to get up at six in morning,desktop_automation,massive,alarm_set
 will i need sunblock this weekend,browser,massive,weather_query
 do i need to bring a coat out tonight,browser,massive,weather_query
 should i pick up some defrosting salt at the store,browser,massive,weather_query
@@ -3113,10 +3582,15 @@ do i need a jacket in the evening,browser,massive,weather_query
 do i need to apply sunburn cream when i go to golf club,browser,massive,weather_query
 do i need to carry sunglasses outside,browser,massive,weather_query
 the weather updated to the using seconds per bit weatherit either updates forecasts from intellicast or weathercom both rather poor for my site,browser,massive,weather_query
+tap start and then select settings,desktop_automation,massive,alarm_query
+then tap ok,desktop_automation,massive,alarm_query
 what are the estimated temperatures this afternoon,browser,massive,weather_query
 get a forecast about wind speed tonight,browser,massive,weather_query
 what is the time in las vegas,desktop_automation,massive,datetime_query
 what time is it in tokyo japan,desktop_automation,massive,datetime_query
+please remove the alarm which i set,desktop_automation,massive,alarm_remove
+disable the alarm which is set at nine thirty p. m.,desktop_automation,massive,alarm_remove
+unset all alarm which is set,desktop_automation,massive,alarm_remove
 may twenty two is my birthdate and i want to know the what day is twenty third may,desktop_automation,massive,datetime_query
 what day of the week is november fourteenth,desktop_automation,massive,datetime_query
 august fifteenth is what day of the week,desktop_automation,massive,datetime_query
@@ -3154,6 +3628,8 @@ turn off the lights please,desktop_automation,massive,iot_hue_lightoff
 is it a rainy and stormy day,browser,massive,weather_query
 shall i change my car tires to snow tires soon,browser,massive,weather_query
 olly do i need sun screen lotion today,browser,massive,weather_query
+show me what alarm times i've set for the week,desktop_automation,massive,alarm_query
+give me the alarm times for the next two days,desktop_automation,massive,alarm_query
 please change lights color to red,desktop_automation,massive,iot_hue_lightchange
 could you change the lights color to green please,desktop_automation,massive,iot_hue_lightchange
 weather news,browser,massive,weather_query
@@ -3191,6 +3667,8 @@ its sunny today,browser,massive,weather_query
 its hot today,browser,massive,weather_query
 clock time,desktop_automation,massive,datetime_query
 alarm clock,desktop_automation,massive,datetime_query
+set an alarm for five o'clock this evening labeled taxi,desktop_automation,massive,alarm_set
+set an alarm in an hour's time,desktop_automation,massive,alarm_set
 switch off,desktop_automation,massive,iot_hue_lightoff
 no lights,desktop_automation,massive,iot_hue_lightoff
 should i wear raincoat before getting out,browser,massive,weather_query
@@ -3227,6 +3705,9 @@ is this the hottest day in mangalore,browser,massive,weather_query
 what's the average temperature in mangalore for this week,browser,massive,weather_query
 give me the latest on donald trump,browser,massive,news_query
 i'd like news on donald trump,browser,massive,news_query
+is there any alarm active,desktop_automation,massive,alarm_query
+tell me about the alarm timings,desktop_automation,massive,alarm_query
+reset the alarm,desktop_automation,massive,alarm_remove
 what's the weather report for bangalore today,browser,massive,weather_query
 hows mysore climate today,browser,massive,weather_query
 is there any chance of rains in mysore to beat the heat,browser,massive,weather_query
@@ -3240,6 +3721,8 @@ hot topic,browser,massive,news_query
 switch off the power,desktop_automation,massive,iot_wemo_off
 power off please,desktop_automation,massive,iot_wemo_off
 open c. n. n. app,browser,massive,news_query
+list all set alarms,desktop_automation,massive,alarm_query
+are there any alarms set what are they,desktop_automation,massive,alarm_query
 whether in u. k. is cold,browser,massive,weather_query
 whether it would be sunny in califonia,browser,massive,weather_query
 how many days is it until may twenty fifth,desktop_automation,massive,datetime_query
@@ -3247,6 +3730,12 @@ what day of the week does july fourth fall on this year,desktop_automation,massi
 is april fifteenth on a weekend,desktop_automation,massive,datetime_query
 please switch off the light,desktop_automation,massive,iot_hue_lightoff
 could you turn off light,desktop_automation,massive,iot_hue_lightoff
+check if alarm is set for six am,desktop_automation,massive,alarm_query
+confirm i have set an alarm for six am,desktop_automation,massive,alarm_query
+check if i have set any alarm for morning,desktop_automation,massive,alarm_query
+please set alarm to my mobile phones,desktop_automation,massive,alarm_set
+please set alarm for today,desktop_automation,massive,alarm_set
+please set alarm for all days,desktop_automation,massive,alarm_set
 attenuate the lights,desktop_automation,massive,iot_hue_lightdim
 what is the latest update on the new york bridge proposal,browser,massive,news_query
 what's going on with the trump budget proposal,browser,massive,news_query
@@ -3281,10 +3770,16 @@ can you please be muted for a while,desktop_automation,massive,audio_volume_mute
 can you please stop speaking,desktop_automation,massive,audio_volume_mute
 i want you to mute,desktop_automation,massive,audio_volume_mute
 how is the climate today,browser,massive,weather_query
+could you please remove the set of alarms between eight and nine,desktop_automation,massive,alarm_remove
+do i have alarms set before six in the morning,desktop_automation,massive,alarm_query
+did i set an alarm to have tablets in the noon,desktop_automation,massive,alarm_query
 could you tell me what today's date is,desktop_automation,massive,datetime_query
 convert eastern time to western time,desktop_automation,massive,datetime_convert
 show me the time in new york city,desktop_automation,massive,datetime_query
 what is the time in australia right now,desktop_automation,massive,datetime_query
+let me know about the alarms you set,desktop_automation,massive,alarm_query
+at what time have you set alarm for me,desktop_automation,massive,alarm_query
+tell me time of alarm you set,desktop_automation,massive,alarm_query
 show me the latest news from the un,browser,massive,news_query
 adjust the lights to a lower setting please,desktop_automation,massive,iot_hue_lightdim
 do you think it's going to rain tomorrow,browser,massive,weather_query
@@ -3304,6 +3799,8 @@ decrease brightness of lights,desktop_automation,massive,iot_hue_lightdim
 has the governor enacted the new crime bill yet,browser,massive,news_query
 chicago time,desktop_automation,massive,datetime_query
 time in chicago,desktop_automation,massive,datetime_query
+would like to know the alarm you sent,desktop_automation,massive,alarm_query
+may i know the about alarm you set,desktop_automation,massive,alarm_query
 what's the latest joke,chitchat,massive,general_joke
 is it a soft evening tonight,browser,massive,weather_query
 will it be a sticky night,browser,massive,weather_query
@@ -3314,6 +3811,8 @@ i have to wear a jacket in the morning,browser,massive,weather_query
 food will be given at the exhibition,browser,massive,weather_query
 turn down the noise,desktop_automation,massive,audio_volume_mute
 volume control,desktop_automation,massive,audio_volume_mute
+open clock,desktop_automation,massive,alarm_set
+wake me up at five thirty,desktop_automation,massive,alarm_set
 will it rain in the noon,browser,massive,weather_query
 will it be rainy day tomorrow,browser,massive,weather_query
 hey turn off the light please,desktop_automation,massive,iot_hue_lightoff
@@ -3340,9 +3839,13 @@ turn off bedroom light at nine thirty p. m.,desktop_automation,massive,iot_hue_l
 can you find out the latest world news from yesterday,browser,massive,news_query
 i want to hear the latest world news from today,browser,massive,news_query
 what is happening in the world news,browser,massive,news_query
+alarm,desktop_automation,massive,alarm_set
 will i need my heavy coat after lunch today,browser,massive,weather_query
 do i need a coat today,browser,massive,weather_query
 should i plan to shovel my way out of the house,browser,massive,weather_query
+create an alarm for today at ten am,desktop_automation,massive,alarm_set
+alert me at ten am please,desktop_automation,massive,alarm_set
+open alarm and create an alert for ten am,desktop_automation,massive,alarm_set
 what is the weather in zip code thirty two thousand two hundred and thirty four,browser,massive,weather_query
 is it going to be sunny next week on tuesday,browser,massive,weather_query
 do i need to take an umbrella with me this afternoon,browser,massive,weather_query
@@ -3351,6 +3854,8 @@ what's new in gaming industry,browser,massive,news_query
 is it going to be cloudy in london during the weekend,browser,massive,weather_query
 should i open the sun roof,browser,massive,weather_query
 should i keep my windows open tonight,browser,massive,weather_query
+what home alarms have been set,desktop_automation,massive,alarm_query
+are there any alarms currently set,desktop_automation,massive,alarm_query
 hey olly what will the weather be like to today in los angeles california,browser,massive,weather_query
 hey what will the weather be like to today in los angeles california,browser,massive,weather_query
 hey is it going to rain today in brooklyn new york,browser,massive,weather_query
@@ -3387,6 +3892,9 @@ what is the date two saturdays from now,desktop_automation,massive,datetime_quer
 please tell me the date for the first day of next month,desktop_automation,massive,datetime_query
 what's the latest,browser,massive,news_query
 outlet on,desktop_automation,massive,iot_wemo_on
+remove alarm,desktop_automation,massive,alarm_remove
+delete alarm,desktop_automation,massive,alarm_remove
+forget alarm,desktop_automation,massive,alarm_remove
 should i wear layers sometime today,browser,massive,weather_query
 should i wear sunblock today,browser,massive,weather_query
 please mute for five minutes,desktop_automation,massive,audio_volume_mute
@@ -3527,6 +4035,7 @@ can i tell you about my day,llm_fallback,massive,general_quirky
 you want to know how my day went,llm_fallback,massive,general_quirky
 i eat breakfast at eight am,llm_fallback,massive,general_quirky
 i don't want to take any more calls after five p. m.,llm_fallback,massive,general_quirky
+i want an alarm for six am everyday,desktop_automation,massive,alarm_set
 hey i saw a dog today,llm_fallback,massive,general_quirky
 hey olly i saw a dog today,llm_fallback,massive,general_quirky
 today i saw a bulldog,llm_fallback,massive,general_quirky
@@ -3712,6 +4221,7 @@ current events,browser,massive,recommendation_events
 sports scores,browser,massive,news_query
 emails,communication,massive,email_query
 reminders,communication,massive,calendar_set
+alarms,desktop_automation,massive,alarm_query
 fashion,llm_fallback,massive,general_quirky
 what's on t. v.,llm_fallback,massive,general_quirky
 how has your day been today,llm_fallback,massive,general_quirky
@@ -3993,6 +4503,7 @@ remind me tomorrow at four about an event,communication,massive,calendar_set
 what time am i meeting john tomorrow,communication,massive,calendar_query
 give me the address of my hairdresser for the meeting today,communication,massive,calendar_query
 remind me about the meeting tomorrow at six,communication,massive,calendar_set
+set an alarm for the dance classes two hours before the classes start,desktop_automation,massive,alarm_set
 remind me about mike's birthdays,communication,massive,calendar_set
 do i have any meetings tomorrow,communication,massive,calendar_query
 what time am i meeting my dentist on friday,communication,massive,calendar_query
@@ -4002,10 +4513,13 @@ add a meeting tomorrow with a pamela at six,communication,massive,calendar_set
 set reminder for tennis game with peter on sunday at four p. m.,communication,massive,calendar_set
 create an event for a john's birthday,communication,massive,calendar_set
 remind me an email to my sister,communication,massive,calendar_set
+set an alarm on wednesday noon so i can register for early adopters program,desktop_automation,massive,alarm_set
+wake me up on friday at five in the morning i need to catch the train,desktop_automation,massive,alarm_set
 prompt me about t. v. program at sixteen fifteen on thursday at b. b. c. four,communication,massive,calendar_set
 list out my schedule today,communication,massive,calendar_query
 show up the events for me today,communication,massive,calendar_query
 show me the programs i have today,communication,massive,calendar_query
+set an alarm at ten am tomorrow and label it as meeting,desktop_automation,massive,alarm_set
 give me a reminder notification on tomorrow's meeting at ten am,communication,massive,calendar_set
 go to calendar and schedule event,communication,massive,calendar_set
 set up the following event in the calendar with the following people,communication,massive,calendar_set
@@ -4080,6 +4594,7 @@ are there any meetings set for next wednesday,communication,massive,calendar_que
 do i have any appointments tomorrow afternoon,communication,massive,calendar_query
 how many meetings do i have this week,communication,massive,calendar_query
 hi please remind the next meeting with my boss it will be at eleven am next monday,communication,massive,calendar_set
+please set an alarm clock for my next meeting with the team at three p. m. next friday,desktop_automation,massive,alarm_set
 i want you to remind me the next meeting with my girlfriend it will be at eight p. m. next sunday,communication,massive,calendar_set
 set a notification about my meeting next tuesday,communication,massive,calendar_set
 set notification for meeting with boss,communication,massive,calendar_set
@@ -4144,12 +4659,15 @@ reminders for card payments,communication,massive,calendar_set
 add new year's eve to calendar,communication,massive,calendar_set
 add to calendar new event thanksgiving,communication,massive,calendar_set
 set reminder for tomorrow morning about my meeting,communication,massive,calendar_set
+set a reminder alarm for my meeting with the agent this evening,desktop_automation,massive,alarm_set
 set a reminder for vacation next month,communication,massive,calendar_set
 i need to set up a recurring event in my calendar please,communication,massive,calendar_set
 hello google take me to google calendar please,communication,massive,calendar_set
 set me a meeting next tuesday at eleven am with jesse,communication,massive,calendar_set
 set a meeting on wednesday at three p. m. in room,communication,massive,calendar_set
 i need to calendar a meeting with nathan on monday at nine am,communication,massive,calendar_set
+please set a reminder alarm for three p. m. on saturday,desktop_automation,massive,alarm_set
+set an alarm for two hours from now please,desktop_automation,massive,alarm_set
 remind me to start getting ready by five p. m. please,communication,massive,calendar_set
 add tal meeting this thursday to calendar,communication,massive,calendar_set
 add tal meeting on twenty first at seven,communication,massive,calendar_set
@@ -4178,6 +4696,7 @@ search my calendar for my next event and notify me before it occurs,communicatio
 let me know when a next event if occurring from my calendar and send me a notification,communication,massive,calendar_set
 please set a reminder for my five p. m. meeting today,communication,massive,calendar_set
 i need a reminder for my five p. m. meeting,communication,massive,calendar_set
+set a reminder alarm for my five p. m. meeting please,desktop_automation,massive,alarm_set
 remind it on tuesday,communication,massive,calendar_set
 remind me later,communication,massive,calendar_set
 open calendar,communication,massive,calendar_set
@@ -4334,6 +4853,7 @@ notify me about birthdays of all my facebook friends,communication,massive,calen
 remind me about my anniversary in advance,communication,massive,calendar_set
 show me the list of pending meetings,communication,massive,calendar_query
 show me the list of friends having birthday yesterday and i have not wished them,communication,massive,calendar_query
+set the alarm to seven am for work,desktop_automation,massive,alarm_set
 remind me of rita's birthday twenty four hours in advance,communication,massive,calendar_set
 remind me to pick up the laundry next monday,communication,massive,calendar_set
 what do i have going on today,communication,massive,calendar_query
@@ -4494,6 +5014,7 @@ please remind me i need to pick my clothes from the cleaner today,communication,
 i have multiple meeting today remind in thirty minutes interval before the start of each meeting,communication,massive,calendar_set
 set meeting with jack on ten march,communication,massive,calendar_set
 set reminder for my wedding anniversary on ten july,communication,massive,calendar_set
+set alarm on tenth november for clock,desktop_automation,massive,alarm_set
 remind me of the meeting with my teacher today by five p. m.,communication,massive,calendar_set
 remember to fix a meeting between me and the players tomorrow evening by seven,communication,massive,calendar_set
 send a notice to the me and a group members reminding us of the new date for the meeting,communication,massive,calendar_set
@@ -4590,6 +5111,7 @@ remind me at location,communication,massive,calendar_set
 remind me when a contact calls,communication,massive,calendar_set
 repeat birthday,communication,massive,calendar_set
 repeat daily,communication,massive,calendar_set
+repeat alarm,desktop_automation,massive,alarm_set
 have john join me on the tenth at the fifth floor meeting,communication,massive,calendar_set
 book my next free day in the calendar for me to get a haircut at sally's,communication,massive,calendar_set
 if there is any free space please set a reminder for me to call my sister about a college fund between my meetings this evening,communication,massive,calendar_set
@@ -4615,11 +5137,13 @@ what events are going on next week,communication,massive,calendar_query
 do i have any events happening next week,communication,massive,calendar_query
 set reminder for meeting tuesday with bill,communication,massive,calendar_set
 set reminder for date night with husband next friday,communication,massive,calendar_set
+set alarm for saturday morning soccer practice at eight am,desktop_automation,massive,alarm_set
 when is dale's birthday,communication,massive,calendar_query
 what time is the cantonese dog festival,communication,massive,calendar_query
 meet with joe tomorrow at three,communication,massive,calendar_set
 meeting with joanne in ten minutes in the conference room,communication,massive,calendar_set
 ask joe and joanne if they can attend tomorrow's meeting at eleven am,communication,massive,calendar_set
+remove tomorrow's alarm,desktop_automation,massive,alarm_remove
 tell me today's events of mine,communication,massive,calendar_query
 what's was the upcoming event,communication,massive,calendar_query
 tell me upcoming event's,communication,massive,calendar_query
@@ -4700,6 +5224,8 @@ hey turn on your reminders for tomorrow's meeting at ten am,communication,massiv
 remind me of my meeting tomorrow ten in the morning,communication,massive,calendar_set
 i have a meeting tomorrow morning at ten please remind me,communication,massive,calendar_set
 remind me that i have a meeting with cassy for an ola event happening tomorrow,communication,massive,calendar_set
+please set an alarm for tomorrows meeting at seven am,desktop_automation,massive,alarm_set
+please set an alarm for tomorrow's meeting at seven am,desktop_automation,massive,alarm_set
 hey cancel all my other meetings and calls for second march as it is jim's birthday tag it as an event in your calendar,communication,massive,calendar_set
 hey olly cancel all my other meetings and calls for second march as it is jim's birthday tag it as an event in your calendar,communication,massive,calendar_set
 locate address for myrtle beach state fair,communication,massive,calendar_query
@@ -4720,6 +5246,7 @@ i have a flight to take on the fifteenth,communication,massive,calendar_set
 i need you to mark next monday,communication,massive,calendar_set
 set a event for the evening,communication,massive,calendar_set
 set bob's birthday for every june third,communication,massive,calendar_set
+wake me up every weekday at seven am,desktop_automation,massive,alarm_set
 remind me to go to the store every friday,communication,massive,calendar_set
 i need to arrange a meeting with jack,communication,massive,calendar_set
 input a meeting with jack for tuesday,communication,massive,calendar_set
@@ -4830,6 +5357,7 @@ remind me at eight am tomorrow that i have a lunch meeting at noon in the confer
 i'm going to the oar concert in paris on march twenty four,communication,massive,calendar_set
 remind me to start supper this afternoon at five,communication,massive,calendar_set
 can you let me know when it's two hundred,communication,massive,calendar_set
+set an alarm for this eight hundred p. m. this evening,desktop_automation,massive,alarm_set
 what to i have on the schedule tomorrow morning,communication,massive,calendar_query
 what does my morning look like tomorrow,communication,massive,calendar_query
 what is on my schedule for nine to eleven am tomorrow,communication,massive,calendar_query
@@ -5072,6 +5600,7 @@ can you put sunday hockey class in my calendar as recurrent event,communication,
 will you remind me to go to hockey class every sunday afternoon,communication,massive,calendar_set
 will you remind me of my next dentist appointment one day before,communication,massive,calendar_set
 can you remind me to go to dentist appointment one day before,communication,massive,calendar_set
+will you set alarm clock one day before for all gym class on my calendar,desktop_automation,massive,alarm_set
 what's my next events,communication,massive,calendar_query
 can you schedule a meeting with mr. chen on next monday six hundred p. m.,communication,massive,calendar_set
 can you send meeting invitation to mr. chen on next monday six hundred p. m.,communication,massive,calendar_set
@@ -5134,10 +5663,13 @@ add tomorrows dinner date to the calendar,communication,massive,calendar_set
 i need next weeks lunch put on the calendar,communication,massive,calendar_set
 olly i need next week's lunch put on the calendar,communication,massive,calendar_set
 i need next week's lunch put on the calendar,communication,massive,calendar_set
+set a timer at five am seven days a week,desktop_automation,massive,alarm_set
+set a reminder i need to wake up at five am every morning,desktop_automation,massive,alarm_set
 more about the concert in street pete,communication,massive,calendar_query
 where is fallout boy performing next,communication,massive,calendar_query
 please alert me a day before jeff's birthday,communication,massive,calendar_set
 send me an alert and hour before my next appointment,communication,massive,calendar_set
+please sound an alarm three hours before a scheduled event,desktop_automation,massive,alarm_set
 olly remind me about tomorrow's meeting tonight,communication,massive,calendar_set
 remind me about tomorrows meeting tonight,communication,massive,calendar_set
 remind me about tomorrow's meeting tonight,communication,massive,calendar_set
@@ -5221,6 +5753,7 @@ make march eighteen a repeating appointment for pearl's birthday,communication,m
 schedule my meeting with mr. john hopkins tomorrow one p. m. in the afternoon after lunch,communication,massive,calendar_set
 schedule my meeting with tom cruise today evening at six p. m.,communication,massive,calendar_set
 new notification for meeting in two hours,communication,massive,calendar_set
+create event with alarm for meeting in two hours,desktop_automation,massive,alarm_set
 make alarm reminder for calendar,communication,massive,calendar_set
 set alarm reminder for calendar,communication,massive,calendar_set
 remind me about calendar,communication,massive,calendar_set
@@ -5402,6 +5935,7 @@ please schedule meeting with ri at ten am on april first,communication,massive,c
 bring up calendar and schedule meeting with ri april first ten am,communication,massive,calendar_set
 set reminder for tomorrow at two p. m.,communication,massive,calendar_set
 remind me tomorrow at two p. m.,communication,massive,calendar_set
+set alarm for tomorrow at two p. m.,desktop_automation,massive,alarm_set
 schedule an event in my calendar for the pool party at jack's place this saturday,communication,massive,calendar_set
 do i have any available time for a doctor's appointment on tuesday morning,communication,massive,calendar_set
 calendar up when is my financial meeting on friday,communication,massive,calendar_query
@@ -5513,8 +6047,11 @@ how soon is my anniversary,communication,massive,calendar_query
 what date is my anniversary,communication,massive,calendar_query
 set a weekly appointment reminder,communication,massive,calendar_set
 please set a reminder in my calendar for my meeting on march twenty five,communication,massive,calendar_set
+set a repeating reminder alarm for the facebook event i have to attend on seventh april,desktop_automation,massive,alarm_set
 what reminders do i have today,communication,massive,calendar_query
 repeat my reminders from yesterday,communication,massive,calendar_query
+set an alarm for two p. m.,desktop_automation,massive,alarm_set
+set an alert for two p. m.,desktop_automation,massive,alarm_set
 what do i have planned next monday from noon to three,communication,massive,calendar_query
 remind me to pick up john from the airport tonight at eight,communication,massive,calendar_set
 remember that i need to turn in my math assignment tonight by eleven,communication,massive,calendar_set
@@ -5568,6 +6105,7 @@ could you please tell when we have to pay for car insurance,communication,massiv
 do i have any reminders on my list,communication,massive,calendar_query
 tell me what reminders i have for today,communication,massive,calendar_query
 please remind me of,communication,massive,calendar_set
+please set alarm for,desktop_automation,massive,alarm_set
 set reminder on calendar for,communication,massive,calendar_set
 remind me about my monday meeting with peter francis fifteen minutes before the meeting,communication,massive,calendar_set
 let me know when my meetings are on monday,communication,massive,calendar_set
@@ -5606,6 +6144,8 @@ remind upcoming meeting with eminem,communication,massive,calendar_set
 remind me of mondays meeting,communication,massive,calendar_set
 what is my schedule for june fourteenth two thousand and seventeen,communication,massive,calendar_query
 what time is the function of the play joy in broadway theater today,communication,massive,calendar_query
+set alarm for reminder,desktop_automation,massive,alarm_set
+olly set alarm for reminder,desktop_automation,massive,alarm_set
 remind me to call mom every tuesday at ten am,communication,massive,calendar_set
 set up a meeting with my tanya for every thursday at ten am,communication,massive,calendar_set
 remind me every morning at seven am to take my vitamins,communication,massive,calendar_set
@@ -5617,7 +6157,10 @@ set twenty first april every year as dad's birthday,communication,massive,calend
 what do i have going on next friday,communication,massive,calendar_query
 do i have anything going on tonight,communication,massive,calendar_query
 set a reminder about tomorrow's meeting at nine am,communication,massive,calendar_set
+schedule an alarm for next week's dentist appointment,desktop_automation,massive,alarm_set
+make an alarm for the meeting with bob at seven today,desktop_automation,massive,alarm_set
 make an alert for my birthday,communication,massive,calendar_set
+set an alarm for next tuesdays meeting,desktop_automation,massive,alarm_set
 remind me about tuesday meeting with client at ten am,communication,massive,calendar_set
 put a reminder in my calendar about meeting with client at ten am on tuesday,communication,massive,calendar_set
 alert me two hours before my meeting on tuesday with client happening at ten in the morning,communication,massive,calendar_set
@@ -5656,6 +6199,7 @@ read me my calendar for the month,communication,massive,calendar_query
 when are the meetings,communication,massive,calendar_query
 how many meetings have there been,communication,massive,calendar_query
 when was the last meeting,communication,massive,calendar_query
+put alarm for this meeting,desktop_automation,massive,alarm_set
 when is the party scheduled,communication,massive,calendar_query
 notify me with all events in the next one week,communication,massive,calendar_set
 what are the events coming up soon,communication,massive,calendar_set
@@ -5665,6 +6209,7 @@ hayathis daughter baby shower,communication,massive,calendar_set
 when is my daughter birthday,communication,massive,calendar_query
 when are holiday in current month,communication,massive,calendar_query
 add remainder,communication,massive,calendar_set
+add alarm,desktop_automation,massive,alarm_set
 set up the meeting with justin and katrina,communication,massive,calendar_set
 is today my brothers birthday,communication,massive,calendar_query
 add event for meeting with james,communication,massive,calendar_set
@@ -5736,6 +6281,9 @@ july three calendar,communication,massive,calendar_query
 meeting july calendar,communication,massive,calendar_query
 rahul marriage reminder,communication,massive,calendar_query
 upcoming events in calendar,communication,massive,calendar_set
+make an alarm for five p. m. on tuesday,desktop_automation,massive,alarm_set
+alarm five p. m. tuesday,desktop_automation,massive,alarm_set
+set an alarm for four p. m. tuesday,desktop_automation,massive,alarm_set
 add monas wedding even to my calendar for tuesday,communication,massive,calendar_set
 make an event reminder for monas wedding on tuesday,communication,massive,calendar_set
 event calendar monas wedding tuesday,communication,massive,calendar_set
@@ -5780,6 +6328,7 @@ make a calendar note exhibition two thousand and seventeen mass on mar twenty fi
 exhibition two thousand and seventeen mass on mar twenty five make a note of it on the corresponding date,communication,massive,calendar_set
 j.,communication,massive,calendar_set
 do add this on my calendar,communication,massive,calendar_set
+set alarm for this event reminder repeating for ten times,desktop_automation,massive,alarm_set
 make a repeating reminder for this calendar event,communication,massive,calendar_set
 what time is my project meeting at,communication,massive,calendar_query
 could you reschedule my meeting,communication,massive,calendar_query
