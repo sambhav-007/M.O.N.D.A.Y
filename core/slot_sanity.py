@@ -72,6 +72,16 @@ _PATH_SLOTS = {"path", "file", "filename", "folder", "directory"}
 #: "tell me the price of the stock market today" is a topic, not a company.
 _MAX_SYMBOL_WORDS = 3
 
+#: Slots that name a person. Checked by rule 5 below, which is scoped to these
+#: rather than to acting skills in general: `remember my drink is a coffee` is
+#: an acting skill with a slot that legitimately opens with an article. A name
+#: is not.
+_PERSON_SLOTS = {"name", "who", "person", "contact"}
+
+#: Articles. "Call me an uber" and "call me Sam" are the same pattern and
+#: different sentences; the article is what separates them.
+_ARTICLES = {"a", "an", "the"}
+
 #: Rule 2 only applies to commands that opened as a question, because "i"
 #: legitimately opens a remembered fact ("remember i park in bay 4").
 _QUESTION_OPENERS = {"how", "what", "why", "when", "where", "which", "who"}
@@ -154,6 +164,21 @@ def implausible(
                     f"{name}={value!r} names no file — no extension, no path, "
                     f"and nothing by that name exists"
                 )
+
+        # ── 5. an article where a person's name belongs ─────────────────────
+        # `call me an uber to the airport` matched `call me {name}` and set the
+        # user's name to "an uber to the airport". Found by the first run of
+        # `reports/scoreboard.py`, which is what that file is for.
+        # `len(words) > 1` for the same reason rule 1 has it: a slot that is
+        # exactly "the" is a parse artifact the handler diagnoses better than
+        # this can. `the number is +91...` captured name="the", and rejecting it
+        # here replaced `save_contact_number`'s "whose number is that?" with a
+        # memory lookup that found nothing.
+        if name.lower() in _PERSON_SLOTS and len(words) > 1 and lowered[0] in _ARTICLES:
+            return (
+                f"{name}={value!r} starts with '{lowered[0]}' — that is a thing, "
+                f"not somebody's name"
+            )
 
         # ── 4. a ticker that is a sentence ──────────────────────────────────
         if name.lower() == "symbol" and len(words) > _MAX_SYMBOL_WORDS:

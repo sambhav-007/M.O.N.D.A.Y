@@ -31,6 +31,7 @@ from core.skills_comms import register_comms_skills
 from core.skills_live import register_live_skills
 from core.skills_system import register_system_skills
 from core.skills_desktop import register_desktop_skills
+from core.skills_documents import register_document_skills
 from core.skills_timers import register_timer_skills
 
 
@@ -914,5 +915,6 @@ def build_builtin_registry(planner: Any) -> SkillRegistry:
     register_comms_skills(registry, planner)     # tranche 6 — email, WhatsApp
     register_timer_skills(registry, planner)     # tranche 7 — timers, media keys
     register_desktop_skills(registry, planner)   # tranche 8 — clipboard, windows, files
+    register_document_skills(registry, planner)  # tranche 9 — document Q&A
 
     return registry

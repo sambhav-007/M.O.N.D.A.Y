@@ -61,6 +61,12 @@ class _ReadOnlySkill:
     ({"path": "my last email and reply to it"}, "summarise my last email and reply to it", "names no file"),
     # 4. a ticker that is a sentence
     ({"symbol": "the stock market today please"}, "price of the stock market today please", "at most 3"),
+    # 5. an article where a person's name belongs. `call me {name}` is a fair
+    # pattern and "call me an uber" is a fair sentence; they mean different
+    # things by "call", and the skill ACTS — it writes the user's name.
+    # Found by the first run of reports/scoreboard.py.
+    ({"name": "an uber to the airport"}, "call me an uber to the airport", "not somebody's name"),
+    ({"name": "a taxi"}, "call me a taxi", "not somebody's name"),
 ])
 def test_a_broken_parse_is_named_as_broken(slots, command, fragment):
     reason = implausible(_Skill, slots, command)
@@ -88,6 +94,11 @@ def test_a_broken_parse_is_named_as_broken(slots, command, fragment):
     ({"symbol": "tata motors"}, "tata motors share price"),
     # A single word that happens to be a pronoun is not evidence of anything.
     ({"title": "me"}, "schedule me at 9"),
+    # A real name, and a value that legitimately opens with an article — rule 5
+    # is scoped to person slots for exactly this reason.
+    ({"name": "Sam"}, "call me Sam"),
+    ({"name": "Sambhav"}, "my name is Sambhav"),
+    ({"key": "my drink", "value": "a coffee"}, "remember my drink is a coffee"),
 ])
 def test_a_good_parse_is_left_alone(slots, command):
     assert implausible(_Skill, slots, command) is None, f"{slots} was rejected wrongly"
