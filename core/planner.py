@@ -59,6 +59,7 @@ from core.help import (
     is_help_request,
 )
 from core.llm import LlmStage
+from core.llm_remote import RemoteAnswerStage
 from core.router import Router
 from core.skills_builtin import build_builtin_registry
 from core.tier2 import Tier2Mixin, parse_confirmation
@@ -234,7 +235,14 @@ class MasterPlanner(EmailMixin, ContactMixin, Tier2Mixin):
         # machine with no Ollama pays nothing for it beyond one refused socket
         # connection on the first unrouted command.
         registry = build_builtin_registry(self)
-        self.router = Router(registry, llm=LlmStage(registry))
+        self.router = Router(
+            registry,
+            llm=LlmStage(registry),
+            # Stage 4 is constructed unconditionally and reports itself
+            # unavailable without a key, so a machine with no hosted model pays
+            # nothing for it and behaves exactly as it did before Phase 13.
+            remote=RemoteAnswerStage(),
+        )
         self.last_routing_decision = None
         #: Set while a plan is running, so a step is never split again.
         self._in_multi_step = False
@@ -784,10 +792,16 @@ class MasterPlanner(EmailMixin, ContactMixin, Tier2Mixin):
         """
         return AgentResult.ok(
             f"💭 {decision.answer}",
-            evidence=ModelAnswered(model=decision.model, host="local"),
+            # `host` is how a reader tells an answer that stayed on this
+            # machine from one that did not, without reading the configuration.
+            evidence=ModelAnswered(
+                model=decision.model,
+                host="remote" if decision.stage == "remote_answer" else "local",
+            ),
             data={
-                "intent": "llm_answer",
+                "intent": decision.stage,
                 "generated": True,
+                "host": "remote" if decision.stage == "remote_answer" else "local",
                 "model": decision.model,
                 "routing_reason": decision.reason,
                 # The tick-mark stripping in `core/speech.py` would otherwise
@@ -856,7 +870,7 @@ class MasterPlanner(EmailMixin, ContactMixin, Tier2Mixin):
         if not decision.routed:
             # Stage 3 may answer instead of choosing a skill. Presented as
             # generated text with `ModelAnswered` evidence — never as work done.
-            if decision.stage == "llm_answer" and decision.answer:
+            if decision.stage in ("llm_answer", "remote_answer") and decision.answer:
                 return self._answer_from_model(decision)
             return self._answer_unrouted(command, intent, decision)
 

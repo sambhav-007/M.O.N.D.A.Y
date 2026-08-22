@@ -1142,6 +1142,47 @@ comparison is per intent, and the alarm rows went from absent to routed.
 
 **921 → 973 passing.**
 
+### 2026-08-18 (last) — tranche 2, document Q&A, the scoreboard, stage 4
+
+Four pieces, each committed on its own.
+
+**Phase 11 tranche 2** — clipboard, open windows, find-a-file. No coverage
+number to move (MASSIVE is a voice corpus; nobody dictates "copy that to the
+clipboard"), so the justification is different and is written down rather than
+assumed: this is a *desktop* assistant. A clipboard write is read back before it
+is called a success, a window focus Windows refuses is reported as refused, and
+a file search that stopped at its cap says so. Its own regression check found
+that **"what processes are running" matched no pattern** — every one put the
+verb last, the same word-order lesson the volume patterns taught.
+
+**Phase 12, first slice** —  and
+ were fully implemented and **unreachable**. No skill
+exposed either. That is a different defect from the ones found here usually:
+nothing lied, a capability had no entrance.  and
+ open it, and both say the passages are *retrieved, not
+reasoned over*.
+
+**Phase 14 — the scoreboard.** , one table, because the
+numbers trade against each other: Phase 9 raised precision and coverage fell;
+Phase 11 added a capability and coverage stayed flat because the denominator
+grew. It found  -> **set_user_name** on its
+first run — an acting skill taking "an uber to the airport" as the user's name.
+Slot sanity gained rule 5. Precision 75% -> 88%.
+
+**Phase 13 — stage 4.** A hosted model, off without a key, reached only when
+every other stage declined. **It answers; it does not act** — never offered the
+tool schema, its reply never parsed as a skill — so the containment is the
+absence of a code path rather than a filter. Hosted function-calling was
+deliberately not built: it would need a second schema translation validated
+against a provider this machine cannot exercise, which is how the *last* hosted
+path stayed broken for weeks.
+
+**Two things rule 5 taught, in one day.** It first rejected  (name="the"), which replaced 's "whose number is
+that?" with a memory lookup finding nothing. It now requires more than one word
+— the guard rule 1 already had, for the same reason.
+
+**1,038 passing. Scoreboard: coverage 35.2%, precision 88%, 68 skills.**
+
 ## 9. WhatsApp (added 2026-08-08)
 
 WhatsApp has **no API a desktop script may send through**. The deep link

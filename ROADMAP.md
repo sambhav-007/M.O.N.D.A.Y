@@ -582,6 +582,23 @@ a capability is only worth adding if it can be done **honestly** — media keys 
 **Ship them in tranches of five, re-running the coverage report each time.** The
 number moves or the tranche did not work.
 
+### Phase 12 — Memory that compounds 🚧 **FIRST SLICE DONE 2026-08-18**
+
+> **The retrieval was already built and could not be reached.**
+> `DocumentAgent.rag_search` and `ask_document_question` had been implemented for
+> weeks with no skill exposing either, so nothing a user could type arrived
+> there. A different defect from the ones this repository usually finds —
+> nothing lied, a capability simply had no entrance — and worth naming, because
+> the registry is the only map of what MONDAY can do.
+>
+> `ask_document` and `search_documents` open it. Both quote their sources, and
+> both say the passages are **retrieved, not reasoned over**: "your report says
+> X" and "the most relevant passage is X" are different claims, and without a
+> model only the second is true.
+>
+> **Still to do in this phase:** summarising finished conversations into durable
+> notes, so "what did we decide last week" works.
+
 ### Phase 12 — Memory that compounds
 
 Six turns of context and a key/value table is not memory; it is a scratchpad.
@@ -589,6 +606,30 @@ Six turns of context and a key/value table is not memory; it is a scratchpad.
 own documents behind retrieval — `DocumentAgent.rag_search` already exists and
 already does the hard part. The goal is "what did we decide about the report last
 week" answering correctly, from evidence, with the document named.
+
+### Phase 13 — A fourth stage, for the questions that need one ✅ **DONE 2026-08-18**
+
+> `core/llm_remote.py`. Reached only when every stage before it declined, off
+> without `GEMINI_API_KEY`, and switchable off with `MONDAY_REMOTE_LLM=off` even
+> with one.
+>
+> **It answers; it does not act** — and that is the design rather than a
+> limitation to lift later. Stage 4 is never offered the tool schema, its reply
+> is never parsed as a skill name, and so the containment argument is the
+> *absence of a code path* rather than a filter that has to keep holding.
+> `tests/test_remote_stage.py` asserts that absence directly, including a scan
+> of the module for the tokens that would indicate a route to an action.
+>
+> Implementing hosted function-calling instead would have meant a second
+> tool-schema translation validated against a provider this machine cannot
+> exercise — and "it never runs here" is a claim about the environment, not the
+> code. That is exactly how the *previous* hosted path stayed broken for weeks.
+>
+> It goes through `TriModelCognitiveEngine` rather than a second HTTP client, so
+> one place talks to a hosted model — the place that already had the credential
+> handling, the header-not-query-string fix and the falsy
+> `CognitiveResponseDict`. Answers carry `ModelAnswered(host="remote")`, so a
+> reader can tell an answer that left the machine from one that did not.
 
 ### Phase 13 — A fourth stage, for the questions that need one
 
@@ -603,6 +644,21 @@ done (§7.2); Tier 2 stays unreachable (§7.3); and the offline path still answe
 the demo with the network off (§7.1). One provider, one code path — the last
 thing this repository needs is a second `TriModelCognitiveEngine`, which is
 exactly what was deleted on 2026-08-18.
+
+### Phase 14 — Make "smarter" a number ✅ **DONE 2026-08-18**
+
+> `reports/scoreboard.py` — coverage, precision, capability count and the suite
+> in one table, because the numbers **trade against each other** and a single
+> headline would hide it. Phase 9 raised precision and coverage went *down*;
+> Phase 11 added a capability and coverage stayed flat because the denominator
+> grew. Either number alone tells a wrong story.
+>
+> It earned itself on the first run by finding `call me an uber to the airport`
+> → `set_user_name`, an acting skill taking a mangled slot. Precision 75% → 88%.
+>
+> **Task success is deliberately absent** rather than faked: it needs a fixture
+> that can exercise irreversible skills safely, and a weak version invented to
+> fill the row would be worse than an honestly empty one.
 
 ### Phase 14 — Make "smarter" a number
 

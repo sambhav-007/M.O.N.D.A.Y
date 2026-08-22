@@ -89,8 +89,18 @@ class RoutingDecision:
 class Router:
     """Chooses a skill for a command. Chooses only — running it is the caller's."""
 
-    def __init__(self, registry: SkillRegistry, llm: Optional[Any] = None) -> None:
+    def __init__(
+        self,
+        registry: SkillRegistry,
+        llm: Optional[Any] = None,
+        remote: Optional[Any] = None,
+    ) -> None:
         self.registry = registry
+        #: Stage 4 (ROADMAP Phase 13). A hosted model that **answers only** — it
+        #: is never offered the tool schema and its reply is never read as a
+        #: skill, so there is no path from here to an action to guard. Off
+        #: without a key, and then the cascade ends exactly where it did before.
+        self.remote = remote
         #: Stage 3. Optional by construction: `None` means the cascade ends at
         #: stage 2 exactly as it did before, which is also what happens when no
         #: Ollama server is running.
@@ -232,6 +242,26 @@ class Router:
             if choice is None:
                 detail = getattr(self.llm, "unavailable_reason", "")
                 reason = f"{reason}; stage 3 declined" + (f" ({detail})" if detail else "")
+
+        # ── Stage 4: a hosted model, if the user configured one ──────────────
+        # Last of all, and only for a *question* — every stage above has
+        # declined, so nothing it says can displace a pattern, a classification
+        # or a local model. It cannot name a skill because it is never asked
+        # for one.
+        if self.remote is not None and self.remote.available():
+            if emit is not None:
+                emit("consulting_remote", {"model": getattr(self.remote, "model", "")})
+            text = self.remote.answer(command, memories=memories, history=history)
+            if text:
+                return RoutingDecision(
+                    stage="remote_answer",
+                    intent=intent,
+                    confidence=confidence,
+                    reason=f"{reason}; hosted {self.remote.model} answered",
+                    answer=text,
+                    model=self.remote.model,
+                )
+            reason = f"{reason}; stage 4 declined"
 
         return RoutingDecision(
             stage="fallback", intent=intent, confidence=confidence, reason=reason
