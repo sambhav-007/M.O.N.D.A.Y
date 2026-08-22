@@ -138,6 +138,13 @@ def register_system_skills(registry: SkillRegistry, planner: Any) -> None:
             "[(what is|whats|what's)] running",
             "running (processes|programs|apps)",
             "task manager",
+            # Word order again, the same lesson the volume patterns taught:
+            # every pattern above puts the verb last, and "what processes are
+            # running" — which is how people ask — matched none of them.
+            "[(what|which)] (processes|programs|apps|tasks) are running",
+            "[(what|which)] (processes|programs|apps|tasks) [(do i have)] running",
+            "[(what is|whats|what's)] running [(right now|on my pc|on my computer)]",
+            "[(show|tell)] me [(what|which)] (processes|programs|apps) are running",
         ],
         handler=list_processes,
         tier=1,

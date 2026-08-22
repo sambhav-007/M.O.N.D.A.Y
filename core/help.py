@@ -120,6 +120,10 @@ Type these in plain English. Every example below works as written.
    Timers ring only while I'm running — I'll tell you if one
    passed while I was closed.
 
+🖱️  CLIPBOARD, WINDOWS & FILES
+   what is on my clipboard       copy <text> to the clipboard
+   what windows are open         switch to chrome
+   find a file called notes      searches your folders, not C:
 🔍  DIAGNOSTICS
    history                  the action audit log
    /help                    this menu
