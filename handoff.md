@@ -1152,36 +1152,49 @@ clipboard"), so the justification is different and is written down rather than
 assumed: this is a *desktop* assistant. A clipboard write is read back before it
 is called a success, a window focus Windows refuses is reported as refused, and
 a file search that stopped at its cap says so. Its own regression check found
-that **"what processes are running" matched no pattern** — every one put the
-verb last, the same word-order lesson the volume patterns taught.
+that **"what processes are running" matched no pattern** — every one of
+`list_processes`'s patterns put the verb last, which is the same word-order
+lesson the volume patterns taught.
 
-**Phase 12, first slice** —  and
- were fully implemented and **unreachable**. No skill
-exposed either. That is a different defect from the ones found here usually:
-nothing lied, a capability had no entrance.  and
- open it, and both say the passages are *retrieved, not
-reasoned over*.
+**Phase 12, first slice** — `DocumentAgent.rag_search` and
+`ask_document_question` were fully implemented and **unreachable**. No skill
+exposed either, so nothing a user could type arrived there. That is a different
+defect from the ones found here usually: nothing lied, a capability simply had
+no entrance, and the registry is the only map of what MONDAY can do.
+`ask_document` and `search_documents` open it, and both say the passages are
+*retrieved, not reasoned over*.
 
-**Phase 14 — the scoreboard.** , one table, because the
-numbers trade against each other: Phase 9 raised precision and coverage fell;
-Phase 11 added a capability and coverage stayed flat because the denominator
-grew. It found  -> **set_user_name** on its
-first run — an acting skill taking "an uber to the airport" as the user's name.
-Slot sanity gained rule 5. Precision 75% -> 88%.
+**Phase 14 — the scoreboard.** `reports/scoreboard.py`, one table, because the
+numbers trade against each other: Phase 9 raised precision and coverage fell
+(35.3% → 35.1%); Phase 11 added a capability and coverage stayed flat because
+549 rows entered the denominator. It earned itself on the first run by finding
+`call me an uber to the airport` → **`set_user_name`** — an acting skill taking
+"an uber to the airport" as the user's name. Slot sanity gained rule 5, an
+article where a person's name belongs. Precision 75% → 88%.
 
-**Phase 13 — stage 4.** A hosted model, off without a key, reached only when
-every other stage declined. **It answers; it does not act** — never offered the
-tool schema, its reply never parsed as a skill — so the containment is the
-absence of a code path rather than a filter. Hosted function-calling was
-deliberately not built: it would need a second schema translation validated
-against a provider this machine cannot exercise, which is how the *last* hosted
-path stayed broken for weeks.
+**Phase 13 — stage 4.** `core/llm_remote.py`: a hosted model, off without
+`GEMINI_API_KEY`, reached only when every other stage has declined. **It
+answers; it does not act** — never offered the tool schema, its reply never
+parsed as a skill name — so the containment is the *absence of a code path*
+rather than a filter that has to hold. Hosted function-calling was deliberately
+not built: it would need a second schema translation validated against a
+provider this machine cannot exercise, which is how the *previous* hosted path
+stayed broken for weeks. Every test for it runs with a stubbed key, because a
+machine with no key is exactly where an unexercised path hides.
 
-**Two things rule 5 taught, in one day.** It first rejected  (name="the"), which replaced 's "whose number is
-that?" with a memory lookup finding nothing. It now requires more than one word
-— the guard rule 1 already had, for the same reason.
+**Rule 5 taught two things in one day.** It first rejected `the number is
++91…` (name="the"), which replaced `save_contact_number`'s "whose number is
+that?" with a memory lookup that found nothing. It now requires more than one
+word — the guard rule 1 already had, for the same reason.
 
-**1,038 passing. Scoreboard: coverage 35.2%, precision 88%, 68 skills.**
+**One process note worth keeping.** The commit that recorded all this was
+written with `py -3.12 -c "…"` whose payload contained backticks, and Git Bash
+command-substituted every one of them, silently deleting each `identifier` from
+the text. `memory/shell-payload-mangling` says to write patch scripts to a file;
+this is the second time that lesson has been paid for.
+
+**1,038 passing. Scoreboard: coverage 35.2%, precision 88%, 68 skills, 57 of
+them offline.**
 
 ## 9. WhatsApp (added 2026-08-08)
 
