@@ -24,12 +24,14 @@ trade is the interesting part:
 
 A single headline number would have hidden both.
 
-What is deliberately not here
------------------------------
-**Task success** — whether a routed command then *worked* end to end. It needs a
-fixture that can run irreversible skills safely, and inventing a weak version to
-fill the row would be worse than the row being honestly absent. It is the next
-thing to build.
+Task success
+------------
+Added 2026-08-18 by `reports/task_success.py`, and it was the row worth waiting
+for: on its first run it found four reads — battery, health, my ip, the process
+list — reporting `success: True` with **no evidence at all**. They were not
+lying; each really does read psutil or a socket. They simply could not prove it,
+having returned bare dicts that never passed through `AgentResult`, which is the
+one thing that makes an unwitnessed success unrepresentable.
 """
 
 from __future__ import annotations
@@ -151,6 +153,21 @@ def measure_suite() -> Dict[str, Any]:
     }
 
 
+def measure_task_success(with_network: bool = False) -> Dict[str, Any]:
+    """Whether a routed command then *worked*. Runs the skills, safely."""
+    from reports.task_success import run
+
+    rows = run(with_network)
+    measured = [r for r in rows if r["outcome"] != "skipped"]
+    passed = [r for r in measured if r["outcome"] == "passed"]
+    failed = [r["command"] for r in measured if r["outcome"] == "FAILED"]
+    return {
+        "value": f"{len(passed) / len(measured):.0%}" if measured else "—",
+        "detail": f"{len(passed)}/{len(measured)} tasks completed end to end"
+                  + (f"; failed: {', '.join(failed)}" if failed else ""),
+    }
+
+
 def measure_selection() -> Dict[str, Any]:
     """Stage 3's skill-selection accuracy. Needs a running model, so opt-in."""
     from reports.stage3_selection import load_cases, run
@@ -184,6 +201,8 @@ def main(argv=None) -> None:
                         help="also score stage 3, which needs Ollama running")
     parser.add_argument("--no-suite", action="store_true",
                         help="skip the test suite (the slow row)")
+    parser.add_argument("--with-network", action="store_true",
+                        help="include the task-success entries that need the network")
     args = parser.parse_args(argv)
 
     planner = _planner()
@@ -191,6 +210,7 @@ def main(argv=None) -> None:
         ("Coverage", measure_coverage(planner)),
         ("Precision", measure_precision(planner)),
         ("Capability", measure_skills(planner)),
+        ("Task success", measure_task_success(args.with_network)),
     ]
     if not args.no_suite:
         results.append(("Suite", measure_suite()))
@@ -221,10 +241,10 @@ def main(argv=None) -> None:
         lines.append(f"| {name} | **{row['value']}** | {row['detail']} |")
     lines += [
         "",
-        "**Not measured here: task success** — whether a routed command then",
-        "worked end to end. It needs a fixture that can exercise irreversible",
-        "skills safely, and a weak version invented to fill the row would be",
-        "worse than the row being honestly absent.",
+        "**Task success** runs each command and checks the outcome, not the",
+        "routing decision — see `reports/task_success.md` for the set and for",
+        "what it deliberately does not measure (sending mail, killing processes,",
+        "anything that cannot be run twice safely).",
         "",
     ]
     (REPORTS / "scoreboard.md").write_text("\n".join(lines), encoding="utf-8")

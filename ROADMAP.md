@@ -582,7 +582,7 @@ a capability is only worth adding if it can be done **honestly** — media keys 
 **Ship them in tranches of five, re-running the coverage report each time.** The
 number moves or the tranche did not work.
 
-### Phase 12 — Memory that compounds 🚧 **FIRST SLICE DONE 2026-08-18**
+### Phase 12 — Memory that compounds ✅ **DONE 2026-08-18**
 
 > **The retrieval was already built and could not be reached.**
 > `DocumentAgent.rag_search` and `ask_document_question` had been implemented for
@@ -596,8 +596,18 @@ number moves or the tranche did not work.
 > X" and "the most relevant passage is X" are different claims, and without a
 > model only the second is true.
 >
-> **Still to do in this phase:** summarising finished conversations into durable
-> notes, so "what did we decide last week" works.
+> **The second slice** is `core/conversation_notes.py`: `recall_conversation`
+> ("what did we talk about last week") reads the turns already in `memories.db`
+> scoped to the window named, and `note_conversation` condenses a stretch into
+> one durable row under its own topic.
+>
+> **Both quote; neither generates.** The condensing is TF-IDF sentence
+> selection, so every line kept was actually said. A *written* summary of a
+> conversation is a claim about what was agreed, produced by something that was
+> not party to the agreement — the shape of claim this repository has spent
+> every commit removing. Nothing fires automatically either: an assistant that
+> silently distils your conversations into stored notes is doing something you
+> did not ask for with words you did not know were being kept.
 
 ### Phase 12 — Memory that compounds
 
@@ -656,9 +666,17 @@ exactly what was deleted on 2026-08-18.
 > It earned itself on the first run by finding `call me an uber to the airport`
 > → `set_user_name`, an acting skill taking a mangled slot. Precision 75% → 88%.
 >
-> **Task success is deliberately absent** rather than faked: it needs a fixture
-> that can exercise irreversible skills safely, and a weak version invented to
-> fill the row would be worse than an honestly empty one.
+> **Task success landed the same day** (`reports/task_success.py`) once the
+> safety question was answered rather than dodged: every task is safe to run
+> repeatedly, Tier-2 skills are measured by their **gate** rather than their
+> effect, network tasks are opt-in, and what cannot be checked safely is listed
+> as unmeasurable with the reason instead of being dropped.
+>
+> It earned the wait on its first run, finding four reads — battery, health, my
+> ip, the process list — reporting `success: True` with **no evidence at all**.
+> None was lying; each really reads psutil or a socket. They returned bare dicts
+> that never passed through `AgentResult`, which is the one thing that makes an
+> unwitnessed success unrepresentable. **20/20** now.
 
 ### Phase 14 — Make "smarter" a number
 

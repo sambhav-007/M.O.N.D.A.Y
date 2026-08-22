@@ -428,19 +428,21 @@ class ComputerAgent:
         """Returns real-time laptop battery percentage and power plug state."""
         battery = psutil.sensors_battery()
         if battery is None:
-            return {"success": True, "has_battery": False, "message": "✓ Desktop PC connected to AC power (No battery)."}
+            return AgentResult.ok(
+                "✓ Desktop PC connected to AC power (No battery).",
+                evidence=SystemQuery(source="psutil.sensors_battery", detail="no battery present"),
+                data={"has_battery": False},
+            ).as_dict()
         
         pct = int(battery.percent)
         plugged = battery.power_plugged
         state = "Plugged in (Charging)" if plugged else "Discharging"
         log_action("check_battery", f"{pct}%", 1, "success", self.name)
-        return {
-            "success": True,
-            "has_battery": True,
-            "percentage": pct,
-            "power_plugged": plugged,
-            "message": f"✓ Battery is at {pct}% ({state}).",
-        }
+        return AgentResult.ok(
+            f"✓ Battery is at {pct}% ({state}).",
+            evidence=SystemQuery(source="psutil.sensors_battery", detail=f"{pct}%, plugged={plugged}"),
+            data={"has_battery": True, "percentage": pct, "power_plugged": plugged},
+        ).as_dict()
 
     def get_network_info(self) -> Dict[str, Any]:
         """Returns local IP address and network status."""
@@ -452,11 +454,14 @@ class ComputerAgent:
             local_ip = "127.0.0.1"
 
         log_action("get_network_info", local_ip, 1, "success", self.name)
-        return {
-            "success": True,
-            "local_ip": local_ip,
-            "message": f"✓ Local IP Address: {local_ip}",
-        }
+        return AgentResult.ok(
+            f"✓ Local IP Address: {local_ip}",
+            # The source matters here more than most: this reads the machine's
+            # own adapters, and the defect it replaced looked up a *public* IP
+            # from a third party. The evidence says which one happened.
+            evidence=SystemQuery(source="socket.gethostbyname", detail=hostname),
+            data={"local_ip": local_ip, "hostname": hostname},
+        ).as_dict()
 
     def get_system_health(self) -> Dict[str, Any]:
         """
@@ -466,8 +471,13 @@ class ComputerAgent:
         mem = psutil.virtual_memory()
         disk = psutil.disk_usage("/")
 
-        return {
-            "success": True,
+        return AgentResult.ok(
+            f"CPU: {cpu_pct}% | RAM: {mem.percent}% | Disk Free: {round(disk.free / (1024**3), 1)}GB",
+            evidence=SystemQuery(
+                source="psutil.cpu_percent/virtual_memory/disk_usage",
+                detail=f"cpu {cpu_pct}%, ram {mem.percent}%, disk {disk.percent}%",
+            ),
+            data={
             "platform": sys.platform,
             "cpu_usage_percent": cpu_pct,
             "memory": {
@@ -480,8 +490,8 @@ class ComputerAgent:
                 "free_gb": round(disk.free / (1024 ** 3), 1),
                 "percent": disk.percent,
             },
-            "message": f"CPU: {cpu_pct}% | RAM: {mem.percent}% | Disk Free: {round(disk.free / (1024**3), 1)}GB",
-        }
+            },
+        ).as_dict()
 
     def list_running_processes(self, limit: int = 15) -> Dict[str, Any]:
         """Lists top system processes sorted by RAM memory usage."""
@@ -496,15 +506,23 @@ class ComputerAgent:
                     "cpu_percent": round(p.info['cpu_percent'] or 0.0, 1),
                 })
             log_action("list_processes", f"top_{limit}", 1, "success", self.name)
-            return {
-                "success": True,
-                "process_count": len(processes),
-                "processes": processes,
-                "top_processes": processes,
-                "message": f"✓ Retrieved top {len(processes)} active system processes.",
-            }
+            return AgentResult.ok(
+                f"✓ Retrieved top {len(processes)} active system processes.",
+                evidence=SystemQuery(
+                    source="psutil.process_iter",
+                    detail=f"{len(processes)} processes by memory",
+                ),
+                data={
+                    "process_count": len(processes),
+                    "processes": processes,
+                    "top_processes": processes,
+                },
+            ).as_dict()
         except Exception as e:
-            return {"success": False, "error": str(e)}
+            return AgentResult.failed(
+                f"I couldn't read the process list: {e}",
+                error="PROCESS_LIST_FAILED",
+            ).as_dict()
 
     def terminate_process(self, process_name_or_pid: str | int, user_approved: bool = False) -> Dict[str, Any]:
         """Terminates target process by PID or process name (Tier-2 security gated)."""

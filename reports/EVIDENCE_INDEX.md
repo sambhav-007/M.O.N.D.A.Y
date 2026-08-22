@@ -84,6 +84,7 @@ Chapter: **`reports/CLO01_ethics_and_safety.md`**
 | **End-to-end routing accuracy** — which handler a command reaches | `reports/routing_evidence.md`, `reports/routing_accuracy.csv` | `py -3.12 -m reports.routing_evidence` |
 | **Routing coverage on 10,631 real utterances** (Amazon MASSIVE), per capability | `reports/massive_coverage.md` | `py -3.12 -m reports.massive_coverage` |
 | **The scoreboard** — coverage, precision, capability and the suite in one table | `reports/scoreboard.md` | `py -3.12 -m reports.scoreboard` |
+| **Task success** — whether a routed command then *worked*, run for real | `reports/task_success.md` | `py -3.12 -m reports.task_success` |
 | Clustering: K-Means vs Agglomerative vs DBSCAN, silhouette | `reports/figures/2_3_pca_clusters.png` | `py -3.12 -m ml.memory_clustering` |
 | Notebooks | `notebooks/2_1_intent_classifier.ipynb`, `notebooks/2_3_memory_clustering.ipynb` | — |
 

@@ -124,6 +124,12 @@ Type these in plain English. Every example below works as written.
    what is on my clipboard       copy <text> to the clipboard
    what windows are open         switch to chrome
    find a file called notes      searches your folders, not C:
+🗒️  DOCUMENTS & CONVERSATION
+   what does report.pdf say about X   answers from inside a file
+   search my documents for X          across a folder, with sources
+   what did we talk about today       quotes past exchanges
+   make a note of this conversation   saves a durable note
+
 🔍  DIAGNOSTICS
    history                  the action audit log
    /help                    this menu

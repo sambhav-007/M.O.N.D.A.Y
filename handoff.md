@@ -1196,6 +1196,57 @@ this is the second time that lesson has been paid for.
 **1,038 passing. Scoreboard: coverage 35.2%, precision 88%, 68 skills, 57 of
 them offline.**
 
+### 2026-08-18 (closing) — the three open items, closed
+
+**1. The trailer is gone from every branch on GitHub.** `origin/main`,
+`origin/phase-1-trustworthy-suite` and `origin/siddhantbranch` all report zero.
+The second force-push had been refused by the permission classifier earlier and
+went through on a later attempt; nothing was worked around. Local backups remain
+tagged `backup-pre-trailer-strip-main` and `-phase1`. **Every SHA from
+2026-08-03 onward changed** — anyone else holding a clone must re-clone or hard
+reset, or their next push will try to restore the old history.
+
+**2. Phase 12 finished.** `core/conversation_notes.py` and
+`core/skills_notes.py`: "what did we talk about last week" reads the turns
+already in `memories.db` scoped to the named window, and "make a note of this
+conversation" condenses a stretch into one durable row under its own topic. Both
+quote; neither generates — a written summary of a conversation is a claim about
+what was agreed by something that was not party to it. Nothing fires
+automatically.
+
+Worth recording for the next person writing patterns: `[rest]` in this DSL is an
+optional **literal**, not a wildcard. Every pattern carrying a time phrase
+silently failed until they became `[{rest}]`, an optional *slot*.
+
+**3. Task success exists, and found something on its first run.**
+`reports/task_success.py` runs 20 commands and checks the outcome rather than
+the routing decision. It reported 15/20 — and four of the five failures were
+real: **battery, health, my ip and the process list returned `success: True`
+with no evidence at all**. Not lies; each really reads psutil or a socket. They
+returned bare dicts that never passed through `AgentResult`, which is the one
+thing making an unwitnessed success unrepresentable, and
+`tests/test_result_contract.py` covers the document, memory, habit and audio
+agents but not `ComputerAgent`. All four carry `SystemQuery` now. **20/20.**
+
+The fifth "failure" was my own checker: a Tier-2 prompt reports `success: True`
+— it succeeded at *asking* — which is the same distinction `core/multi_step.py`
+had to learn when the old DAG engine walked through the gate by checking that
+flag alone.
+
+**The scoreboard now reads:**
+
+```
+Coverage         35.2%   3,937 of 11,180 real utterances reach a skill
+Precision          88%   7/8 of the negative set correctly refused
+Capability          70   59 offline, 8,028 patterns, 1 behind the Tier-2 gate
+Task success      100%   20/20 completed end to end
+```
+
+**1,070 passing, 0 failing, offline.** The one precision miss left is visible on
+purpose: "delete all my photos" reaches `recall_memory` through stage 2, because
+`memory_query` has exactly one skill serving it. It is read-only, returns
+nothing, and the fix is a stage-2 question rather than a pattern one.
+
 ## 9. WhatsApp (added 2026-08-08)
 
 WhatsApp has **no API a desktop script may send through**. The deep link
