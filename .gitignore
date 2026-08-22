@@ -36,6 +36,12 @@ ui/_monday_ref_22k.wav
 # in agents/comms_agent.py create it on demand when absent.
 data/calendar.json
 
+# Timer/alarm store — runtime state, written whenever a timer is set, and the
+# same class of churn as data/calendar.json above. A fresh clone should start
+# with no timers pending, not with whoever committed last. core/timers.py
+# creates it on demand.
+data/timers.json
+
 # Python runtime & byte-code
 __pycache__/
 *.py[cod]
