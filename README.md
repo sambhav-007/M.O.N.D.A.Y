@@ -487,20 +487,6 @@ names the two that are real.
 
 ---
 
-## Team
-
-| Name | Role | Speciality |
-|------|------|------------|
-| **Siddhant Bhatia** | Founder & Lead Architect | Core vision, coordination |
-| **Sambhav Sehgal** | AI & Intelligence Lead | Models, reasoning, CLO04 |
-| **Samarth Sharma** | ML Engineer | Neural systems, CLO03/05 |
-| **Shivansh Chandel** | Infrastructure & Platform | Security, distribution |
-
-**Course Coordinator**: Dr. Priyanka Gupta
-**Session**: July–December 2026
-
----
-
 ## License
 
 MIT License — see [LICENSE](LICENSE) for details.
