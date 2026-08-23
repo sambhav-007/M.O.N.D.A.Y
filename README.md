@@ -22,6 +22,8 @@ M.O.N.D.A.Y. is a multi-agent AI assistant built around **five classical ML comp
 
 This repository contains the complete Python ML backend, the multi-agent runtime, and the WebGL desktop shell.
 
+Latest updates (2026-08-23): added an optional hosted stage-4 model (answers but cannot act), enhanced memory with conversation notes and task-success markers, new desktop skills (clipboard, open-windows, timers/alarms), reports scoreboard; removed team & course coordinator sections from this README.
+
 ---
 
 ## The Five ML Components
@@ -380,7 +382,9 @@ Written down deliberately, so nothing in this README claims more than the code d
 | Result contract | `core/contracts.py` — a handler may only claim success if it carries evidence of what it did. All 11 agents route through it |
 | Skill router | `core/router.py` — patterns → classifier → honest refusal. **The substring chain is gone**: `_dispatch_to_agent` was ~520 lines and is now four steps. Routing accuracy 1.000 (123/123), 51 skills, 2,271 patterns — [`reports/routing_evidence.md`](reports/routing_evidence.md) |
 | News and share prices | `latest_news` reads Google News RSS — top headlines or any topic — and reports the publisher beside each one; it does not summarise articles it has not read. `stock_price` resolves a company name to a ticker through Yahoo's search endpoint (people type "ifci", the quote endpoint wants `IFCI.NS`) and returns the price with its move against the previous close. Both need the network and say so when they cannot reach it |
-| Local LLM (optional) | `core/llm.py` — the router's third stage. A command no pattern or classifier can place goes to a local model via Ollama, which picks one of the 49 skills it is offered or answers directly. Nothing typed leaves the machine. Generated replies carry `ModelAnswered` evidence and a 💭 prefix; Tier-2 skills and generated-code execution are unreachable from it, and a guessed selection of anything that is not read-only is **proposed, not performed** — measured: asked to "shut down chrome", a 3B picked *open* it. Off with `MONDAY_LLM=off` |
+| Local LLM (optional) | `core/llm.py` — the router's third stage. A command no pattern or classifier can place goes to a local model via Ollama, which picks one of the 49 skills it is offered or answers directly. Nothing typed leaves the machine. Generated replies carry `ModelAnswered` evidence and a 💭 prefix; Tier-2 skills and generated-code execution are unreachable from it, and a guessed selection of anything that is not read-only is **proposed, not performed** — measured: asked to "shut down chrome", a 3B picked *open* it. Off with `MONDAY_LLM=off`.
+
+Stage 4 — optional hosted, read-only model (added 2026-08-22): an additional router stage that may be configured to query a hosted model; it is explicitly read-only and cannot perform actions. It is offered only as an extra, opt-in evidence source for ambiguous commands and cannot bypass Tier-2 gates or execute potentially dangerous operations. If configured, stage-4 answers are marked in execution traces but carry no action permission. |
 | Streaming | `POST /agent/stream` reports the same pipeline as `/agent/execute` while it runs — `classified` → `consulting_model` → `token` → `result`, heartbeating every 10s. The UI used to abort after 15s, which cancelled every cold model load before it could answer |
 | Contacts | A typed `contacts` table, queried exactly. A contact lookup cannot return a conversation transcript, because transcripts are not in that table — the four similarity-search guards remain for numbers taught before it existed |
 | Demo | [`DEMO.md`](DEMO.md) is a rehearsed ten-minute script that runs with the Wi-Fi off, and `tests/test_demo_script.py` parses and executes it with sockets blocked |
