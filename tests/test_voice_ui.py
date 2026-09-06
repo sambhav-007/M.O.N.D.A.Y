@@ -238,6 +238,11 @@ def test_the_ui_speaks_the_short_form_not_the_message():
     assert "speakText(msg)" not in html, "the UI is speaking the on-screen text again"
 
 
+def test_multiline_results_preserve_help_menu_formatting():
+    html = INDEX.read_text(encoding="utf-8")
+    assert 'class="whitespace-pre-wrap break-words"' in html
+
+
 def test_recognition_is_continuous_with_interim_results():
     """
     Both are required. `continuous` keeps the session alive between utterances;

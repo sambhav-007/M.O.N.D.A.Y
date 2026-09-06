@@ -967,7 +967,7 @@
       card.className = 'bg-zinc-900/80 p-3 rounded-lg border border-zinc-800 space-y-1';
       card.innerHTML = `
         <div><span class="text-cyan-400 font-bold">Intent:</span> ${ic.predicted_intent || 'multi-turn'}</div>
-        <div><span class="text-emerald-400 font-bold">Result:</span> ${msg}</div>
+        <div class="whitespace-pre-wrap break-words"><span class="text-emerald-400 font-bold">Result:</span> ${msg}</div>
         ${generatedHtml}
         ${gmailBtnHtml}
       `;
