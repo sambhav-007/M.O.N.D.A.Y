@@ -94,6 +94,14 @@ def test_the_wake_phrase_is_consumed_and_the_command_is_not():
     ) == ["", "open gmail", "battery", "set volume to 40"]
 
 
+def test_the_wake_phrase_allows_to_between_greeting_and_name():
+    assert _wake(
+        "hi to monday",
+        "hello to monday battery",
+        "hey to monday what time is it",
+    ) == ["", "battery", "what time is it"]
+
+
 def test_apostrophes_survive_the_wake_word():
     """
     The regression this exists for. The first version flattened punctuation to

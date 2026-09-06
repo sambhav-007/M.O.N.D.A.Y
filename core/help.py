@@ -62,6 +62,21 @@ def build_help_text() -> str:
 
 Type these in plain English. Every example below works as written.
 
+Supported now
+  • Read-only desktop and system tasks, file/document work, memory, live info,
+    timers, clipboard/window queries, and the built-in help menu.
+  • Irreversible tasks are blocked by the Tier-2 confirmation gate until you say
+    yes in a separate turn.
+  • The exact supported surface is the set of examples below; optional features
+    are listed separately so a missing dependency is never mistaken for a working
+    feature.
+
+Optional / setup required
+  • Email sending needs setup: SMTP_USER / SMTP_PASSWORD in .env.
+  • Screen vision needs setup: a Gemini API key.
+  • A less robotic voice needs setup: MONDAY_PIPER_VOICE set to a .onnx file.
+  • MONDAY_TTS=off silences the backend entirely.
+
 🖥️  APPS & SYSTEM
    open notepad             launch an app (web fallback)
    screenshot               capture the screen to data/staging
@@ -156,7 +171,7 @@ Type these in plain English. Every example below works as written.
    writes are marked 💭, because a generated answer is not a
    checked one. Off entirely with MONDAY_LLM=off.
 
-⚙️  NEEDS SETUP (inactive right now)
+⚙️  OPTIONAL / SETUP REQUIRED
    Sending email needs SMTP_USER / SMTP_PASSWORD in .env
    (for Gmail, an App Password).
    Screen vision needs a Gemini API key.

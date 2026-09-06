@@ -65,8 +65,13 @@ _SLOT = re.compile(r"\{[^{}]*\}")
 #: wake word when a greeting introduces it or a comma follows it — otherwise
 #: "monday morning meeting" would lose its day. `olly` is MASSIVE's assistant
 #: name and appears in front of ~1 in 20 utterances there.
+#
+#: The greeting can appear in the natural forms "hi monday", "hello monday",
+#: and "hi to monday" / "hello to monday". Taking the `to` between the
+#: greeting and the name is intentional: that variant shows up in real speech,
+#: and it should not be mistaken for a command that starts with the word "to".
 _WAKE_WORD = re.compile(
-    r"^(?:(?:hey|hi|hello|ok|okay)[\s,]+(?:monday|olly)|(?:monday|olly)\s*,)[\s,]*",
+    r"^(?:(?:hey|hi|hello|ok|okay)[\s,]+(?:to[\s,]+)?(?:monday|olly)|(?:monday|olly)\s*,)[\s,]*",
     re.IGNORECASE,
 )
 

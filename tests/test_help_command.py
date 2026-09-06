@@ -110,6 +110,14 @@ def test_help_does_not_claim_speech_needs_the_network():
     assert "monday_piper_voice" in text
 
 
+def test_help_has_explicit_supported_now_status_sections():
+    """The help text must make the implemented-vs-optional split explicit."""
+    text = build_help_text()
+    assert "Supported now" in text
+    assert "Optional / setup required" in text
+    assert "kill <process>" in text
+
+
 def test_help_names_the_voice_settings_that_exist():
     """The two switches named in the menu must be the two the code reads."""
     from voice import tts

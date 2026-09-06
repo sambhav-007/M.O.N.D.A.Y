@@ -62,6 +62,19 @@ def test_a_command_is_never_stripped_to_nothing():
     assert strip_civilities("thanks") == "thanks"
 
 
+@pytest.mark.parametrize("greeting", ["hi monday", "hello monday", "hey monday", "hi to monday", "hello to monday"])
+def test_wake_word_greetings_survive_stripping(greeting):
+    assert strip_civilities(greeting) == greeting
+
+
+@pytest.mark.parametrize("typed,bare", [
+    ("hi to monday what time is it", "what time is it"),
+    ("hello to monday battery", "battery"),
+])
+def test_wake_word_with_to_is_stripped(typed, bare):
+    assert strip_civilities(typed) == bare
+
+
 # ── The retry, and its one guarantee ─────────────────────────────────────────
 def test_the_retry_only_runs_when_the_first_pass_failed():
     """A pattern that matches the command as typed keeps its match and its
