@@ -277,6 +277,7 @@ class MasterPlanner(EmailMixin, ContactMixin, Tier2Mixin):
         # this table can ever be resumed by a confirmation.
         self._tier2_executors: Dict[str, Any] = {
             "terminate_process": self._exec_terminate_process,
+            "delete_folder": self._exec_delete_folder,
         }
 
         # Boot-up System Context Scanner

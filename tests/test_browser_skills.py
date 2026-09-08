@@ -231,6 +231,37 @@ def test_the_query_is_what_was_asked_for(planner, stub_browser, command, query):
     assert stub_browser["searched"] == [query]
 
 
+def test_youtube_destination_is_not_part_of_the_web_query(planner, stub_browser):
+    result = planner._dispatch_to_agent(
+        "search mr beast on youtube.com", intent="browser", user_approved=False
+    )
+
+    assert result["success"] is True
+    assert stub_browser["searched"] == []
+    assert stub_browser["opened"] == [
+        "https://www.youtube.com/results?search_query=mr+beast"
+    ]
+
+
+@pytest.mark.parametrize(
+    "command",
+    [
+        "search for mr beast on youtube",
+        "search for mr beast on youtube.com",
+        "open mr beast on youtube",
+        "open mr beast on youtube.com",
+    ],
+)
+def test_youtube_command_forms_search_only_for_the_topic(planner, stub_browser, command):
+    result = planner._dispatch_to_agent(command, intent="browser", user_approved=False)
+
+    assert result["success"] is True
+    assert stub_browser["searched"] == []
+    assert stub_browser["opened"] == [
+        "https://www.youtube.com/results?search_query=mr+beast"
+    ]
+
+
 def test_a_weak_classification_no_longer_reaches_generated_code(planner, stub_browser):
     """
     "search current AI news" classified `desktop_automation` at 0.33 and was

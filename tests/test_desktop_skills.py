@@ -84,6 +84,28 @@ def test_the_older_commands_are_undisturbed(planner):
         assert _route(planner, command).skill.name == skill, command
 
 
+@pytest.mark.parametrize(
+    "command,skill",
+    [
+        ("create a folder named abc", "create_desktop_folder"),
+        ("rename that folder to abc", "rename_folder"),
+        ("delete folder abc", "delete_folder"),
+    ],
+)
+def test_folder_commands_have_explicit_skills(planner, command, skill):
+    decision = _route(planner, command)
+    assert decision.skill is not None
+    assert decision.skill.name == skill
+
+
+def test_delete_folder_requires_a_separate_confirmation(planner):
+    result = _run(planner, "delete folder abc")
+    assert result["awaiting_tier2_approval"] is True
+    assert result["action_name"] == "delete_folder"
+    assert "All files inside" in result["message"]
+    planner.pending_clarification = None
+
+
 # ── Clipboard ────────────────────────────────────────────────────────────────
 class _FakeClipboard:
     """Stands in for pyperclip, so the suite never touches the real clipboard."""

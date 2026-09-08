@@ -216,3 +216,7 @@ class Tier2Mixin:
     def _exec_terminate_process(self, process: str) -> Dict[str, Any]:
         """Approved executor for terminate_process. Only reachable post-approval."""
         return self.computer_agent.terminate_process(process, user_approved=True)
+
+    def _exec_delete_folder(self, target: str) -> Dict[str, Any]:
+        """Approved executor for delete_folder. Only reachable post-approval."""
+        return self.computer_agent.delete_folder(target)

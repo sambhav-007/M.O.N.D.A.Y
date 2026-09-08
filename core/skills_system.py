@@ -24,6 +24,7 @@ that yet" in the app). A skill is reachable from every surface by construction.
 from __future__ import annotations
 
 import re
+from pathlib import Path
 from typing import Any, Dict
 
 from core.contracts import AgentResult, SystemQuery
@@ -84,24 +85,8 @@ def register_system_skills(registry: SkillRegistry, planner: Any) -> None:
         offline=True,
     ))
 
-    def create_desktop_folder(_command: str = "", **_: Any) -> Dict[str, Any]:
-        """The one generated-code path that is still routed to.
-
-        `CoderAgent` supports three domains: `system_volume`, `desktop_folder`
-        and `web_scraper`. The volume is now served directly by
-        `ComputerAgent.set_system_volume`, which reports the PowerShell exit
-        status instead of a generated script's `print`. `web_scraper` is
-        deliberately **not** routed to at all: its template printed `[SUCCESS]`
-        and exited 0 when the fetch raised, so the parent read a zero exit code
-        and reported a scrape that never happened — a fabricated success
-        laundered through a subprocess, where the result contract cannot see it
-        (UPGRADE_PLAN §2.2). `web_search` and `research_topic` do that job and
-        report their own HTTP status.
-
-        So this is what remains, and it reaches code generation only from an
-        explicit, patterned request — never from a low-confidence guess.
-        """
-        return planner.coder_agent.generate_and_execute_script(_command)
+    def create_desktop_folder(name: str = "NewFolder", **_: Any) -> Dict[str, Any]:
+        return planner.computer_agent.create_folder(name)
 
     registry.register(Skill(
         name="create_desktop_folder",
@@ -110,6 +95,9 @@ def register_system_skills(registry: SkillRegistry, planner: Any) -> None:
             "(create|make|add) [a] [new] (folder|directory) on [my] desktop",
             "(create|make|add) [a] [new] desktop (folder|directory)",
             "(create|make|add) [a] [new] (folder|directory) called {name} on [my] desktop",
+            "(create|make|add) [a] [new] (folder|directory) named {name} [on] [my] desktop",
+            "(create|make|add) a (folder|directory) named {name}",
+            "(create|make|add) a (folder|directory) called {name}",
         ],
         handler=create_desktop_folder,
         tier=1,
@@ -123,6 +111,55 @@ def register_system_skills(registry: SkillRegistry, planner: Any) -> None:
         # exclusion is about what the implementation *does* — two different
         # questions, so it needs its own flag rather than a tier bump.
         llm_reachable=False,
+    ))
+
+    def rename_folder(source: str = "", name: str = "", **_: Any) -> Dict[str, Any]:
+        if source.strip().lower() in {"", "that folder", "the folder", "this folder"}:
+            source = str(Path.home() / "Desktop" / "NewFolder")
+        elif "\\" not in source and "/" not in source and ":" not in source:
+            source = str(Path.home() / "Desktop" / source.strip())
+        return planner.computer_agent.rename_folder(source, name)
+
+    registry.register(Skill(
+        name="rename_folder",
+        description="Rename an existing folder",
+        patterns=[
+            "rename (that|the|this) folder to {name}",
+            "rename {source} to {name}",
+        ],
+        handler=rename_folder,
+        tier=1,
+        offline=True,
+    ))
+
+    def delete_folder(target: str = "", **_: Any) -> Dict[str, Any]:
+        path = target.strip().strip('"\'')
+        if not path:
+            return AgentResult.failed("Which folder should I delete?", error="NO_FOLDER").as_dict()
+        if "\\" not in path and "/" not in path and ":" not in path:
+            path = str(Path.home() / "Desktop" / path)
+        return planner.require_tier2_approval(
+            action_name="delete_folder",
+            target=path,
+            executor="delete_folder",
+            executor_kwargs={"target": path},
+            original_command=f"delete folder {path}",
+            task_type="desktop_automation",
+            agent="computer",
+            detail_lines=["All files inside this folder will also be deleted."],
+        )
+
+    registry.register(Skill(
+        name="delete_folder",
+        description="Delete a folder and everything inside it (Tier 2 — asks first)",
+        patterns=[
+            "delete [the] folder {target}",
+            "remove [the] folder {target}",
+            "delete {target} folder",
+        ],
+        handler=delete_folder,
+        tier=2,
+        offline=True,
     ))
 
     # ── Processes ────────────────────────────────────────────────────────────

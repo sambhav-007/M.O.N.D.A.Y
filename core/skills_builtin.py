@@ -870,6 +870,33 @@ def build_builtin_registry(planner: Any) -> SkillRegistry:
             ).as_dict()
         return planner.browser_agent.web_search(q)
 
+    def search_youtube(query: str = "", **_: Any) -> Dict[str, Any]:
+        from urllib.parse import quote_plus
+
+        q = query.strip().strip("\"'").rstrip("?").strip()
+        if not q:
+            return AgentResult.failed(
+                "What should I search for on YouTube?", error="NO_QUERY"
+            ).as_dict()
+        return planner.browser_agent.open_app_or_website(
+            f"https://www.youtube.com/results?search_query={quote_plus(q)}"
+        )
+
+    registry.register(Skill(
+        name="youtube_search",
+        description="Search YouTube for a video or channel",
+        patterns=[
+            "search for {query} on (youtube|youtube.com)",
+            "search {query} on (youtube|youtube.com)",
+            "find {query} on (youtube|youtube.com)",
+            "look up {query} on (youtube|youtube.com)",
+            "open {query} on (youtube|youtube.com)",
+        ],
+        handler=search_youtube,
+        tier=1,
+        offline=False,
+    ))
+
     registry.register(Skill(
         name="web_search",
         description="Search the web and cite the sources",

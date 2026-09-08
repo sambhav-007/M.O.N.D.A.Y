@@ -100,6 +100,7 @@ TIER_2_ACTIONS = {
 TIER_2_IMPLEMENTED = {
     "send_email",
     "terminate_process",
+    "delete_folder",
 }
 
 

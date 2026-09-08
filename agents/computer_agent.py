@@ -112,6 +112,47 @@ class ComputerAgent:
             "message": f"✓ Organized {total_moved} files in '{path.name}' into categorized folders.",
         }
 
+    def create_folder(self, name: str, parent: str | Path | None = None) -> Dict[str, Any]:
+        clean_name = name.strip().strip('"\'')
+        base = Path(parent).expanduser() if parent else Path.home() / "Desktop"
+        target = (base / clean_name).resolve()
+        if not clean_name or target.name != clean_name:
+            return {"success": False, "error": "INVALID_FOLDER_NAME", "message": "Give me a valid folder name."}
+        if target.exists():
+            return {"success": False, "error": "FOLDER_EXISTS", "message": f"That folder already exists: {target}"}
+        try:
+            target.mkdir(parents=False)
+        except OSError as exc:
+            return {"success": False, "error": "FOLDER_CREATE_FAILED", "message": f"I couldn't create {target}: {exc}"}
+        log_action("create_folder", str(target), 1, "success", self.name)
+        return {"success": True, "folder": str(target), "message": f"✓ Created folder: {target}"}
+
+    def rename_folder(self, source: str, name: str) -> Dict[str, Any]:
+        source_path = Path(source).expanduser().resolve()
+        clean_name = name.strip().strip('"\'')
+        target = source_path.parent / clean_name
+        if not source_path.is_dir():
+            return {"success": False, "error": "FOLDER_NOT_FOUND", "message": f"Folder not found: {source_path}"}
+        if not clean_name or target.exists():
+            return {"success": False, "error": "FOLDER_TARGET_EXISTS", "message": f"Cannot rename to {target}"}
+        try:
+            source_path.rename(target)
+        except OSError as exc:
+            return {"success": False, "error": "FOLDER_RENAME_FAILED", "message": f"I couldn't rename {source_path}: {exc}"}
+        log_action("rename_folder", f"{source_path} -> {target}", 1, "success", self.name)
+        return {"success": True, "folder": str(target), "message": f"✓ Renamed folder to: {target}"}
+
+    def delete_folder(self, target: str) -> Dict[str, Any]:
+        path = Path(target).expanduser().resolve()
+        if not path.is_dir():
+            return {"success": False, "error": "FOLDER_NOT_FOUND", "message": f"Folder not found: {path}"}
+        try:
+            shutil.rmtree(path)
+        except OSError as exc:
+            return {"success": False, "error": "FOLDER_DELETE_FAILED", "message": f"I couldn't delete {path}: {exc}"}
+        log_action("delete_folder", str(path), 2, "success", self.name)
+        return {"success": True, "folder": str(path), "message": f"✓ Deleted folder: {path}"}
+
     def take_screenshot(self, filename: Optional[str] = None) -> Dict[str, Any]:
         """
         Captures the primary monitor screen and saves it to staging directory.
