@@ -43,12 +43,18 @@ from typing import Any, Dict, Optional
 
 from core.skills import Skill, SkillRegistry
 from core.slot_sanity import implausible
+import re
 
 #: Below this, the classifier is guessing and stage 2 declines to act on it.
 #: `predict_intent`'s own fallback threshold is 0.65; this is the routing floor,
 #: kept separate because they answer different questions — "should we ask an LLM"
 #: versus "may this dispatch to a handler".
 MIN_INTENT_CONFIDENCE = 0.50
+_DIRECT_ANSWER_RE = re.compile(
+    r"^(?:is|are|should|would|could|can|do you think|what do you think)\b.*"
+    r"\b(?:death|die|dying|suffer|suffering|life|meaning|morality|moral|ethical|ethics|better)\b",
+    re.IGNORECASE,
+)
 
 
 @dataclass(frozen=True)
@@ -211,6 +217,7 @@ class Router:
                 # user once asked to be remembered would match differently on
                 # two machines.
                 memories=memories,
+                direct_answer=bool(_DIRECT_ANSWER_RE.match(command.strip())),
             )
             if choice is not None and choice.skill:
                 skill = self.registry.get(choice.skill)

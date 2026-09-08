@@ -75,6 +75,7 @@ class StubLlm:
         on_token: Optional[Any] = None,
         history: Optional[List[Dict[str, str]]] = None,
         memories: Optional[List[Dict[str, Any]]] = None,
+        direct_answer: bool = False,
     ) -> Optional[LlmChoice]:
         self.calls.append(command)
         self.history = list(history or [])
@@ -136,6 +137,11 @@ def test_the_schema_is_generated_from_the_registry(registry):
         assert tool["function"]["description"], f"{tool['function']['name']} has no description"
 
 
+def test_prompt_prefers_direct_answers_for_subjective_questions():
+    assert "subjective, philosophical, ethical, or advice questions" in SYSTEM_PROMPT
+    assert "instead of calling a web-search tool" in SYSTEM_PROMPT
+
+
 def test_the_schema_arguments_match_the_patterns(registry):
     """A schema that drifts from the patterns is the stale-artefact bug again."""
     tools = {t["function"]["name"]: t for t in build_tool_schema(registry)}
@@ -156,6 +162,12 @@ def test_no_tier2_skill_is_ever_offered_to_the_model(registry):
     offered = {s.name for s in registry.llm_reachable_skills()}
     for name in registry.tier2_names():
         assert name not in offered, f"Tier-2 skill {name} is reachable from the model"
+
+
+def test_confirmation_recovery_skill_is_not_offered_to_the_model(registry):
+    assert "stray_confirmation" not in {
+        skill.name for skill in registry.llm_reachable_skills()
+    }
 
 
 def test_tier2_forces_llm_reachable_off_even_when_asked_for_it():

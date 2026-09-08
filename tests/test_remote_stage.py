@@ -168,7 +168,7 @@ def test_stage_3_answering_stops_the_cascade(planner):
         model = "llama-stub"
         unavailable_reason = ""
 
-        def choose(self, command, on_token=None, history=None, memories=None):
+        def choose(self, command, on_token=None, history=None, memories=None, direct_answer=False):
             return LlmChoice(text="A local answer.", model=self.model)
 
     stub = _StubRemote()
@@ -214,7 +214,7 @@ def test_a_local_answer_still_says_local(planner):
         model = "llama-stub"
         unavailable_reason = ""
 
-        def choose(self, command, on_token=None, history=None, memories=None):
+        def choose(self, command, on_token=None, history=None, memories=None, direct_answer=False):
             return LlmChoice(text="A local answer.", model=self.model)
 
     original = planner.router.llm

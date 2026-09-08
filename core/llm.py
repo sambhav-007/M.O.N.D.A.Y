@@ -213,8 +213,12 @@ SYSTEM_PROMPT = (
     "You are the routing stage of M.O.N.D.A.Y., a desktop assistant. "
     "Decide which of the available tools answers the user's command, and call "
     "it with arguments taken from their words. "
-    "If no tool fits, reply in one or two short sentences instead — you are "
-    "talking to someone at their computer, not writing an essay. "
+    "For subjective, philosophical, ethical, or advice questions, reply "
+    "directly in one or two short sentences instead of calling a web-search "
+    "tool. Use answer_question only when the user asks for a factual lookup "
+    "that benefits from current sources. If no other tool fits, reply in one "
+    "or two short sentences instead — you are talking to someone at their "
+    "computer, not writing an essay. "
     "Never claim to have done something; you select tools, you do not perform "
     "actions."
 )
@@ -317,6 +321,7 @@ class LlmStage:
         on_token: Optional[Any] = None,
         history: Optional[List[Dict[str, str]]] = None,
         memories: Optional[List[Dict[str, Any]]] = None,
+        direct_answer: bool = False,
     ) -> Optional[LlmChoice]:
         """Asks the model to pick a skill, or to answer. None if it cannot.
 
@@ -370,7 +375,7 @@ class LlmStage:
             call = dict(
                 model=self.model,
                 messages=messages,
-                tools=self._tools,
+                tools=[] if direct_answer else self._tools,
                 # Deterministic-ish: this is a routing decision, not prose.
                 options={"temperature": 0.0},
             )

@@ -601,6 +601,9 @@ def build_builtin_registry(planner: Any) -> SkillRegistry:
         ],
         handler=stray_confirmation,
         tier=1,
+        # This is an internal recovery route for a confirmation with no pending
+        # question; it is not a meaningful tool for an LLM to select.
+        llm_reachable=False,
         offline=True,
     ))
 
