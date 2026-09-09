@@ -528,7 +528,7 @@ def build_builtin_registry(planner: Any) -> SkillRegistry:
     # "✓ Summarised text snippet (1 words → 5 key points)". A demonstrative is
     # the user pointing at something MONDAY cannot see, and the honest answer is
     # to ask which file — not to summarise the word.
-    _DEICTIC = {"this", "that", "it", "these", "those", "the file", "the document"}
+    _DEICTIC = {"this", "that", "it", "these", "those", "me", "the file", "the document"}
 
     def summarize(path: str = "", **_: Any) -> Dict[str, Any]:
         target = path.strip().strip("\"'")

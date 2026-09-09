@@ -51,8 +51,9 @@ import re
 #: versus "may this dispatch to a handler".
 MIN_INTENT_CONFIDENCE = 0.50
 _DIRECT_ANSWER_RE = re.compile(
-    r"^(?:is|are|should|would|could|can|do you think|what do you think)\b.*"
-    r"\b(?:death|die|dying|suffer|suffering|life|meaning|morality|moral|ethical|ethics|better)\b",
+    r"^(?:(?:is|are|should|would|could|can|do you think|what do you think)\b.*"
+    r"\b(?:death|die|dying|suffer|suffering|life|meaning|morality|moral|ethical|ethics|better)\b|"
+    r"(?:teach|teach me|help me learn|learn)\b.*)",
     re.IGNORECASE,
 )
 

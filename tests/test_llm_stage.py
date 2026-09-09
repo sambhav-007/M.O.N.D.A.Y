@@ -142,6 +142,13 @@ def test_prompt_prefers_direct_answers_for_subjective_questions():
     assert "instead of calling a web-search tool" in SYSTEM_PROMPT
 
 
+def test_teaching_requests_are_direct_local_answers():
+    from core.router import _DIRECT_ANSWER_RE
+
+    assert _DIRECT_ANSWER_RE.match("Teach me Java basics")
+    assert "beginner-friendly lesson directly" in SYSTEM_PROMPT
+
+
 def test_the_schema_arguments_match_the_patterns(registry):
     """A schema that drifts from the patterns is the stale-artefact bug again."""
     tools = {t["function"]["name"]: t for t in build_tool_schema(registry)}
