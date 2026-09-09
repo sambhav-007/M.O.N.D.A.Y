@@ -164,6 +164,53 @@ def test_the_cli_turns_it_on_because_a_terminal_has_no_browser():
     assert "enable_voice = True" in source
 
 
+def test_voice_status_is_not_part_of_the_spoken_phrase(monkeypatch, tmp_path):
+    from voice.tts import Spoken
+
+    monkeypatch.setattr(
+        tts,
+        "synthesize",
+        lambda text, path: Spoken(True, engine="test", path=str(path)),
+    )
+    monkeypatch.setattr(tts, "play", lambda path: True)
+    agent = VoiceAgent(enable_voice=True)
+    result = agent.speak('hi i am monday')
+
+    assert result["message"] == '[Voice] M.O.N.D.A.Y. Speaking: "hi i am monday"'
+    assert result["speech"] == "hi i am monday"
+
+
+def test_say_command_does_not_synthesize_inside_its_handler(monkeypatch):
+    from core.planner import MasterPlanner
+
+    planner = MasterPlanner()
+    planner.enable_voice = False
+    called = []
+    monkeypatch.setattr(planner.voice_agent, "speak", lambda text: called.append(text))
+
+    result = planner.process_command('say it exactly "hi i am monday"')
+
+    assert result["execution_result"]["speech"] == "hi i am monday"
+    assert called == []
+
+
+def test_voice_enabled_say_command_synthesizes_once(monkeypatch):
+    from core.planner import MasterPlanner
+
+    planner = MasterPlanner()
+    planner.enable_voice = True
+    called = []
+    monkeypatch.setattr(
+        planner.voice_agent,
+        "speak",
+        lambda text: called.append(text) or {"success": True},
+    )
+
+    planner.process_command('say it exactly "hi i am monday"')
+
+    assert called == ["hi i am monday"]
+
+
 # ── End to end, for real ─────────────────────────────────────────────────────
 @pytest.mark.real_audio
 @pytest.mark.parametrize("phrase", ["what is the battery level"])

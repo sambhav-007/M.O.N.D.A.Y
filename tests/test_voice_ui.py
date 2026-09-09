@@ -238,6 +238,14 @@ def test_the_ui_speaks_the_short_form_not_the_message():
     assert "speakText(msg)" not in html, "the UI is speaking the on-screen text again"
 
 
+def test_the_ui_prefers_a_natural_voice_and_human_pacing():
+    html = INDEX.read_text(encoding="utf-8")
+    assert "Microsoft Aria Online (Natural)" in html
+    assert "Microsoft Jenny Online (Natural)" in html
+    assert "u.rate = 0.98" in html
+    assert "u.pitch = 1.02" in html
+
+
 def test_multiline_results_preserve_help_menu_formatting():
     html = INDEX.read_text(encoding="utf-8")
     assert 'class="whitespace-pre-wrap break-words"' in html

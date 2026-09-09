@@ -194,12 +194,21 @@ def register_system_skills(registry: SkillRegistry, planner: Any) -> None:
     # The pattern makes the anchoring structural rather than a regex someone has
     # to remember to keep.
     def speak_text(phrase: str = "", **_: Any) -> Dict[str, Any]:
-        return planner.voice_agent.speak(phrase.strip().strip("\"'") or "M.O.N.D.A.Y. online.")
+        text = phrase.strip().strip("\"'") or "M.O.N.D.A.Y. online."
+        # Speech is performed once by MasterPlanner after the result is built.
+        # Calling VoiceAgent here as well made CLI/API voice-enabled surfaces
+        # synthesize the phrase twice.
+        return AgentResult.ok(
+            f'[Voice] M.O.N.D.A.Y. Speaking: "{text}"',
+            evidence=SystemQuery(source="voice command", detail="queued once by planner"),
+            data={"text": text, "speech": text, "intent": "speak_text"},
+        ).as_dict()
 
     registry.register(Skill(
         name="speak_text",
         description="Read a given phrase aloud through the speakers — not a volume control",
         patterns=[
+            "say it exactly {phrase}",
             "(say|speak) {phrase}",
             "say out loud {phrase}",
             "(read|say) {phrase} out loud",

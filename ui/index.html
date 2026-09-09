@@ -430,6 +430,38 @@
       wakeTimer: null,
       lastSpoken: '',
       utterance: null,
+      voices: [],
+      preferredVoiceNames: [
+        'Microsoft Aria Online (Natural) - English (United States)',
+        'Microsoft Jenny Online (Natural) - English (United States)',
+        'Microsoft Sonia Online (Natural) - English (United Kingdom)',
+        'Microsoft Aria',
+        'Microsoft Jenny',
+        'Microsoft Sonia',
+        'Google US English',
+        'Samantha'
+      ],
+
+      loadVoices() {
+        if (!('speechSynthesis' in window) || typeof window.speechSynthesis.getVoices !== 'function') return;
+        this.voices = window.speechSynthesis.getVoices();
+      },
+
+      selectVoice() {
+        const voices = this.voices.length
+          ? this.voices
+          : (typeof window.speechSynthesis.getVoices === 'function'
+            ? window.speechSynthesis.getVoices()
+            : []);
+        for (const preferred of this.preferredVoiceNames) {
+          const match = voices.find(v => v.name === preferred);
+          if (match) return match;
+        }
+        return voices.find(v => /^en(-|_)/i.test(v.lang) && /natural|online|aria|jenny|sonia|zira|samantha/i.test(v.name))
+          || voices.find(v => /^en(-|_)/i.test(v.lang))
+          || voices[0]
+          || null;
+      },
 
       // Deliberately generous, because a wake word that misses is a feature
       // that does not work. "Hey Monday" comes back as "hey Monday", "heyy
@@ -667,8 +699,10 @@
         // Set before speaking, not in onstart — see isTalking().
         this.speaking = true;
         const u = new SpeechSynthesisUtterance(clean);
-        u.rate = 1.05;
-        u.pitch = 0.92;
+        u.voice = this.selectVoice();
+        u.rate = 0.98;
+        u.pitch = 1.02;
+        u.volume = 1.0;
         u.onstart = () => { this.speaking = true; setEntityMode('talking'); };
         u.onend = () => { this.speaking = false; this.lastSpoken = ''; this.idle(); };
         u.onerror = () => { this.speaking = false; this.lastSpoken = ''; this.idle(); };
@@ -976,6 +1010,10 @@
     window.onload = function() {
       init3D();
       Voice.init();
+      Voice.loadVoices();
+      if ('speechSynthesis' in window) {
+        window.speechSynthesis.onvoiceschanged = () => Voice.loadVoices();
+      }
       Voice.paint();
     };
   </script>

@@ -140,6 +140,9 @@ class VoiceAgent:
             ),
             data={
                 "text": text,
+                # The status line belongs on screen; only the requested phrase
+                # should be sent to the speech engine on the next surface.
+                "speech": text,
                 "engine": spoken.engine,
                 # Whether audio reached the speakers is a separate claim from
                 # whether it was synthesised, and `play` only reports that
