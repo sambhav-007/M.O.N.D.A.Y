@@ -12,8 +12,8 @@ no downstream number has to take the mix on trust.
 
 | File | Rows | Cols | Size | Provenance | Feeds |
 |---|---|---|---|---|---|
-| [`synthetic/commands.csv`](synthetic/commands.csv) | 17,487 | 3 | 1.1 MB | 6,847 real + 10,640 generated | **2.1** Intent Classifier (CLO04) |
-| [`external/massive_en_us.csv`](external/massive_en_us.csv) | 10,631 | 4 | 752 KB | **real** — Amazon MASSIVE, en-US | source pool for the above |
+| [`synthetic/commands.csv`](synthetic/commands.csv) | 17,488 | 3 | 1.1 MB | 6,847 real + 10,641 generated | **2.1** Intent Classifier (CLO04) |
+| [`external/massive_en_us.csv`](external/massive_en_us.csv) | 11,180 | 4 | 788 KB | **real** — Amazon MASSIVE, en-US | source pool for the above |
 | [`synthetic/action_tasks.csv`](synthetic/action_tasks.csv) | 7,655 | 10 | 544 KB | generated | **2.2** ETA Regression (CLO03), **2.5** RL Router (CLO05) |
 | [`synthetic/action_sessions.csv`](synthetic/action_sessions.csv) | 3,000 | 2 | 108 KB | generated | **2.4** Association Rule Mining (CLO05) |
 
@@ -66,7 +66,7 @@ The generators live in [`datagen/`](../datagen/):
 |---|---|---|---|
 | browser | 1,700 | 850 | 2,550 |
 | communication | 1,700 | 830 | 2,530 |
-| desktop_automation | 1,700 | 847 | 2,547 |
+| desktop_automation | 1,700 | 848 | 2,548 |
 | memory_query | 789 | 1,694 | 2,483 |
 | llm_fallback | 826 | 1,680 | 2,506 |
 | document_intel | 0 | 2,451 | 2,451 |
@@ -93,8 +93,10 @@ against the app's own commands, the classifier scored **0.657 accuracy at 0.549
 mean confidence**, against 0.929 macro-F1 on its own held-out split. See
 [`reports/real_command_evidence.md`](../reports/real_command_evidence.md).
 
-Vocabulary is now **4,871 words** (5.3×), and the classifier scores **0.703 on
-paraphrases it has never seen**, up from 0.486.
+The current CSV contains **4,639 unique whitespace-delimited tokens**. The
+classifier scores **1.000 on the advertised-command coverage set** and **0.649
+on the held-out paraphrase set**; the latter is the meaningful generalisation
+number because those phrasings are not in the generator.
 
 **A cap worth knowing about.** `build_synthetic_dataset` capped the corpus at
 **500 rows per class**, so the 9,996-row file was fitted on 2,800 rows — 72%
@@ -236,7 +238,7 @@ news, email, calendar and lists, which is most of what MONDAY does.
   unchanged — only the *command* corpus gained real data.
 - **The held-out macro-F1 is still a within-corpus number.** 0.919 (SVM) says the
   model learned the corpus, not that the corpus resembles a user. The number for
-  that question is the paraphrase set — **0.703** — and it is reported separately
+  that question is the paraphrase set — **0.649** — and it is reported separately
   and deliberately in
   [`reports/real_command_evidence.md`](../reports/real_command_evidence.md).
 - **The coverage set is not a benchmark.** It scores 1.000, and it would be
