@@ -26,14 +26,128 @@
   <script src="vendor/UnrealBloomPass.js"></script>
   <style>
     @import url('vendor/fonts.css');
-    body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #060608; color: #f4f4f5; user-select: none; }
-    .font-mono { font-family: 'JetBrains Mono', monospace; }
-    .gold-gradient { background: linear-gradient(135deg, #ffd700 0%, #ff8c00 50%, #ff4500 100%); background-clip: text; -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-    .glass-card { background: rgba(12, 12, 18, 0.85); backdrop-filter: blur(20px); border: 1px solid rgba(255, 140, 0, 0.2); }
+    :root {
+      color-scheme: dark;
+      --ink: #08090a;
+      --panel: rgba(15, 17, 18, 0.86);
+      --panel-strong: rgba(12, 14, 15, 0.96);
+      --line: rgba(227, 174, 91, 0.18);
+      --line-cool: rgba(91, 197, 198, 0.2);
+      --gold: #e7ad58;
+      --gold-soft: #f0c77f;
+      --cyan: #69c6c4;
+      --muted: #858a89;
+      --text: #ecece7;
+      --mono: 'JetBrains Mono', monospace;
+    }
+    html, body { width: 100%; height: 100%; margin: 0; }
+    body { font-family: 'Plus Jakarta Sans', sans-serif; background: var(--ink); color: var(--text); user-select: none; }
+    .font-mono { font-family: var(--mono); }
+    .gold-gradient { color: var(--gold-soft); }
+    .glass-card { background: var(--panel); backdrop-filter: blur(18px); border: 1px solid var(--line); box-shadow: 0 18px 48px rgba(0, 0, 0, 0.24); }
+    .app-header { height: 56px; flex: 0 0 56px; padding: 0 22px; border-bottom: 1px solid rgba(255,255,255,.055); background: rgba(8,9,10,.72); backdrop-filter: blur(16px); }
+    .brand-mark { color: var(--gold-soft); font-size: 13px; letter-spacing: .08em; }
+    .online-pill, .voice-pill, .mode-button, .window-button { height: 30px; display: inline-flex; align-items: center; gap: 8px; border: 1px solid rgba(255,255,255,.09); border-radius: 6px; padding: 0 10px; font: 10px var(--mono); letter-spacing: .04em; }
+    .online-pill { color: #a9cebd; background: rgba(82,144,111,.1); border-color: rgba(108,174,137,.22); }
+    .status-dot { width: 6px; height: 6px; border-radius: 50%; background: #78bd91; box-shadow: 0 0 8px rgba(120,189,145,.3); }
+    .voice-pill { color: #a0a5a3; background: rgba(255,255,255,.025); cursor: pointer; transition: .18s ease; }
+    .voice-pill[data-active="true"] { color: #a9d8d2; border-color: var(--line-cool); background: rgba(58,125,126,.13); }
+    .voice-pill:disabled { opacity: .45; cursor: not-allowed; }
+    .mode-button { color: var(--gold-soft); border-color: rgba(231,173,88,.28); background: rgba(194,132,45,.1); cursor: pointer; }
+    .mode-button:hover { background: rgba(194,132,45,.18); }
+    .window-button { width: 30px; justify-content: center; padding: 0; color: #b9bcb8; background: rgba(255,255,255,.035); cursor: pointer; font-size: 14px; }
+    .window-button:hover { color: white; background: rgba(255,255,255,.1); }
+    .window-button.close:hover { background: #863e35; border-color: #ad564b; }
+    #canvas-container { opacity: .78; transition: opacity .35s ease; }
+    #canvas-container canvas { display: block; }
+    body.console-mode #canvas-container { opacity: .17; filter: saturate(.7); }
+    .presence-view { min-height: 0; flex: 1; position: relative; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 10px; padding: 24px 24px 30px; pointer-events: none; }
+    .presence-readout { z-index: 1; min-width: 190px; display: flex; flex-direction: column; align-items: flex-start; gap: 5px; padding: 8px 12px; border: 1px solid rgba(255,255,255,.08); border-radius: 5px; background: rgba(10,12,12,.76); backdrop-filter: blur(12px); text-align: left; pointer-events: auto; }
+    .eyebrow { color: #929592; font: 10px var(--mono); letter-spacing: .12em; }
+    .presence-state { color: var(--gold-soft); font: 12px var(--mono); letter-spacing: .08em; }
+    .presence-caption { max-width: min(620px, 82vw); color: #b7bbb7; font: 11px var(--mono); line-height: 1.55; }
+    .presence-agent { min-height: 0; color: var(--cyan); font: 10px var(--mono); }
+    .presence-agent:empty { display: none; }
+    .command-dock { width: min(650px, calc(100vw - 36px)); pointer-events: auto; }
+    .command-shell { padding: 9px; border: 1px solid rgba(231,173,88,.25); border-radius: 9px; background: rgba(13,15,16,.88); box-shadow: 0 12px 38px rgba(0,0,0,.35), 0 0 28px rgba(188,126,41,.055); backdrop-filter: blur(18px); }
+    .command-row { display: flex; align-items: center; gap: 10px; }
+    .command-input { min-width: 0; flex: 1; height: 42px; padding: 0 14px; border: 1px solid transparent; border-radius: 5px; outline: none; background: rgba(255,255,255,.025); color: var(--text); font: 13px 'Plus Jakarta Sans', sans-serif; }
+    .command-input::placeholder { color: #777d7b; }
+    .command-input:focus { border-color: rgba(231,173,88,.32); background: rgba(255,255,255,.045); }
+    .send-button { height: 38px; min-width: 74px; padding: 0 14px; border: 1px solid rgba(231,173,88,.3); border-radius: 5px; background: #c99043; color: #17120b; font: 11px var(--mono); cursor: pointer; }
+    .send-button:hover { background: #e0ac60; }
+    .command-meta { display: flex; align-items: center; justify-content: space-between; padding: 8px 3px 1px; color: #787e7b; font: 10px var(--mono); }
+    .command-meta strong { color: #a5aaa5; font-weight: 400; }
+    .console-view { position: relative; z-index: 2; flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(300px, .85fr); grid-template-rows: minmax(0, 1fr) auto; gap: 12px; padding: 16px 20px 14px; }
+    .console-column { min-height: 0; display: flex; flex-direction: column; gap: 12px; }
+    .console-panel { min-height: 0; border: 1px solid rgba(255,255,255,.09); border-radius: 7px; background: var(--panel); backdrop-filter: blur(18px); box-shadow: 0 16px 40px rgba(0,0,0,.24); }
+    .panel-heading { min-height: 38px; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 0 13px; border-bottom: 1px solid rgba(255,255,255,.07); }
+    .panel-title { color: var(--gold-soft); font: 10px var(--mono); letter-spacing: .09em; }
+    .panel-note { color: #7e8581; font: 10px var(--mono); }
+    .pipeline-panel { display: flex; flex-direction: column; overflow: hidden; }
+    .pipeline-list { flex: 1; min-height: 0; overflow: auto; padding: 9px 12px 12px; }
+    .pipeline-empty { padding: 18px 10px; color: #858a87; font: 11px var(--mono); line-height: 1.8; }
+    .pipeline-run { margin: 0 0 9px; padding: 9px 10px; border: 1px solid rgba(255,255,255,.065); border-radius: 5px; background: rgba(0,0,0,.17); cursor: pointer; transition: border-color .15s ease, background-color .15s ease; }
+    .pipeline-run:hover { border-color: rgba(231,173,88,.24); }
+    .pipeline-run.selected { border-color: rgba(231,173,88,.5); background: rgba(154,103,36,.08); }
+    .pipeline-step { display: grid; grid-template-columns: 102px minmax(0,1fr); gap: 10px; padding: 6px 0; border-bottom: 1px solid rgba(255,255,255,.045); }
+    .pipeline-step:last-child { border-bottom: 0; }
+    .step-label { color: #9b9e99; font: 9px var(--mono); letter-spacing: .07em; }
+    .step-value { min-width: 0; color: #e3e3dd; font-size: 11px; line-height: 1.55; overflow-wrap: anywhere; white-space: pre-wrap; }
+    .step-value.muted { color: #828986; }
+    .step-value.accent { color: var(--gold-soft); }
+    .step-value.cool { color: #8fd2ce; }
+    .task-panel { padding-bottom: 12px; }
+    .task-command { margin: 13px 14px 12px; color: #e5e5df; font-size: 13px; line-height: 1.55; overflow-wrap: anywhere; }
+    .task-details { display: grid; gap: 7px; margin: 0 14px; }
+    .task-detail { display: grid; grid-template-columns: 88px minmax(0,1fr); gap: 9px; color: #a2a7a1; font: 10px var(--mono); line-height: 1.5; }
+    .task-detail-label { color: #7e8581; }
+    .task-detail-value { color: #d6d8d2; overflow-wrap: anywhere; white-space: pre-wrap; }
+    .task-detail-value:empty { display: none; }
+    .task-hold { margin: 13px 14px 0; padding: 10px; border: 1px solid rgba(105,198,196,.2); border-radius: 5px; background: rgba(58,125,126,.08); color: #a5d5d1; font: 10px var(--mono); line-height: 1.6; white-space: pre-line; }
+    .approval-box { margin: 12px 14px 0; padding: 11px; border: 1px solid rgba(231,173,88,.34); border-radius: 5px; background: rgba(154,103,36,.1); }
+    .approval-title { color: var(--gold-soft); font: 10px var(--mono); letter-spacing: .07em; }
+    .approval-detail { padding-top: 8px; color: #ded9ce; font-size: 11px; line-height: 1.6; }
+    .approval-actions { display: flex; gap: 8px; padding-top: 11px; }
+    .approval-actions button { height: 29px; padding: 0 12px; border-radius: 4px; font: 10px var(--mono); cursor: pointer; }
+    .approve-button { color: #17120b; border: 1px solid #c99043; background: #c99043; }
+    .cancel-button { color: #c3c7c2; border: 1px solid rgba(255,255,255,.13); background: rgba(255,255,255,.04); }
+    .status-panel { padding-bottom: 12px; }
+    .status-list { display: grid; grid-template-columns: 1fr; gap: 7px; padding: 12px 14px 0; }
+    .status-item { display: flex; align-items: center; justify-content: space-between; gap: 12px; color: #a8aca7; font: 10px var(--mono); }
+    .status-value { color: #7eaaa1; }
+    .status-value.voice { color: var(--cyan); }
+    .developer-details { border-top: 1px solid rgba(255,255,255,.07); margin-top: 12px; padding: 9px 14px 0; color: #737a76; font: 10px var(--mono); }
+    .developer-details summary { cursor: pointer; color: #939994; }
+    .developer-controls { display: flex; justify-content: space-between; gap: 10px; padding-top: 9px; align-items: center; }
+    .developer-controls select { border: 1px solid rgba(255,255,255,.12); border-radius: 4px; padding: 5px 7px; background: #151819; color: #bec2bc; font: 10px var(--mono); }
+    .console-command { grid-column: 1 / -1; justify-self: center; width: min(650px, 100%); }
+    .hidden { display: none !important; }
+    @media (max-width: 900px) {
+      .console-view { grid-template-columns: minmax(0,1fr) minmax(255px,.75fr); padding: 12px; gap: 9px; }
+      .pipeline-step { grid-template-columns: 82px minmax(0,1fr); }
+      .app-header { padding: 0 12px; }
+    }
+    @media (max-width: 680px) {
+      .app-header { height: 52px; flex-basis: 52px; padding: 0 9px; }
+      .brand-mark { font-size: 11px; }
+      .online-pill { display: none; }
+      .app-header .right-controls { gap: 5px; }
+      .voice-pill, .mode-button { padding: 0 7px; font-size: 9px; }
+      .console-view { display: flex; flex-direction: column; overflow: auto; padding: 9px; }
+      .console-column { display: contents; }
+      .pipeline-panel { height: 280px; flex: 0 0 280px; }
+      .task-panel, .status-panel { flex: 0 0 auto; }
+      .console-command { flex: 0 0 auto; }
+      .command-dock { width: 100%; }
+      .presence-view { padding: 4vh 12px 20px; }
+      .presence-caption { font-size: 11px; }
+    }
     ::-webkit-scrollbar { width: 6px; }
     ::-webkit-scrollbar-track { background: #0a0a0f; }
     ::-webkit-scrollbar-thumb { background: #27272a; border-radius: 3px; }
     .pywebview-drag-region { -webkit-app-region: drag; }
+    .no-drag, .no-drag * { -webkit-app-region: no-drag; }
   </style>
 </head>
 <body class="h-screen w-screen overflow-hidden flex flex-col relative bg-[#060608]">
@@ -41,110 +155,98 @@
   <!-- Three.js 3D WebGL Living Entity Canvas Background -->
   <div id="canvas-container" class="absolute inset-0 z-0 cursor-pointer" onclick="togglePushToTalk()"></div>
 
-  <!-- Ambient Glow Overlay -->
-  <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-gradient-to-r from-amber-500/10 via-orange-600/10 to-transparent blur-[160px] pointer-events-none z-0"></div>
-
-  <!-- Top Drag Handle & Hover Mode Switcher Bar -->
-  <header class="relative z-30 flex items-center justify-between px-6 py-3 pywebview-drag-region opacity-90 hover:opacity-100 transition-opacity">
+  <header class="app-header relative z-30 flex items-center justify-between pywebview-drag-region">
     <div class="flex items-center gap-3">
-      <div class="w-3 h-3 rounded-full bg-amber-400 animate-ping"></div>
-      <span class="text-sm font-extrabold tracking-tight gold-gradient">M.O.N.D.A.Y.</span>
-      <span id="state-text-indicator" class="text-[10px] font-mono bg-amber-500/10 text-amber-400 border border-amber-500/30 px-2 py-0.5 rounded-full font-bold uppercase">
-        Presence Mode Active
-      </span>
+      <span class="brand-mark font-extrabold">M.O.N.D.A.Y.</span>
+      <span class="online-pill"><i class="status-dot"></i>SYSTEM ONLINE</span>
     </div>
 
-    <div class="flex items-center gap-3 font-mono text-xs no-drag">
-      <span class="bg-zinc-900/80 border border-zinc-800 px-2.5 py-1 rounded-lg text-amber-400 font-bold">
-        FPS: <span id="fps-counter">60</span>
-      </span>
-      <button id="live-btn" onclick="Voice.toggleLive()" title="Always-on listening — say &quot;Hey Monday&quot; (Ctrl+L)"
-              class="bg-zinc-900/80 hover:bg-zinc-800 border border-zinc-800 text-zinc-400 px-3 py-1 rounded-lg font-bold transition-all flex items-center gap-1.5">
-        <span id="live-dot" class="w-2 h-2 rounded-full bg-zinc-600 transition-all"></span>
-        <span id="live-btn-text">Live Off</span>
+    <div class="right-controls flex items-center gap-2 font-mono text-xs no-drag">
+      <button id="live-btn" onclick="Voice.toggleLive()" title="Always-on listening — say &quot;Hey Monday&quot; (Ctrl+L)" class="voice-pill">
+        <span id="live-dot" class="status-dot" style="background:#6f7774;box-shadow:none"></span>
+        <span id="live-btn-text">VOICE: OFF</span>
       </button>
-      <button onclick="toggleViewMode()" class="bg-amber-500 hover:bg-amber-400 text-black px-3 py-1 rounded-lg font-bold transition-all shadow-lg shadow-amber-500/20">
+      <button id="mode-button" onclick="toggleViewMode()" class="mode-button">
         <span id="mode-btn-text">Console Mode</span>
       </button>
-      <!-- Native Frameless Window Controls -->
-      <button onclick="minimizeApp()" class="w-7 h-7 bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 rounded-lg text-zinc-400 hover:text-white font-bold flex items-center justify-center transition-all">
+      <button onclick="minimizeApp()" aria-label="Minimize" title="Minimize" class="window-button">
         —
       </button>
-      <button onclick="closeApp()" class="w-7 h-7 bg-red-950/60 hover:bg-red-600 border border-red-500/30 rounded-lg text-red-300 hover:text-white font-bold flex items-center justify-center transition-all">
-        ✕
+      <button onclick="closeApp()" aria-label="Close" title="Close" class="window-button close">
+        ×
       </button>
     </div>
   </header>
 
-  <!-- PRESENCE MODE OVERLAY (Pure Holographic Entity) -->
-  <div id="presence-overlay" class="relative z-10 flex-1 flex flex-col items-center justify-between p-8 pointer-events-none">
-    <div></div> <!-- Spacer -->
-
-    <!-- Status & Caption Subtitle -->
-    <div class="flex flex-col items-center gap-2 text-center pointer-events-auto">
-      <div id="presence-caption" class="bg-black/70 border border-amber-500/30 backdrop-blur-md text-amber-300 font-mono text-sm px-5 py-2.5 rounded-2xl max-w-xl shadow-2xl transition-all">
-        "M.O.N.D.A.Y. Online. Say 'Hey Monday', or hold Space."
+  <div id="presence-overlay" class="presence-view">
+    <div class="presence-readout">
+      <span class="eyebrow">SYSTEM STATE</span>
+      <span id="presence-online" class="eyebrow"><i class="status-dot"></i> SYSTEM ONLINE</span>
+      <span id="presence-state" class="presence-state">IDLE</span>
+      <span id="presence-caption" class="presence-caption"></span>
+      <span id="presence-agent" class="presence-agent"></span>
+    </div>
+    <div class="command-dock">
+      <div class="command-shell">
+        <div class="command-row">
+          <input id="cmd-input" type="text" placeholder="Ask M.O.N.D.A.Y. anything..." class="command-input" onkeypress="if(event.key==='Enter') sendCommand()" autocomplete="off" />
+          <button onclick="sendCommand()" class="send-button">SEND</button>
+        </div>
+        <div class="command-meta"><span>Hold Space to talk</span><strong>Try: “Message Papa I'll be home by 7”</strong></div>
       </div>
-      <span class="text-[11px] font-mono text-zinc-500">Say "Hey Monday" with Live on • Space to talk • Ctrl+L live • Ctrl+` console</span>
     </div>
   </div>
 
-  <!-- CONSOLE MODE OVERLAY (Developer Execution Dashboard) -->
-  <main id="console-overlay" class="relative z-10 flex-1 grid grid-cols-12 gap-6 p-6 overflow-hidden hidden">
-    <!-- Left Column: Living Entity Status -->
-    <div class="col-span-5 flex flex-col gap-5 justify-between">
-      <div class="glass-card rounded-2xl p-5 shadow-2xl flex flex-col gap-3">
-        <div class="flex items-center justify-between">
-          <span class="text-xs font-mono font-bold text-amber-400 uppercase tracking-wider">Consciousness State</span>
-          <span id="state-badge" class="text-xs font-mono font-bold px-3 py-1 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30 uppercase">
-            IDLE (BREATHING)
-          </span>
-        </div>
-        <p id="state-desc" class="text-xs text-zinc-400 leading-relaxed">
-          The 3D molten gold entity is floating in standby mode, breathing organically.
-        </p>
-
-        <!-- Quality LOD Selector -->
-        <div class="flex items-center justify-between pt-2 border-t border-zinc-800 font-mono text-xs">
-          <span class="text-zinc-400">Particle Quality:</span>
-          <select id="lod-select" onchange="changeLOD(this.value)" class="bg-zinc-900 border border-zinc-800 text-zinc-300 text-xs px-2.5 py-1 rounded-lg focus:outline-none">
-            <option value="8000" selected>High (8,000 p)</option>
-            <option value="4000">Balanced (4,000 p)</option>
-            <option value="1800">Saver (1,800 p)</option>
-          </select>
-        </div>
+  <main id="console-overlay" class="console-view hidden">
+    <section class="console-panel pipeline-panel">
+      <div class="panel-heading"><span class="panel-title">EXECUTION PIPELINE</span><span id="execution-count" class="panel-note">0 EXECUTIONS</span></div>
+      <div id="output-box" class="pipeline-list">
+        <div class="pipeline-empty">No executions yet. Submit a command to inspect the runtime trace.</div>
+        <template id="pipeline-row-template"><div class="pipeline-step"><span class="step-label"></span><span class="step-value"><span class="whitespace-pre-wrap break-words"></span></span></div></template>
       </div>
+    </section>
 
-      <!-- Command Prompt Input -->
-      <div class="glass-card rounded-2xl p-5 shadow-2xl flex flex-col gap-4">
-        <label class="text-xs font-mono font-bold text-zinc-400 uppercase">Command Input</label>
-        <div class="flex items-center gap-2">
-          <input
-            id="cmd-input"
-            type="text"
-            placeholder="Type command or reply (e.g. 'draft email to sambhav')..."
-            class="flex-1 bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-3 text-sm text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-amber-500 font-mono transition-all"
-            onkeypress="if(event.key==='Enter') sendCommand()"
-          />
-          <button
-            onclick="sendCommand()"
-            class="px-5 py-3 bg-amber-500 hover:bg-amber-400 text-black text-xs font-bold rounded-xl shadow-lg shadow-amber-500/20 font-mono transition-all"
-          >
-            EXECUTE
-          </button>
+    <aside class="console-column">
+      <section class="console-panel task-panel">
+        <div class="panel-heading"><span class="panel-title">CURRENT TASK</span><span id="task-selection" class="panel-note">LATEST EXECUTION</span></div>
+        <p id="task-command" class="task-command">Ready for a command.</p>
+        <div id="task-details" class="task-details"></div>
+        <div id="task-hold" class="task-hold hidden"></div>
+        <div id="approval-card" class="approval-box hidden">
+          <div class="approval-title">ACTION REQUIRES APPROVAL</div>
+          <div id="approval-detail" class="approval-detail"></div>
+          <div class="approval-actions">
+            <button class="approve-button" onclick="sendConfirmation('yes')">APPROVE</button>
+            <button class="cancel-button" onclick="sendConfirmation('no')">CANCEL</button>
+          </div>
         </div>
-      </div>
-    </div>
+      </section>
 
-    <!-- Right Column: Execution Log -->
-    <div class="col-span-7 flex flex-col gap-4 glass-card rounded-2xl p-5 overflow-hidden shadow-2xl">
-      <div class="flex items-center justify-between pb-3 border-b border-zinc-800">
-        <span class="text-xs font-mono font-bold text-amber-400 uppercase tracking-wider">Multi-Agent Execution Output</span>
-        <span id="intent-tag" class="text-xs font-mono text-zinc-500">Intent: Ready</span>
-      </div>
-      <div id="output-box" class="flex-1 bg-zinc-950/80 rounded-xl p-4 border border-zinc-850 font-mono text-xs overflow-y-auto space-y-3">
-        <div class="text-amber-400 font-bold">🧠 M.O.N.D.A.Y. Master Planner Online.</div>
-        <div class="text-zinc-500">Commands and multi-turn clarifications will be logged here...</div>
+      <section class="console-panel status-panel">
+        <div class="panel-heading"><span class="panel-title">SYSTEM STATUS</span><span class="panel-note">LOCAL RUNTIME</span></div>
+        <div class="status-list">
+          <div class="status-item"><span>System</span><span class="status-value">Online</span></div>
+          <div class="status-item"><span>Voice</span><span id="voice-status" class="status-value voice">Off</span></div>
+          <div class="status-item"><span>Memory</span><span class="status-value">Local</span></div>
+          <div class="status-item"><span>Agent Runtime</span><span class="status-value">Active</span></div>
+          <div class="status-item"><span>ML Routing</span><span class="status-value">Classifier / fallback</span></div>
+          <div class="status-item"><span>Safety Layer</span><span class="status-value">Tier 2 gate</span></div>
+        </div>
+        <details class="developer-details">
+          <summary>Developer / Performance</summary>
+          <div class="developer-controls"><span>Particle quality</span><select id="lod-select" onchange="changeLOD(this.value)"><option value="8000" selected>High · 8,000</option><option value="4000">Balanced · 4,000</option><option value="1800">Saver · 1,800</option></select></div>
+          <div class="developer-controls"><span>Renderer FPS</span><span><span id="fps-counter">--</span> FPS</span></div>
+        </details>
+      </section>
+    </aside>
+
+    <div class="console-command">
+      <div class="command-shell">
+        <div class="command-row">
+          <input id="console-cmd-input" type="text" placeholder="Ask M.O.N.D.A.Y. anything..." class="command-input" onkeypress="if(event.key==='Enter') sendCommand()" autocomplete="off" />
+          <button onclick="sendCommand()" class="send-button">SEND</button>
+        </div>
+        <div class="command-meta"><span>Hold Space to talk</span><strong>Try: “Message Papa I'll be home by 7”</strong></div>
       </div>
     </div>
   </main>
@@ -425,6 +527,8 @@
       supported: false,
       live: false,            // always-on listening armed
       awake: false,           // wake word heard; next words are a command
+      interimWake: false,
+      interimWakeText: '',
       speaking: false,
       restartTimer: null,
       wakeTimer: null,
@@ -573,12 +677,32 @@
 
         const text = (final || '').trim();
         if (!text) {
-          if (interim && this.awake) this.caption(`🎙️ "${interim.trim()}"`);
+          if (interim && this.awake) {
+            this.caption(`🎙️ "${interim.trim()}"`);
+          } else if (interim && this.afterWakeWord(interim) === '') {
+            this.interimWake = true;
+            this.interimWakeText = interim.trim();
+            this.arm();
+          }
           return;
         }
         if (this.isEcho(text)) return;
 
         if (this.awake) {
+          if (this.interimWake) {
+            const normalizedText = text.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+            const normalizedWake = this.interimWakeText.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+            const afterWake = this.afterWakeWord(text);
+            this.interimWake = false;
+            this.interimWakeText = '';
+            if (afterWake === '') return;
+            if (normalizedText.startsWith(`${normalizedWake} `) && afterWake !== null) {
+              this.clearWakeTimer();
+              this.awake = false;
+              this.run(afterWake);
+              return;
+            }
+          }
           this.clearWakeTimer();
           this.awake = false;
           this.run(text);
@@ -650,6 +774,8 @@
           this.caption('👂 "Listening for \'Hey Monday\'..."');
         } else {
           this.awake = false;
+          this.interimWake = false;
+          this.interimWakeText = '';
           this.clearWakeTimer();
           clearTimeout(this.restartTimer);
           try { this.rec.stop(); } catch (e) {}
@@ -664,13 +790,12 @@
         const txt = document.getElementById('live-btn-text');
         const btn = document.getElementById('live-btn');
         if (!dot || !txt || !btn) return;
-        txt.innerText = this.live ? 'Live On' : 'Live Off';
-        dot.className = 'w-2 h-2 rounded-full transition-all ' +
-          (this.live ? 'bg-emerald-400 animate-pulse' : 'bg-zinc-600');
-        btn.className = 'px-3 py-1 rounded-lg font-bold transition-all flex items-center gap-1.5 border ' +
-          (this.live
-            ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-300'
-            : 'bg-zinc-900/80 border-zinc-800 text-zinc-400 hover:bg-zinc-800');
+        txt.innerText = this.live ? 'VOICE: ON' : 'VOICE: OFF';
+        btn.dataset.active = String(this.live);
+        dot.style.background = this.live ? '#69c6c4' : '#6f7774';
+        dot.style.boxShadow = this.live ? '0 0 8px rgba(105,198,196,.34)' : 'none';
+        const status = document.getElementById('voice-status');
+        if (status) status.innerText = this.live ? 'On' : 'Off';
       },
 
       // ── Speaking ──────────────────────────────────────────────────────────
@@ -723,19 +848,33 @@
       }
     };
 
-    const IDLE_CAPTION = '"M.O.N.D.A.Y. Online. Say \'Hey Monday\', or hold Space."';
+    const IDLE_CAPTION = '';
+
+    let activeRoute = null;
+    let activePipeline = null;
+    let activeExecution = null;
+    let selectedExecution = null;
+    const executions = [];
+
+    function getCommandInput() {
+      return document.getElementById(viewMode === 'console' ? 'console-cmd-input' : 'cmd-input');
+    }
 
     function toggleViewMode() {
+      const command = getCommandInput();
+      const value = command ? command.value : '';
       viewMode = viewMode === 'presence' ? 'console' : 'presence';
       document.getElementById('presence-overlay').classList.toggle('hidden', viewMode === 'console');
       document.getElementById('console-overlay').classList.toggle('hidden', viewMode === 'presence');
       document.getElementById('mode-btn-text').innerText = viewMode === 'presence' ? 'Console Mode' : 'Presence Mode';
-      document.getElementById('state-text-indicator').innerText = viewMode === 'presence' ? 'Presence Mode Active' : 'Console Mode Active';
+      document.body.classList.toggle('console-mode', viewMode === 'console');
+      const nextInput = getCommandInput();
+      if (nextInput) nextInput.value = value;
     }
 
     async function togglePushToTalk() {
-      if (isListening) {
-        isListening = false;
+      if (isPushToTalk) {
+        isPushToTalk = false;
         setEntityMode('idle');
         Voice.idle();
         return;
@@ -743,7 +882,7 @@
 
       setEntityMode('listening');
       document.getElementById('presence-caption').innerText = '🎙️ "Listening... Speak into your microphone now."';
-      isListening = true;
+      isPushToTalk = true;
 
       const baseUrl = (window.location.origin && window.location.origin.startsWith('http')) 
         ? window.location.origin 
@@ -752,9 +891,10 @@
       try {
         const res = await fetch(`${baseUrl}/agent/voice/listen?timeout=6`);
         const data = await res.json();
-        isListening = false;
+        isPushToTalk = false;
         if (data.transcript && data.transcript.trim()) {
-          document.getElementById('cmd-input').value = data.transcript.trim();
+          const input = getCommandInput();
+          if (input) input.value = data.transcript.trim();
           document.getElementById('presence-caption').innerText = `🎙️ "Heard: '${data.transcript}'"`;
           sendCommand();
         } else {
@@ -762,7 +902,7 @@
           Voice.idle();
         }
       } catch(err) {
-        isListening = false;
+        isPushToTalk = false;
         setEntityMode('idle');
         Voice.idle();
         const cmdIn = document.getElementById('cmd-input');
@@ -797,11 +937,22 @@
 
     function setEntityMode(mode) {
       currentMode = mode;
-      // Null-safe: a missing badge element must never abort command execution.
-      const setText = (id, txt) => { const el = document.getElementById(id); if (el) el.innerText = txt; };
-      setText('state-badge', mode.toUpperCase());
-      setText('presence-state-badge', mode.toUpperCase());
-      setText('state-text-indicator', (viewMode === 'presence' ? 'Presence Mode Active' : 'Console Mode Active') + ` (${mode.toUpperCase()})`);
+      const state = document.getElementById('presence-state');
+      const caption = document.getElementById('presence-caption');
+      const labels = {
+        idle: ['IDLE', ''],
+        listening: ['LISTENING...', ''],
+        thinking: ['THINKING', 'PROCESSING...'],
+        executing: ['EXECUTING', ''],
+        talking: ['RESPONDING...', ''],
+      };
+      const display = labels[mode] || labels.idle;
+      if (state) state.innerText = display[0];
+      if (caption) caption.innerText = display[1];
+      const online = document.getElementById('presence-online');
+      if (online) online.classList.toggle('hidden', mode !== 'idle');
+      const agent = document.getElementById('presence-agent');
+      if (agent) agent.innerText = mode === 'executing' && activeRoute && activeRoute.skill ? `HANDLING · ${activeRoute.skill}` : '';
     }
 
     function onWindowResize() {
@@ -819,19 +970,217 @@
     // CLI, the API and this UI. Passing `.message` is what had it reading a
     // whole scraped search result, and a Tier-2 prompt including
     // "can't be undone · est. 1s", out loud.
-    function speakText(text) { Voice.speak(text); }
+    function speakText(text) {
+      if (!('speechSynthesis' in window) || !text) {
+        setEntityMode('idle');
+        return;
+      }
+      Voice.speak(text);
+    }
+
+    function setPipelineValue(label, value, tone = '') {
+      if (!activePipeline) return;
+      const row = activePipeline.querySelector(`[data-step="${label}"] .step-value`);
+      if (!row) return;
+      const copy = row.querySelector('.whitespace-pre-wrap');
+      if (copy) copy.innerText = value || '';
+      else row.innerText = value || '';
+      row.classList.remove('muted', 'accent', 'cool');
+      if (tone) row.classList.add(tone);
+      const fieldByLabel = {
+        'USER INPUT': 'command',
+        INTENT: 'intent',
+        ROUTING: 'routing',
+        'AGENT / SKILL': 'skill',
+        ACTION: 'action',
+        RESULT: 'result',
+      };
+      if (activeExecution && fieldByLabel[label]) activeExecution.fields[fieldByLabel[label]] = value || '';
+      if (activeExecution && selectedExecution === activeExecution) renderSelectedExecution(activeExecution);
+    }
+
+    function beginPipeline(command) {
+      const box = document.getElementById('output-box');
+      const empty = box.querySelector('.pipeline-empty');
+      if (empty) empty.remove();
+      const run = document.createElement('section');
+      run.className = 'pipeline-run';
+      run.tabIndex = 0;
+      run.setAttribute('role', 'button');
+      run.setAttribute('aria-label', `Select execution: ${command}`);
+      const execution = {
+        command,
+        element: run,
+        fields: { command, intent: '', routing: '', skill: '', action: '', result: '' },
+        intentClassification: null,
+        routingDecision: null,
+        routingData: null,
+        resultData: null,
+        status: 'Processing',
+        hold: '',
+      };
+      const steps = [
+        ['USER INPUT', command],
+        ['INTENT', ''],
+        ['ROUTING', ''],
+        ['AGENT / SKILL', ''],
+        ['ACTION', ''],
+        ['RESULT', ''],
+      ];
+      for (const [label, value] of steps) {
+        const row = document.getElementById('pipeline-row-template').content.firstElementChild.cloneNode(true);
+        row.dataset.step = label;
+        const heading = row.querySelector('.step-label');
+        heading.innerText = label;
+        row.querySelector('.whitespace-pre-wrap').innerText = value;
+        run.appendChild(row);
+      }
+      run.addEventListener('click', () => selectExecution(execution));
+      run.addEventListener('keydown', event => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          selectExecution(execution);
+        }
+      });
+      box.appendChild(run);
+      box.scrollTop = box.scrollHeight;
+      executions.push(execution);
+      document.getElementById('execution-count').innerText = `${executions.length} EXECUTION${executions.length === 1 ? '' : 'S'}`;
+      activeExecution = execution;
+      activePipeline = run;
+      activeRoute = null;
+      selectExecution(execution);
+      renderSelectedExecution(execution);
+    }
+
+    function selectExecution(execution) {
+      selectedExecution = execution;
+      for (const record of executions) record.element.classList.toggle('selected', record === execution);
+      renderSelectedExecution(execution);
+    }
+
+    function renderSelectedExecution(execution) {
+      if (!execution) return;
+      const taskCommand = document.getElementById('task-command');
+      const taskSelection = document.getElementById('task-selection');
+      const taskDetails = document.getElementById('task-details');
+      const holdPanel = document.getElementById('task-hold');
+      const approvalCard = document.getElementById('approval-card');
+      if (taskCommand) taskCommand.innerText = execution.command;
+      if (taskSelection) {
+        const index = executions.indexOf(execution) + 1;
+        taskSelection.innerText = execution === executions[executions.length - 1]
+          ? `LATEST EXECUTION · ${execution.status.toUpperCase()}`
+          : `SELECTED EXECUTION ${index}`;
+      }
+      if (taskDetails) {
+        taskDetails.replaceChildren();
+        for (const [label, key] of [['INTENT', 'intent'], ['ROUTING', 'routing'], ['AGENT / SKILL', 'skill'], ['ACTION', 'action'], ['RESULT', 'result']]) {
+          const value = execution.fields[key];
+          if (!value) continue;
+          const row = document.createElement('div');
+          row.className = 'task-detail';
+          const name = document.createElement('span');
+          name.className = 'task-detail-label';
+          name.innerText = label;
+          const text = document.createElement('span');
+          text.className = 'task-detail-value';
+          text.innerText = value;
+          row.append(name, text);
+          taskDetails.appendChild(row);
+        }
+      }
+      if (holdPanel) {
+        holdPanel.innerText = execution.hold;
+        holdPanel.classList.toggle('hidden', !execution.hold);
+      }
+      const approval = execution.resultData && execution.resultData.awaiting_tier2_approval === true
+        && execution === executions[executions.length - 1];
+      if (approvalCard) approvalCard.classList.toggle('hidden', !approval);
+      if (approval) {
+        const detail = document.getElementById('approval-detail');
+        if (detail) {
+          detail.replaceChildren();
+          const lines = [
+            execution.resultData.action_name && `Action: ${execution.resultData.action_name}`,
+            execution.resultData.target && `Target: ${execution.resultData.target}`,
+            execution.resultData.predicted_eta_seconds != null && Number.isFinite(Number(execution.resultData.predicted_eta_seconds)) && `Estimated time: ${Math.round(Number(execution.resultData.predicted_eta_seconds))}s`,
+          ].filter(Boolean);
+          detail.innerText = lines.join('\n');
+        }
+      }
+    }
+
+    function routeFromResult(data, exec) {
+      return data.routing_decision || {
+        stage: exec.routed_by || '',
+        skill: exec.selected_skill || '',
+      };
+    }
+
+    function updatePipeline(ic, route, rl, exec, msg) {
+      if (!activeExecution) return;
+      activeExecution.intentClassification = ic;
+      activeExecution.routingDecision = route;
+      activeExecution.routingData = rl;
+      activeExecution.resultData = exec;
+      const intent = ic.predicted_intent || '';
+      setPipelineValue('INTENT', intent, intent ? 'accent' : '');
+      const routeParts = [];
+      if (route && route.stage) routeParts.push(route.stage);
+      if (rl && rl.strategy) routeParts.push(`strategy: ${rl.strategy}`);
+      const routing = routeParts.join(' · ');
+      setPipelineValue('ROUTING', routing, routing ? 'cool' : '');
+      const skill = (route && route.skill) || exec.selected_skill || exec.skill || '';
+      setPipelineValue('AGENT / SKILL', skill, skill ? 'cool' : '');
+      activeRoute = route || null;
+
+      const isPreparedMessage = exec.message_sent === false && Boolean(exec.phone && exec.text);
+      const action = isPreparedMessage
+        ? 'WhatsApp opened · Message typed'
+        : exec.message_sent === false && exec.phone
+          ? 'WhatsApp opened'
+          : exec.action_name || exec.action || exec.operation || '';
+      setPipelineValue('ACTION', action || 'No separate action field returned', action ? 'accent' : 'muted');
+      const resultMessage = (msg || '').replace(/^[✓❌]\s*/, '');
+      const result = exec.success === true
+        ? `✓ Handler returned success${resultMessage ? ` · ${resultMessage}` : ''}`
+        : exec.success === false
+          ? `✕ Handler returned failure${resultMessage ? ` · ${resultMessage}` : ''}`
+          : msg || '';
+      setPipelineValue('RESULT', result, exec.success === true ? 'cool' : '');
+      activeExecution.hold = isPreparedMessage
+        ? 'WhatsApp opened\nMessage typed\nUSER CONFIRMATION REQUIRED\nPress Enter to send'
+        : '';
+      activeExecution.status = exec.awaiting_tier2_approval === true
+        ? 'Waiting for approval'
+        : isPreparedMessage
+          ? 'Waiting for user'
+          : exec.success === true
+            ? 'Complete'
+            : exec.success === false
+              ? 'Failed'
+              : 'In progress';
+      if (selectedExecution === activeExecution) renderSelectedExecution(activeExecution);
+    }
+
+    function sendConfirmation(answer) {
+      if (!selectedExecution || selectedExecution !== executions[executions.length - 1]
+        || !selectedExecution.resultData || selectedExecution.resultData.awaiting_tier2_approval !== true) return;
+      const input = getCommandInput();
+      if (!input) return;
+      input.value = answer;
+      sendCommand();
+    }
 
     async function sendCommand() {
-      const input = document.getElementById('cmd-input');
+      const input = getCommandInput();
       const cmd = input.value.trim();
       if (!cmd) return;
 
-      const box = document.getElementById('output-box');
-      box.innerHTML += `<div class="text-amber-300 border-t border-zinc-800 pt-2 font-bold">user &gt; ${cmd}</div>`;
       input.value = '';
-
+      beginPipeline(cmd);
       setEntityMode('thinking');
-      document.getElementById('presence-caption').innerText = `🧠 "Processing: ${cmd}"`;
 
       // Check PyWebView native Python bridge first
       if (window.pywebview && window.pywebview.api && window.pywebview.api.execute_command) {
@@ -839,19 +1188,16 @@
           const data = await window.pywebview.api.execute_command(cmd);
           const ic = data.intent_classification || {};
           const exec = data.execution_result || {};
-          const msg = exec.message || 'Action completed.';
+          const msg = exec.message || '';
+          const route = routeFromResult(data, exec);
+          updatePipeline(ic, route, data.rl_routing, exec, msg);
           // `.speech` is the short spoken form the backend derived; `.message`
           // is what belongs on screen. They are deliberately different.
           const spoken = exec.speech || msg;
 
           setEntityMode('talking');
-          document.getElementById('presence-caption').innerText = `🗣️ "${msg}"`;
           speakText(spoken);
-
-          const card = document.createElement('div');
-          box.appendChild(card);
-          renderResult(card, ic, exec, msg);
-          box.scrollTop = box.scrollHeight;
+          renderResult(activePipeline, ic, exec, msg, route, data.rl_routing);
           return;
         } catch (bridgeErr) {
           console.warn("PyWebView API bridge error, falling back to HTTP fetch:", bridgeErr);
@@ -874,23 +1220,9 @@
       // "slow" and "dead" stay distinguishable.
       const IDLE_LIMIT_MS = 45000;
 
-      let live = null;      // the in-progress result card
       let streamed = '';    // model-written text accumulated from `token` events
-
-      const ensureCard = () => {
-        if (live) return live;
-        const card = document.createElement('div');
-        card.className = 'bg-zinc-900/80 p-3 rounded-lg border border-zinc-800 space-y-1';
-        card.innerHTML = `<div class="text-zinc-500 text-[11px] font-mono" data-role="status">…</div>`;
-        box.appendChild(card);
-        box.scrollTop = box.scrollHeight;
-        live = card;
-        return card;
-      };
       const setStatus = (text) => {
-        const el = ensureCard().querySelector('[data-role="status"]');
-        if (el) el.innerText = text;
-        box.scrollTop = box.scrollHeight;
+        setPipelineValue('RESULT', text, 'muted');
       };
 
       try {
@@ -940,11 +1272,16 @@
             try { body = payload ? JSON.parse(payload) : {}; } catch (e) { /* keep {} */ }
 
             if (name === 'classified') {
-              document.getElementById('intent-tag').innerText =
-                `Intent: ${body.intent} (${Math.round((body.confidence || 0) * 100)}%)`;
-              setStatus(`classified as ${body.intent}…`);
+              activeExecution.intentClassification = body;
+              setPipelineValue('INTENT', body.intent || '', body.intent ? 'accent' : '');
+            } else if (name === 'routing') {
+              activeRoute = body;
+              activeExecution.routingDecision = body;
+              setPipelineValue('ROUTING', body.stage || '', body.stage ? 'cool' : '');
+              setPipelineValue('AGENT / SKILL', body.skill || '', body.skill ? 'cool' : '');
+              setEntityMode('executing');
             } else if (name === 'consulting_model') {
-              setStatus(`asking the local model (${body.model || 'llm'})… first run loads it, which is slow`);
+              setStatus(`Consulting ${body.model || 'configured model'}…`);
             } else if (name === 'token') {
               streamed += body.text || '';
               setStatus(streamed);
@@ -962,49 +1299,55 @@
 
         const ic = data.intent_classification || {};
         const exec = data.execution_result || {};
-        const msg = exec.message || 'Action completed.';
+        const msg = exec.message || '';
+        const route = activeRoute || routeFromResult(data, exec);
+        updatePipeline(ic, route, data.rl_routing, exec, msg);
         const spoken = exec.speech || msg;
 
         setEntityMode('talking');
-        document.getElementById('presence-caption').innerText = `🗣️ "${msg}"`;
         speakText(spoken);
-
-        renderResult(ensureCard(), ic, exec, msg);
-        box.scrollTop = box.scrollHeight;
+        renderResult(activePipeline, ic, exec, msg, route, data.rl_routing);
       } catch (err) {
         setEntityMode('idle');
         const note = err.name === 'AbortError'
           ? `No response for ${IDLE_LIMIT_MS / 1000}s — the engine may be busy or stopped.`
           : (err.message || err);
-        box.innerHTML += `
-          <div class="bg-red-950/40 p-3 rounded-lg border border-red-800 text-red-300">
-            ❌ Notice: ${note}
-          </div>
-        `;
-        box.scrollTop = box.scrollHeight;
+        setPipelineValue('RESULT', note);
+        if (activeExecution) {
+          activeExecution.status = 'Needs attention';
+          activeExecution.fields.result = note;
+          if (selectedExecution === activeExecution) renderSelectedExecution(activeExecution);
+        }
       }
     }
 
     // One renderer for both transports. The pywebview bridge and the HTTP path
     // used to each build this markup themselves, ~40 lines apart, which is how
     // one of them quietly kept a field the other had dropped.
-    function renderResult(card, ic, exec, msg) {
-      const gmailBtnHtml = exec.gmail_compose_url
-        ? `<div class="pt-2"><a href="${exec.gmail_compose_url}" target="_blank" class="inline-flex items-center gap-2 bg-amber-500 hover:bg-amber-400 text-black font-bold px-3 py-1.5 rounded-lg text-xs transition-all shadow-md shadow-amber-500/20">📧 Open Pre-Filled Gmail Web Composer Window</a></div>`
-        : '';
+    function renderResult(card, ic, exec, msg, route, rl) {
+      if (!card) return;
+      updatePipeline(ic, route, rl, exec, msg);
       // `generated` marks an answer a language model wrote rather than one the
       // assistant observed. The distinction is the whole point of the
       // ModelAnswered evidence variant, so it has to survive to the screen.
-      const generatedHtml = exec.generated
-        ? `<div class="text-[11px] text-zinc-500 font-mono">💭 written by ${exec.model || 'a local model'} — not a looked-up fact</div>`
-        : '';
-      card.className = 'bg-zinc-900/80 p-3 rounded-lg border border-zinc-800 space-y-1';
-      card.innerHTML = `
-        <div><span class="text-cyan-400 font-bold">Intent:</span> ${ic.predicted_intent || 'multi-turn'}</div>
-        <div class="whitespace-pre-wrap break-words"><span class="text-emerald-400 font-bold">Result:</span> ${msg}</div>
-        ${generatedHtml}
-        ${gmailBtnHtml}
-      `;
+      if (exec.generated) {
+        setPipelineValue('RESULT', `${msg}\nGenerated by ${exec.model || 'reported model'}; not a verified lookup.`);
+      }
+      if (exec.gmail_compose_url) {
+        const row = document.createElement('div');
+        row.className = 'pipeline-step';
+        const label = document.createElement('span');
+        label.className = 'step-label';
+        label.innerText = 'EMAIL DRAFT';
+        const link = document.createElement('a');
+        link.className = 'step-value accent';
+        link.href = exec.gmail_compose_url;
+        link.target = '_blank';
+        link.rel = 'noopener noreferrer';
+        link.innerText = 'Open pre-filled Gmail composer';
+        row.append(label, link);
+        card.appendChild(row);
+      }
     }
 
     window.onload = function() {

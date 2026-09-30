@@ -136,6 +136,44 @@ def test_mishearings_still_wake_it():
     ) == ["open gmail", "battery", "proactive", "health", "what's my name"]
 
 
+def test_interim_wake_arms_immediately_without_running_the_final_wake_as_a_command():
+        assert _run_js(r'''
+            global.setTimeout = () => 1;
+            global.clearTimeout = () => {};
+            const input = { value: '' };
+            const commands = [];
+            global.document = { getElementById: id => id === 'cmd-input' ? input : null };
+            global.sendCommand = () => commands.push(input.value);
+            const result = (transcript, isFinal) => Object.assign([{ transcript }], { isFinal });
+
+            Voice.live = true;
+            Voice.onResult({ resultIndex: 0, results: [result('Hey Monday', false)] });
+            const armedOnInterim = Voice.awake;
+            Voice.onResult({ resultIndex: 0, results: [result('Hey Monday', true)] });
+            const ignoredDuplicateWake = commands.length === 0 && Voice.awake;
+            Voice.onResult({ resultIndex: 0, results: [result('what time is it', true)] });
+
+            console.log(JSON.stringify([armedOnInterim, ignoredDuplicateWake, commands, Voice.awake]));
+        ''') == [True, True, ['what time is it'], False]
+
+
+def test_interim_wake_and_command_in_one_final_transcript_runs_only_the_command():
+        assert _run_js(r'''
+            global.setTimeout = () => 1;
+            global.clearTimeout = () => {};
+            const input = { value: '' };
+            const commands = [];
+            global.document = { getElementById: id => id === 'cmd-input' ? input : null };
+            global.sendCommand = () => commands.push(input.value);
+            const result = (transcript, isFinal) => Object.assign([{ transcript }], { isFinal });
+
+            Voice.live = true;
+            Voice.onResult({ resultIndex: 0, results: [result('Hello Monday', false)] });
+            Voice.onResult({ resultIndex: 0, results: [result('Hello, Monday, battery', true)] });
+            console.log(JSON.stringify([commands, Voice.awake]));
+        ''') == [['battery'], False]
+
+
 def test_speech_not_addressed_to_monday_is_ignored():
     """
     The point of a wake word. Always-on listening that acts on everything is
