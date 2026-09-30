@@ -254,16 +254,22 @@ def main() -> None:
     import urllib.request
     app_url = f"http://{args.host}:{args.port}/app"
     engine_up = False
-    for _ in range(30):
+    startup_timeout = 60.0
+    startup_deadline = time.monotonic() + startup_timeout
+    while time.monotonic() < startup_deadline:
         if SERVER_STARTUP_ERROR is not None:
             break
         try:
-            with urllib.request.urlopen(f"http://{args.host}:{args.port}/health", timeout=1) as resp:
+            remaining = startup_deadline - time.monotonic()
+            with urllib.request.urlopen(
+                f"http://{args.host}:{args.port}/health",
+                timeout=min(1.0, remaining),
+            ) as resp:
                 if resp.status == 200:
                     engine_up = True
                     break
         except Exception:
-            time.sleep(0.3)
+            time.sleep(min(0.3, max(0.0, startup_deadline - time.monotonic())))
 
     # Never open a window onto a dead engine — that looks like the app works
     # while every command silently fails.
@@ -278,7 +284,10 @@ def main() -> None:
                     "at a slightly older version normally clears it."
                 )
         else:
-            print(f"   No response from http://{args.host}:{args.port}/health after ~9s.")
+            print(
+                f"   No response from http://{args.host}:{args.port}/health "
+                f"after {startup_timeout:.0f}s."
+            )
         sys.exit(1)
 
     if args.test:
