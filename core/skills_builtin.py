@@ -428,9 +428,9 @@ def build_builtin_registry(planner: Any) -> SkillRegistry:
     # fell through to a web search, which returned an SEO article titled "How to
     # Know How Many Files I Have on My PC". The machine can simply be asked.
     def desktop_contents(**_: Any) -> Dict[str, Any]:
-        from pathlib import Path
+        from core.desktop_paths import desktop_path
 
-        desktop = Path.home() / "Desktop"
+        desktop = desktop_path()
         if not desktop.exists():
             return AgentResult.failed(
                 f"I can't find a Desktop folder at {desktop}.",

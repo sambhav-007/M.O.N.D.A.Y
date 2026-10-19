@@ -56,6 +56,14 @@ _DIRECT_ANSWER_RE = re.compile(
     r"(?:teach|teach me|help me learn|learn)\b.*)",
     re.IGNORECASE,
 )
+_UNMATCHED_DESTRUCTIVE_RE = re.compile(
+    r"^\s*(?:(?:please|can you|could you|would you|will you)\s+)*"
+    r"(?:(?:i want|i need)\s+(?:you\s+)?to\s+)?"
+    r"(?:delete|erase|wipe|destroy|remove|clear)\b"
+    r"(?=.*\b(?:files?|photos?|pictures?|documents?|folders?|data|drives?|disks?|"
+    r"emails?|messages?|contacts?)\b)",
+    re.IGNORECASE,
+)
 
 
 @dataclass(frozen=True)
@@ -152,6 +160,18 @@ class Router:
                         confidence=confidence,
                         reason=f"matched pattern '{match.pattern}'",
                     )
+
+        # A broad classifier family or model guess must not reinterpret an
+        # unsupported destructive command as an unrelated read (for example,
+        # "delete all my photos" as a memory lookup). Explicit patterns above
+        # remain eligible and retain their own safety gates.
+        if _UNMATCHED_DESTRUCTIVE_RE.match(command):
+            return RoutingDecision(
+                stage="fallback",
+                intent=intent,
+                confidence=confidence,
+                reason="unmatched destructive request; no explicit supported skill matched",
+            )
 
         # ── Stage 2: the classifier ──────────────────────────────────────────
         if intent and confidence >= MIN_INTENT_CONFIDENCE:

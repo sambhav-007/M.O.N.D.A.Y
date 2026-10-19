@@ -107,6 +107,23 @@ def test_low_confidence_does_not_reach_a_handler(router):
     assert "below the" in d.reason
 
 
+@pytest.mark.parametrize("command", [
+    "delete all my photos",
+    "please delete all my photos",
+    "I want you to erase all my photos",
+])
+def test_unmatched_destructive_request_cannot_use_classifier_or_llm(router, command):
+    class _MustNotRun:
+        def choose(self, *args, **kwargs):
+            raise AssertionError("model must not receive an unmatched destructive request")
+
+    guarded = Router(router.registry, llm=_MustNotRun())
+    d = guarded.route(command, intent="memory_query", confidence=0.99)
+    assert d.stage == "fallback"
+    assert d.skill is None
+    assert "destructive request" in d.reason
+
+
 def test_the_confidence_floor_is_where_it_says_it_is(router):
     just_under = router.route("vague", intent="document_intel", confidence=MIN_INTENT_CONFIDENCE - 0.01)
     just_over = router.route("vague", intent="document_intel", confidence=MIN_INTENT_CONFIDENCE)

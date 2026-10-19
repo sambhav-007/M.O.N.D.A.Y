@@ -52,16 +52,16 @@ action is an annoyance, a wrongly-ungated destructive one is an incident.
 
 ### 2.2 What is actually gated
 
-`TIER_2_ACTIONS` names nine action types. `TIER_2_IMPLEMENTED` names the subset
-that has a real implementation behind it, and there are **two**:
+`TIER_2_ACTIONS` names eleven policy action types. `TIER_2_IMPLEMENTED` names
+the subset with a real implementation behind it, and there are **three**:
 
 ```python
-TIER_2_IMPLEMENTED = {"send_email", "terminate_process"}
+TIER_2_IMPLEMENTED = {"delete_folder", "send_email", "terminate_process"}
 ```
 
-That distinction is deliberate and is itself an ethics claim. An earlier version
-of this document would have listed nine gated actions; seven of them — including
-`delete_file` and `overwrite_file` — **do not exist anywhere in the codebase**.
+That distinction is deliberate and is itself an ethics claim. Eight policy
+actions — including `delete_file`, `overwrite_file`, `send_whatsapp` and
+`execute_shell` — **do not exist anywhere in the codebase**.
 Reporting a guardrail around a capability the system does not have is not a
 safety property, it is a decoration. The list of what is enforced is kept
 separate from the list of what the policy would cover.
@@ -360,7 +360,7 @@ handler that reports only successes.
 | The demo runs with no network | `DEMO.md` | `tests/test_demo_script.py` (31) |
 | No machine identity in committed test data | `tests/conftest.py` | `tests/test_cassette_hygiene.py` (21) |
 
-Full suite: **687 passing, 0 failing, offline, ~75s.**
+Full suite: **1,105 passing, 0 failing, 7 opt-in tests deselected, offline, ~66s** (2026-10-19).
 
 See `reports/EVIDENCE_INDEX.md` for the regeneration command behind each
 artefact.

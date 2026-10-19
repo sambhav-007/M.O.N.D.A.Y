@@ -31,6 +31,7 @@ from typing import Any, Dict, List
 import pytest
 
 import core.skills_desktop as desktop
+import agents.computer_agent as computer
 from core.planner import MasterPlanner
 from ml.intent_classifier import predict_intent
 
@@ -104,6 +105,29 @@ def test_delete_folder_requires_a_separate_confirmation(planner):
     assert result["action_name"] == "delete_folder"
     assert "All files inside" in result["message"]
     planner.pending_clarification = None
+
+
+def test_create_folder_uses_resolved_desktop_path(tmp_path, monkeypatch):
+    monkeypatch.setattr(computer, "desktop_path", lambda: tmp_path)
+
+    result = computer.ComputerAgent().create_folder("MondayTestFolder")
+
+    assert result["success"] is True
+    assert Path(result["folder"]) == tmp_path / "MondayTestFolder"
+    assert (tmp_path / "MondayTestFolder").is_dir()
+
+
+def test_desktop_contents_uses_resolved_desktop_path(planner, tmp_path, monkeypatch):
+    from core import desktop_paths
+
+    (tmp_path / "visible.txt").write_text("desktop test", encoding="utf-8")
+    monkeypatch.setattr(desktop_paths, "desktop_path", lambda: tmp_path)
+
+    result = _run(planner, "how many files are on my desktop")
+
+    assert result["success"] is True
+    assert result["file_count"] == 1
+    assert result["names"] == ["visible.txt"]
 
 
 # ── Clipboard ────────────────────────────────────────────────────────────────

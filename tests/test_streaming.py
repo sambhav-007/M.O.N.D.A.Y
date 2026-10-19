@@ -165,7 +165,7 @@ def test_token_events_are_forwarded_from_the_model(planner, monkeypatch):
         model = "stub-model"
 
         def choose(self, command: str, on_token: Any = None, history: Any = None,
-                   memories: Any = None) -> Any:
+                   memories: Any = None, direct_answer: bool = False) -> Any:
             from core.llm import LlmChoice
 
             for fragment in ("Mon", "days ", "are ", "fine."):

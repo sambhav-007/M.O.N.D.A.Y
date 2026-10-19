@@ -305,7 +305,9 @@ class MasterPlanner(EmailMixin, ContactMixin, Tier2Mixin):
         mem = psutil.virtual_memory()
         cpu_pct = psutil.cpu_percent(interval=0.1)
 
-        desktop = Path.home() / "Desktop"
+        from core.desktop_paths import desktop_path
+
+        desktop = desktop_path()
         documents = Path.home() / "Documents"
 
         desktop_files = [f.name for f in list(desktop.glob("*"))[:10]] if desktop.exists() else []

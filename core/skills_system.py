@@ -28,6 +28,7 @@ from pathlib import Path
 from typing import Any, Dict
 
 from core.contracts import AgentResult, SystemQuery
+from core.desktop_paths import desktop_path
 from core.skills import Skill, SkillRegistry
 
 
@@ -115,9 +116,9 @@ def register_system_skills(registry: SkillRegistry, planner: Any) -> None:
 
     def rename_folder(source: str = "", name: str = "", **_: Any) -> Dict[str, Any]:
         if source.strip().lower() in {"", "that folder", "the folder", "this folder"}:
-            source = str(Path.home() / "Desktop" / "NewFolder")
+            source = str(desktop_path() / "NewFolder")
         elif "\\" not in source and "/" not in source and ":" not in source:
-            source = str(Path.home() / "Desktop" / source.strip())
+            source = str(desktop_path() / source.strip())
         return planner.computer_agent.rename_folder(source, name)
 
     registry.register(Skill(
@@ -137,7 +138,7 @@ def register_system_skills(registry: SkillRegistry, planner: Any) -> None:
         if not path:
             return AgentResult.failed("Which folder should I delete?", error="NO_FOLDER").as_dict()
         if "\\" not in path and "/" not in path and ":" not in path:
-            path = str(Path.home() / "Desktop" / path)
+            path = str(desktop_path() / path)
         return planner.require_tier2_approval(
             action_name="delete_folder",
             target=path,

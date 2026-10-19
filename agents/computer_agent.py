@@ -24,6 +24,7 @@ from PIL import ImageGrab
 
 from core.config import STAGING_DIR
 from core.contracts import AgentResult, ProcessExit, SystemQuery
+from core.desktop_paths import desktop_path
 from core.security import evaluate_action_permission, log_action
 
 # Category mapping for file extension organization
@@ -114,7 +115,7 @@ class ComputerAgent:
 
     def create_folder(self, name: str, parent: str | Path | None = None) -> Dict[str, Any]:
         clean_name = name.strip().strip('"\'')
-        base = Path(parent).expanduser() if parent else Path.home() / "Desktop"
+        base = Path(parent).expanduser() if parent else desktop_path()
         target = (base / clean_name).resolve()
         if not clean_name or target.name != clean_name:
             return {"success": False, "error": "INVALID_FOLDER_NAME", "message": "Give me a valid folder name."}

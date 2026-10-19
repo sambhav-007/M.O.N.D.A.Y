@@ -373,10 +373,11 @@ Written down deliberately, so nothing in this README claims more than the code d
 | Components 2.1–2.6 | All run; evidence in `reports/` and `reports/figures/` |
 | Intent corpus (2.1) | 17,487 rows, 6,847 of them real (Amazon MASSIVE, Apache 2.0). Held-out macro-F1 0.919; real-command accuracy 1.000 coverage / 0.703 paraphrase — see `reports/real_command_evidence.md` |
 | FastAPI engine | 24 endpoints, verified against the live OpenAPI schema |
-| Tier-2 approval gate | Enforced for `send_email` and `terminate_process` — `core.security.TIER_2_IMPLEMENTED`. See [`reports/CLO01_ethics_and_safety.md`](reports/CLO01_ethics_and_safety.md) |
-| WhatsApp | Opens a chat with the message pre-typed; auto-send is Tier-2 gated (see below) |
+| Tier-2 approval gate | Enforced for `delete_folder`, `send_email` and `terminate_process` — `core.security.TIER_2_IMPLEMENTED`. See [`reports/CLO01_ethics_and_safety.md`](reports/CLO01_ethics_and_safety.md) |
+| WhatsApp | Opens a chat and can pre-type a message; the user presses Enter to send. Automatic sending is not implemented |
 | Audit log | Append-only JSON Lines (`data/action_history.jsonl`). Lossless across processes; records the full Tier-2 lifecycle |
-| Test suite | 773 passing, offline and deterministic (`py -3.12 -m pytest`) in ~90s. It opens no browser tabs, plays no audio, drives no COM automation, touches no real memory and leaves the volume alone — see `tests/test_no_side_effects.py` |
+| Test suite | 1,105 passing, 7 opt-in tests deselected, offline and deterministic (`py -3.12 -m pytest tests/ -q`) in ~66s. It opens no browser tabs, plays no audio, drives no COM automation, touches no real memory and leaves the volume alone — see `tests/test_no_side_effects.py` |
+| Real-utterance routing | 35.2% of 11,180 MASSIVE utterances reach a skill; reaching a skill does not establish that it is the correct skill. The curated negative-set refusal score is 100% (8/8) — see [`reports/scoreboard.md`](reports/scoreboard.md) |
 | Offline start | The UI has no external dependency. Tailwind, three.js and its six add-ons, and both font families are vendored in `ui/vendor/` and served from `/vendor`; re-fetch with `py -3.12 -m ui.vendor.fetch_vendor --write` |
 | Voice | Wake word, always-on listening and barge-in, browser-side. **Backend speech and offline transcription** via `voice/tts.py` (Piper → pyttsx3) and `voice/stt.py` (Vosk on raw PCM, no FFmpeg). Both report which engine did the work. The backend is silent by default — the UI speaks — and `cli.py` turns it on |
 | Result contract | `core/contracts.py` — a handler may only claim success if it carries evidence of what it did. All 11 agents route through it |
@@ -460,7 +461,7 @@ lookup carries emails only, so a bare name has no other route to a number.
 these have an implementation anywhere in the codebase.** The list is a
 default-deny policy so that a future implementation is gated from its first
 commit — it is not a description of existing capability. `TIER_2_IMPLEMENTED`
-names the two that are real.
+names the three that are real.
 
 ### Constraints on this machine
 

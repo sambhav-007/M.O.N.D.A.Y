@@ -69,13 +69,15 @@ TIER_1_ACTIONS = {
 # rather than shipping unguarded.
 #
 # Of these, only the following are actually implemented and reachable today:
+#   • delete_folder    — agents/computer_agent.py, gated via require_tier2_approval
 #   • send_email       — agents/comms_agent.py, gated via planner confirm_send
 #   • terminate_process— agents/computer_agent.py, gated via require_tier2_approval
-# The rest (delete_file, overwrite_file, execute_shell, submit_form,
-# modify_system_settings, kill_process) have no implementation anywhere in the
-# codebase. Do not cite them as working safety features.
+# The rest (delete_file, overwrite_file, send_notification, send_whatsapp,
+# execute_shell, submit_form, modify_system_settings, kill_process) have no
+# implementation anywhere in the codebase. Do not cite them as working features.
 TIER_2_ACTIONS = {
     "delete_file",
+    "delete_folder",
     "overwrite_file",
     "send_email",
     "send_notification",

@@ -162,6 +162,7 @@ def _route(planner, command):
     # There is no email-summarising path, and `summarize_document` would have
     # gone looking for a file called "my last email and reply to it".
     "summarise my last email and reply to it",
+    "delete all my photos",
 ])
 def test_a_command_with_no_honest_answer_reaches_nothing(planner, command):
     decision = _route(planner, command)
@@ -190,6 +191,8 @@ def test_the_refusal_says_which_pattern_was_not_believed(planner):
     ("latest news", "latest_news"),
     ("set volume to 40", "set_volume"),
     ("turn up the volume", "volume_up"),
+    ("delete folder abc", "delete_folder"),
+    ("remove the folder abc", "delete_folder"),
 ])
 def test_the_commands_that_must_keep_working_keep_working(planner, command, skill):
     """Every rule can only reject, so over-rejection is the failure mode with no
