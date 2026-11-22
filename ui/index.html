@@ -527,6 +527,8 @@
       supported: false,
       live: false,            // always-on listening armed
       recognizing: false,     // browser has actually started the microphone
+      offlineFallback: false,
+      offlineLoopTimer: null,
       awake: false,           // wake word heard; next words are a command
       interimWake: false,
       interimWakeText: '',
@@ -756,6 +758,10 @@
         // recognizer cannot reliably hear a wake word; stop rather than showing
         // VOICE ON and silently restarting a broken recognizer forever.
         if (event.error === 'no-speech' || event.error === 'aborted') return;
+        if (event.error === 'network') {
+          this.startOnlineFallback();
+          return;
+        }
 
         this.live = false;
         this.recognizing = false;
@@ -780,11 +786,65 @@
 
       onEnd() {
         if (!this.live) { this.paint(); return; }
+        if (this.offlineFallback) { this.paint(); return; }
         // Chrome ends the session by itself; restart it. The delay keeps a
         // permission failure from becoming a busy loop.
         clearTimeout(this.restartTimer);
         this.paint();
         this.restartTimer = setTimeout(() => this.start(), 350);
+      },
+
+      startOnlineFallback() {
+        if (this.offlineFallback) return;
+        this.offlineFallback = true;
+        this.recognizing = false;
+        this.live = true;
+        try { this.rec.stop(); } catch (error) {}
+        clearTimeout(this.restartTimer);
+        this.caption('🎙️ "Using the online microphone recognizer..."');
+        this.paint();
+        this.runOfflineLoop();
+      },
+
+      startOfflineFallback() {
+        this.startOnlineFallback();
+      },
+
+      stopOfflineFallback() {
+        this.offlineFallback = false;
+        clearTimeout(this.offlineLoopTimer);
+        this.offlineLoopTimer = null;
+      },
+
+      async runOfflineLoop() {
+        if (!this.live || !this.offlineFallback) return;
+        const baseUrl = (window.location && window.location.origin && window.location.origin.startsWith('http'))
+          ? window.location.origin
+          : 'http://127.0.0.1:8000';
+        try {
+          const response = await fetch(`${baseUrl}/agent/voice/listen?timeout=5&engine=google`);
+          if (response.ok) {
+            const data = await response.json();
+            const transcript = data.transcript || data.data?.transcript;
+            if (transcript) this.processOfflineTranscript(transcript);
+          }
+        } catch (error) {
+          this.caption('🎙️ "Online microphone unavailable. Check the microphone and connection."');
+        }
+        if (this.live && this.offlineFallback) {
+          this.offlineLoopTimer = setTimeout(() => this.runOfflineLoop(), 150);
+        }
+      },
+
+      processOfflineTranscript(transcript) {
+        const result = Object.assign(
+          [{ transcript: transcript }],
+          { isFinal: true }
+        );
+        this.onResult({
+          resultIndex: 0,
+          results: [result]
+        });
       },
 
       start() {
@@ -814,6 +874,7 @@
         } else {
           this.awake = false;
           this.recognizing = false;
+          this.stopOfflineFallback();
           this.interimWake = false;
           this.interimWakeText = '';
           this.clearWakeTimer();
@@ -830,14 +891,21 @@
         const txt = document.getElementById('live-btn-text');
         const btn = document.getElementById('live-btn');
         const active = this.live && this.recognizing;
+        const offline = this.live && this.offlineFallback;
         if (dot && txt && btn) {
-          txt.innerText = !this.live ? 'VOICE: OFF' : active ? 'VOICE: ON' : 'VOICE: STARTING';
+          txt.innerText = !this.live
+            ? 'VOICE: OFF'
+            : offline
+              ? 'VOICE: ONLINE'
+              : active
+                ? 'VOICE: ON'
+                : 'VOICE: STARTING';
           btn.dataset.active = String(this.live);
-          dot.style.background = active ? '#69c6c4' : '#6f7774';
-          dot.style.boxShadow = active ? '0 0 8px rgba(105,198,196,.34)' : 'none';
+          dot.style.background = active || offline ? '#69c6c4' : '#6f7774';
+          dot.style.boxShadow = active || offline ? '0 0 8px rgba(105,198,196,.34)' : 'none';
         }
         const status = document.getElementById('voice-status');
-        if (status) status.innerText = !this.live ? 'Off' : active ? 'On' : 'Starting';
+        if (status) status.innerText = !this.live ? 'Off' : offline ? 'Online' : active ? 'On' : 'Starting';
       },
 
       // ── Speaking ──────────────────────────────────────────────────────────

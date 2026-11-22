@@ -424,11 +424,11 @@ async def voice_speak(req: SpeakRequest) -> Dict[str, Any]:
 
 
 @app.get("/agent/voice/listen", tags=["Voice Agent"])
-async def voice_listen(timeout: int = 5) -> Dict[str, Any]:
+async def voice_listen(timeout: int = 5, engine: str = "auto") -> Dict[str, Any]:
     """Listens for voice audio input."""
     if _PLANNER is None:
         raise HTTPException(503, "Planner offline.")
-    return _PLANNER.voice_agent.listen(timeout_seconds=timeout)
+    return _PLANNER.voice_agent.listen(timeout_seconds=timeout, engine=engine)
 
 
 

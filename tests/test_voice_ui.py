@@ -241,6 +241,59 @@ def test_voice_command_uses_the_currently_selected_input():
     ''') == ['battery']
 
 
+def test_network_error_switches_to_the_online_backend_recognizer():
+    assert _run_js(r'''
+        global.setTimeout = () => 1;
+        global.clearTimeout = () => {};
+        const elements = {
+          'live-btn': { dataset: {}, classList: { add() {} } },
+          'live-dot': { style: {} },
+          'live-btn-text': { innerText: '' },
+          'voice-status': { innerText: '' },
+          'presence-caption': { innerText: '' },
+        };
+        global.document = { getElementById: id => elements[id] || null };
+        global.fetch = () => new Promise(() => {});
+        window.SpeechRecognition = class {
+          start() { this.onstart(); }
+          stop() {}
+        };
+
+        Voice.init();
+        Voice.toggleLive();
+        Voice.onError({ error: 'network' });
+        console.log(JSON.stringify([
+          Voice.live,
+          Voice.offlineFallback,
+          elements['live-btn-text'].innerText,
+          elements['voice-status'].innerText,
+          elements['presence-caption'].innerText,
+        ]));
+    ''') == [
+        True,
+        True,
+        'VOICE: ONLINE',
+        'Online',
+        '🎙️ "Using the online microphone recognizer..."',
+    ]
+
+
+def test_offline_transcript_is_processed_as_a_wake_word_result():
+    assert _run_js(r'''
+        global.setTimeout = () => 1;
+        global.clearTimeout = () => {};
+        const input = { value: '' };
+        const commands = [];
+        global.document = { getElementById: id => id === 'cmd-input' ? input : null };
+        global.sendCommand = () => commands.push(input.value);
+
+        Voice.live = true;
+        Voice.offlineFallback = true;
+        Voice.processOfflineTranscript('Hey Monday battery');
+        console.log(JSON.stringify(commands));
+    ''') == ['battery']
+
+
 def test_speech_not_addressed_to_monday_is_ignored():
     """
     The point of a wake word. Always-on listening that acts on everything is

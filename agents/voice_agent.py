@@ -152,7 +152,7 @@ class VoiceAgent:
             },
         ).as_dict()
 
-    def listen(self, timeout_seconds: int = 5) -> Dict[str, Any]:
+    def listen(self, timeout_seconds: int = 5, engine: str = "auto") -> Dict[str, Any]:
         """
         Listens for audio speech input from default microphone using sounddevice and converts to text.
         """
@@ -178,47 +178,71 @@ class VoiceAgent:
                 wf.setframerate(fs)
                 wf.writeframes(recording.tobytes())
 
-            # ── Offline first ────────────────────────────────────────────────
-            # Vosk takes the raw PCM that is already in memory. Going to Google
-            # was the only path until now, which made "voice works offline" an
-            # overstatement in the place it mattered most: with no network
-            # MONDAY could speak but could not hear.
+            # Online mode is explicit for the desktop fallback. It sends the
+            # recorded PCM to Google's web-speech recognizer instead of letting
+            # a PyWebView browser implementation decide whether that service is
+            # reachable. Vosk remains a final fallback if the backend request
+            # fails or returns no recognisable speech.
             from voice import stt
 
-            heard = stt.transcribe_pcm(recording.tobytes(), fs)
-            if heard.ok:
-                return AgentResult.ok(
-                    f'[Mic] Recognized speech: "{heard.transcript}"',
-                    evidence=FileWritten(
-                        path=str(wav_path), bytes_written=wav_path.stat().st_size
-                    ),
-                    data={"transcript": heard.transcript, "listening": False,
-                          "engine": heard.engine, "offline": True},
-                ).as_dict()
-            if heard.error == "NO_SPEECH":
-                # The recogniser worked and there was nothing to hear. Reporting
-                # that as a recognition failure sends the user to debug a
-                # microphone that is fine.
-                return AgentResult.failed(
-                    "[Mic] I didn't hear anything.",
-                    error="NO_SPEECH",
-                    data={"engine": heard.engine, "offline": True},
-                ).as_dict()
+            heard = None
+            if engine.lower() != "google":
+                heard = stt.transcribe_pcm(recording.tobytes(), fs)
+                if heard.ok:
+                    return AgentResult.ok(
+                        f'[Mic] Recognized speech: "{heard.transcript}"',
+                        evidence=FileWritten(
+                            path=str(wav_path), bytes_written=wav_path.stat().st_size
+                        ),
+                        data={"transcript": heard.transcript, "listening": False,
+                              "engine": heard.engine, "offline": True},
+                    ).as_dict()
+                if heard.error == "NO_SPEECH":
+                    return AgentResult.failed(
+                        "[Mic] I didn't hear anything.",
+                        error="NO_SPEECH",
+                        data={"engine": heard.engine, "offline": True},
+                    ).as_dict()
 
-            # ── Otherwise the online recogniser, and say that it was used ────
-            recognizer = sr.Recognizer()
-            with sr.AudioFile(str(wav_path.resolve())) as source:
-                audio = recognizer.record(source)
-                transcript = recognizer.recognize_google(audio)
+            try:
+                recognizer = sr.Recognizer()
+                with sr.AudioFile(str(wav_path.resolve())) as source:
+                    audio = recognizer.record(source)
+                    transcript = recognizer.recognize_google(audio)
+                    return AgentResult.ok(
+                        f'[Mic] Recognized speech: "{transcript}"',
+                        evidence=FileWritten(
+                            path=str(wav_path), bytes_written=wav_path.stat().st_size
+                        ),
+                        data={"transcript": transcript, "listening": False,
+                              "engine": "google_web_speech", "offline": False,
+                              "offline_unavailable": heard.detail if heard else ""},
+                    ).as_dict()
+            except sr.UnknownValueError:
+                pass
+            except sr.RequestError as err:
+                google_detail = str(err)
+            else:
+                google_detail = "Google returned no transcript."
+
+            offline = stt.transcribe_pcm(recording.tobytes(), fs)
+            if offline.ok:
                 return AgentResult.ok(
-                    f'[Mic] Recognized speech: "{transcript}"',
+                    f'[Mic] Recognized speech: "{offline.transcript}"',
                     evidence=FileWritten(
                         path=str(wav_path), bytes_written=wav_path.stat().st_size
                     ),
-                    data={"transcript": transcript, "listening": False,
-                          "engine": "google_web_speech", "offline": False,
-                          "offline_unavailable": heard.detail},
+                    data={"transcript": offline.transcript, "listening": False,
+                          "engine": offline.engine, "offline": True,
+                          "google_fallback_detail": locals().get("google_detail", "")},
                 ).as_dict()
+            return AgentResult.failed(
+                "[Mic] Online recognition was unavailable and the offline recognizer heard nothing.",
+                error="NO_SPEECH" if offline.error == "NO_SPEECH" else "VOICE_RECOGNITION_UNAVAILABLE",
+                data={"engine": "google_web_speech", "offline": True,
+                      "offline_error": offline.error,
+                      "detail": locals().get("google_detail", "")},
+            ).as_dict()
         except Exception as err:
             return AgentResult.failed(
                 f"[Mic] Listening timed out or speech not clear: {err}",
