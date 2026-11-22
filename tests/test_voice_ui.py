@@ -88,14 +88,33 @@ def _wake(*phrases):
 # ── Wake word ────────────────────────────────────────────────────────────────
 def test_the_wake_phrase_is_consumed_and_the_command_is_not():
     assert _wake(
-        "hey monday",
-        "hey monday open gmail",
-        "hello monday battery",
-        "ok monday set volume to 40",
-    ) == ["", "open gmail", "battery", "set volume to 40"]
+        "monday",
+        "monday open gmail",
+        "monday battery",
+        "monday set volume to 40",
+        "mon day open gmail",
+        "mundy battery",
+    ) == ["", "open gmail", "battery", "set volume to 40", "open gmail", "battery"]
 
 
-def test_the_wake_phrase_allows_to_between_greeting_and_name():
+def test_a_lower_ranked_speech_alternative_can_match_the_wake_word():
+    assert _run_js(r'''
+        const input = { value: '' };
+        const commands = [];
+        global.document = { getElementById: id => id === 'cmd-input' ? input : null };
+        global.sendCommand = () => commands.push(input.value);
+        const result = Object.assign([
+          { transcript: 'one day open gmail' },
+          { transcript: 'Monday open gmail' },
+        ], { isFinal: true });
+
+        Voice.live = true;
+        Voice.onResult({ resultIndex: 0, results: [result] });
+        console.log(JSON.stringify(commands));
+    ''') == ['open gmail']
+
+
+def test_the_name_is_the_wake_phrase_with_or_without_a_greeting():
     assert _wake(
         "hi to monday",
         "hello to monday battery",
@@ -148,9 +167,9 @@ def test_interim_wake_arms_immediately_without_running_the_final_wake_as_a_comma
             const result = (transcript, isFinal) => Object.assign([{ transcript }], { isFinal });
 
             Voice.live = true;
-            Voice.onResult({ resultIndex: 0, results: [result('Hey Monday', false)] });
+            Voice.onResult({ resultIndex: 0, results: [result('Monday', false)] });
             const armedOnInterim = Voice.awake;
-            Voice.onResult({ resultIndex: 0, results: [result('Hey Monday', true)] });
+            Voice.onResult({ resultIndex: 0, results: [result('Monday', true)] });
             const ignoredDuplicateWake = commands.length === 0 && Voice.awake;
             Voice.onResult({ resultIndex: 0, results: [result('what time is it', true)] });
 
@@ -169,10 +188,40 @@ def test_interim_wake_and_command_in_one_final_transcript_runs_only_the_command(
             const result = (transcript, isFinal) => Object.assign([{ transcript }], { isFinal });
 
             Voice.live = true;
-            Voice.onResult({ resultIndex: 0, results: [result('Hello Monday', false)] });
-            Voice.onResult({ resultIndex: 0, results: [result('Hello, Monday, battery', true)] });
+            Voice.onResult({ resultIndex: 0, results: [result('Monday', false)] });
+            Voice.onResult({ resultIndex: 0, results: [result('Monday, battery', true)] });
             console.log(JSON.stringify([commands, Voice.awake]));
         ''') == [['battery'], False]
+
+
+def test_backend_followup_reply_is_accepted_without_another_wake_word():
+    assert _run_js(r'''
+        const input = { value: '' };
+        const commands = [];
+        global.document = { getElementById: id => id === 'cmd-input' ? input : null };
+        global.sendCommand = () => commands.push(input.value);
+
+        Voice.live = true;
+        Voice.expectReply({ pending_clarification: true });
+        Voice.onResult({
+          resultIndex: 0,
+          results: [Object.assign([{ transcript: 'Quarterly update' }], { isFinal: true })],
+        });
+        console.log(JSON.stringify([commands, Voice.awaitingReply]));
+    ''') == [['Quarterly update'], False]
+
+
+def test_voice_stays_in_listening_state_while_waiting_for_a_followup():
+    assert _run_js(r'''
+        global.setEntityMode = mode => { global.mode = mode; };
+        const caption = { innerText: '' };
+        global.document = { getElementById: id => id === 'presence-caption' ? caption : null };
+
+        Voice.live = true;
+        Voice.expectReply({ awaiting_tier2_approval: true });
+        Voice.idle();
+        console.log(JSON.stringify([global.mode, caption.innerText]));
+    ''') == ['listening', '🎙️ "Listening for your reply..."']
 
 
 def test_microphone_start_failure_is_visible_and_does_not_claim_voice_is_on():
@@ -274,7 +323,7 @@ def test_network_error_switches_to_the_online_backend_recognizer():
         True,
         'VOICE: ONLINE',
         'Online',
-        '🎙️ "Using the online microphone recognizer..."',
+        '🎙️ "Using the online microphone recognizer. Say Monday to wake me."',
     ]
 
 
@@ -289,7 +338,7 @@ def test_offline_transcript_is_processed_as_a_wake_word_result():
 
         Voice.live = true;
         Voice.offlineFallback = true;
-        Voice.processOfflineTranscript('Hey Monday battery');
+        Voice.processOfflineTranscript('Monday battery');
         console.log(JSON.stringify(commands));
     ''') == ['battery']
 
@@ -409,6 +458,14 @@ def test_multiline_results_preserve_help_menu_formatting():
     assert 'class="whitespace-pre-wrap break-words"' in html
 
 
+def test_presence_mode_shows_and_keeps_the_completed_response():
+    html = INDEX.read_text(encoding="utf-8")
+    assert 'id="presence-result-panel"' in html
+    assert 'id="presence-result"' in html
+    assert "showPresenceResult(msg);" in html
+    assert "showPresenceResult(note);" in html
+
+
 def test_recognition_is_continuous_with_interim_results():
     """
     Both are required. `continuous` keeps the session alive between utterances;
@@ -417,6 +474,7 @@ def test_recognition_is_continuous_with_interim_results():
     html = INDEX.read_text(encoding="utf-8")
     assert "rec.continuous = true" in html
     assert "rec.interimResults = true" in html
+    assert "rec.maxAlternatives = 5" in html
 
 
 def test_voice_initializes_before_optional_webgl_entity():

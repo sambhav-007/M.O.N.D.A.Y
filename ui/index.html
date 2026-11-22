@@ -66,6 +66,9 @@
     .eyebrow { color: #929592; font: 10px var(--mono); letter-spacing: .12em; }
     .presence-state { color: var(--gold-soft); font: 12px var(--mono); letter-spacing: .08em; }
     .presence-caption { max-width: min(620px, 82vw); color: #b7bbb7; font: 11px var(--mono); line-height: 1.55; }
+    .presence-result-panel { max-width: min(620px, 82vw); max-height: 28vh; overflow-y: auto; padding-top: 7px; border-top: 1px solid rgba(255,255,255,.07); }
+    .presence-result-panel.hidden { display: none; }
+    .presence-result { margin-top: 4px; color: var(--text); font: 12px/1.6 'Plus Jakarta Sans', sans-serif; white-space: pre-wrap; overflow-wrap: anywhere; }
     .presence-agent { min-height: 0; color: var(--cyan); font: 10px var(--mono); }
     .presence-agent:empty { display: none; }
     .command-dock { width: min(650px, calc(100vw - 36px)); pointer-events: auto; }
@@ -162,7 +165,7 @@
     </div>
 
     <div class="right-controls flex items-center gap-2 font-mono text-xs no-drag">
-      <button id="live-btn" onclick="Voice.toggleLive()" title="Always-on listening — say &quot;Hey Monday&quot; (Ctrl+L)" class="voice-pill">
+      <button id="live-btn" onclick="Voice.toggleLive()" title="Always-on listening — say &quot;Monday&quot; (Ctrl+L)" class="voice-pill">
         <span id="live-dot" class="status-dot" style="background:#6f7774;box-shadow:none"></span>
         <span id="live-btn-text">VOICE: OFF</span>
       </button>
@@ -185,6 +188,10 @@
       <span id="presence-state" class="presence-state">IDLE</span>
       <span id="presence-caption" class="presence-caption"></span>
       <span id="presence-agent" class="presence-agent"></span>
+      <div id="presence-result-panel" class="presence-result-panel hidden" aria-live="polite">
+        <span class="eyebrow">RESPONSE</span>
+        <div id="presence-result" class="presence-result"></div>
+      </div>
     </div>
     <div class="command-dock">
       <div class="command-shell">
@@ -530,6 +537,7 @@
       offlineFallback: false,
       offlineLoopTimer: null,
       awake: false,           // wake word heard; next words are a command
+      awaitingReply: false,   // backend asked a follow-up question
       interimWake: false,
       interimWakeText: '',
       speaking: false,
@@ -570,22 +578,9 @@
           || null;
       },
 
-      // Deliberately generous, because a wake word that misses is a feature
-      // that does not work. "Hey Monday" comes back as "hey Monday", "heyy
-      // Monday", "hay Monday", "hey munday" and "hey mondey" depending on
-      // accent and how much of the first word survives the start of the audio
-      // buffer — so the greeting allows repeated letters and the name allows
-      // the vowels people actually get transcribed.
-      //
-      // The second pattern is bare "Monday", for when the greeting is clipped
-      // entirely. It costs the occasional false wake on "see you Monday", which
-      // is a stray "Yes? I'm listening" — cheap next to not waking at all.
-      // Order matters: the first match wins, so the greeting form is tried
-      // first and keeps its command text intact.
-      WAKE: [
-        /\b(?:h[ae]+y+|hi+|hell+o+|o+k+(?:ay)?|yo+)[\s,]+(?:to[\s,]+)?m[ou]n+d[aei]y\b[\s,.:;!?-]*/i,
-        /\bm[ou]n+d[aei]y\b[\s,.:;!?-]*/i
-      ],
+      // "Monday" alone is the wake phrase. Accept common ASR substitutions,
+      // including a split "Mon day", without requiring a greeting.
+      WAKE: [/\bm(?:on|un)\s*d(?:ay|ey|y)\b[\s,.:;!?-]*/i],
 
       // How long to wait for a command after the wake word before standing down.
       WAKE_TIMEOUT_MS: 8000,
@@ -608,11 +603,13 @@
         rec.continuous = true;
         rec.interimResults = true;
         rec.lang = 'en-US';
-        rec.maxAlternatives = 1;
+        rec.maxAlternatives = 5;
 
         rec.onstart = () => {
           this.recognizing = true;
-          this.caption('👂 "Listening for \'Hey Monday\'..."');
+          this.caption(this.awaitingReply
+            ? '🎙️ "Listening for your reply..."'
+            : '👂 "Listening for \'Monday\'..."');
           this.paint();
         };
         rec.onresult = (e) => this.onResult(e);
@@ -659,7 +656,7 @@
       //
       // The slice is taken from the ORIGINAL text, not a normalised copy. An
       // earlier version flattened punctuation to spaces before searching and
-      // returned the flattened string, so "hey monday what's the time" became
+      // returned the flattened string, so "monday what's the time" became
       // "what s the time" — which matches no skill pattern, since those are
       // written with the apostrophe ("what's my name", "papa's number"). The
       // wake word is found case-insensitively; everything after it is passed
@@ -674,10 +671,23 @@
         return null;
       },
 
+      transcriptFor(result, preferWake) {
+        const alternatives = Array.from(
+          { length: result.length || 1 },
+          (_, index) => result[index] && result[index].transcript
+        ).filter(text => typeof text === 'string' && text.trim());
+        if (preferWake) {
+          const wakeCandidate = alternatives.find(text => this.afterWakeWord(text) !== null);
+          if (wakeCandidate) return wakeCandidate;
+        }
+        return alternatives[0] || '';
+      },
+
       onResult(event) {
         let interim = '', final = '';
         for (let i = event.resultIndex; i < event.results.length; i++) {
-          const chunk = event.results[i][0].transcript;
+          const result = event.results[i];
+          const chunk = this.transcriptFor(result, !this.awake || this.interimWake);
           if (event.results[i].isFinal) final += chunk; else interim += chunk;
         }
 
@@ -698,6 +708,19 @@
           return;
         }
         if (this.isEcho(text)) return;
+
+        if (this.awaitingReply) {
+          if (!text) {
+            if (interim) this.caption(`🎙️ "${interim.trim()}"`);
+            return;
+          }
+          this.awaitingReply = false;
+          this.clearWakeTimer();
+          this.interimWake = false;
+          this.interimWakeText = '';
+          this.run(text);
+          return;
+        }
 
         if (this.awake) {
           if (this.interimWake) {
@@ -722,8 +745,8 @@
 
         const after = this.afterWakeWord(text);
         if (after === null) return;          // not addressed to us
-        if (after) { this.run(after); return; }   // "hey monday, what's the time"
-        this.arm();                          // just "hey monday" — wait for more
+        if (after) { this.run(after); return; }   // "monday, what's the time"
+        this.arm();                          // just "monday" — wait for more
       },
 
       arm() {
@@ -734,7 +757,7 @@
         this.wakeTimer = setTimeout(() => {
           this.awake = false;
           setEntityMode('idle');
-          this.caption(this.live ? '👂 "Listening for \'Hey Monday\'..."' : IDLE_CAPTION);
+          this.caption(this.live ? '👂 "Listening for \'Monday\'..."' : IDLE_CAPTION);
         }, this.WAKE_TIMEOUT_MS);
       },
 
@@ -801,7 +824,7 @@
         this.live = true;
         try { this.rec.stop(); } catch (error) {}
         clearTimeout(this.restartTimer);
-        this.caption('🎙️ "Using the online microphone recognizer..."');
+        this.caption('🎙️ "Using the online microphone recognizer. Say Monday to wake me."');
         this.paint();
         this.runOfflineLoop();
       },
@@ -953,8 +976,28 @@
       },
 
       idle() {
+        if (this.awaitingReply) {
+          setEntityMode('listening');
+          this.caption('🎙️ "Listening for your reply..."');
+          return;
+        }
         setEntityMode('idle');
-        this.caption(this.live ? '👂 "Listening for \'Hey Monday\'..."' : IDLE_CAPTION);
+        this.caption(this.live ? '👂 "Listening for \'Monday\'..."' : IDLE_CAPTION);
+      },
+
+      expectReply(result) {
+        this.awaitingReply = Boolean(result && (
+          result.pending_clarification === true
+          || result.awaiting_tier2_approval === true
+          || result.awaiting_send_confirmation === true
+          || result.awaiting_llm_confirmation === true
+          || result.awaiting_contact_number === true
+          || result.awaiting_subject === true
+        ));
+        if (this.awaitingReply && this.live && !this.isTalking()) {
+          setEntityMode('listening');
+          this.caption('🎙️ "Listening for your reply..."');
+        }
       }
     };
 
@@ -1065,6 +1108,14 @@
       if (agent) agent.innerText = mode === 'executing' && activeRoute && activeRoute.skill ? `HANDLING · ${activeRoute.skill}` : '';
     }
 
+    function showPresenceResult(message) {
+      const panel = document.getElementById('presence-result-panel');
+      const result = document.getElementById('presence-result');
+      if (!panel || !result) return;
+      result.innerText = message || '';
+      panel.classList.toggle('hidden', !message);
+    }
+
     function onWindowResize() {
       camera.aspect = window.innerWidth / window.innerHeight;
       camera.updateProjectionMatrix();
@@ -1110,6 +1161,7 @@
     }
 
     function beginPipeline(command) {
+      showPresenceResult('');
       const box = document.getElementById('output-box');
       const empty = box.querySelector('.pipeline-empty');
       if (empty) empty.remove();
@@ -1428,6 +1480,7 @@
           activeExecution.fields.result = note;
           if (selectedExecution === activeExecution) renderSelectedExecution(activeExecution);
         }
+        showPresenceResult(note);
       }
     }
 
@@ -1436,6 +1489,8 @@
     // one of them quietly kept a field the other had dropped.
     function renderResult(card, ic, exec, msg, route, rl) {
       if (!card) return;
+      Voice.expectReply(exec);
+      showPresenceResult(msg);
       updatePipeline(ic, route, rl, exec, msg);
       // `generated` marks an answer a language model wrote rather than one the
       // assistant observed. The distinction is the whole point of the

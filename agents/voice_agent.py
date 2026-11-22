@@ -252,17 +252,17 @@ class VoiceAgent:
 
     def start_wake_word_listener(self, callback_fn: Optional[Any] = None) -> Dict[str, Any]:
         """
-        Starts a continuous hands-free background listener loop for 'Monday' or 'Hey Monday' wake word activation.
+        Starts a continuous hands-free background listener loop for the 'Monday' wake phrase.
         Streams speech directly into M.O.N.D.A.Y. execution engine when triggered.
         """
         def continuous_listener_worker():
-            print("🎙️ [Mic] Continuous Hands-free 'Monday' / 'Hey Monday' Wake-Word Listener Active.")
+            print("🎙️ [Mic] Continuous Hands-free 'Monday' Wake-Word Listener Active.")
             while True:
                 try:
                     res = self.listen(timeout_seconds=6)
                     if res.get("success") and res.get("transcript"):
                         transcript = res["transcript"]
-                        if any(w in transcript.lower() for w in ["monday", "hey monday", "ok monday"]):
+                        if "monday" in transcript.lower():
                             print(f"🎙️ [Wake-Word Triggered] Spoken command: \"{transcript}\"")
                             if callback_fn:
                                 callback_fn(transcript)
@@ -271,9 +271,9 @@ class VoiceAgent:
 
         t = threading.Thread(target=continuous_listener_worker, daemon=True)
         t.start()
-        log_action("start_wake_word_listener", "hey_monday", 1, "success", self.name)
+        log_action("start_wake_word_listener", "monday", 1, "success", self.name)
         return AgentResult.ok(
             "✓ Hands-free continuous 'Monday' Wake-Word listener activated in background.",
             evidence=TaskQueued(worker="wake-word listener thread", detail="polls the mic every 6s"),
-            data={"wake_word": "Hey Monday / Monday"},
+            data={"wake_word": "Monday"},
         ).as_dict()

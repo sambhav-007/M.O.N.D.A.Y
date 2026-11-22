@@ -341,8 +341,8 @@ decides the spoken form once for every surface: a handler that knows its own
 short form sets `speech`, otherwise the message is stripped of decoration, URLs
 and citations and cut to whole sentences within `MAX_SPEECH_CHARS` (240).
 
-**Live voice, in the UI.** Wake word ("Hey Monday" / "Hello Monday", Live button
-or Ctrl+L), continuous listening, and barge-in — talk over MONDAY and it stops.
+**Live voice, in the UI.** Wake word ("Monday", Live button or Ctrl+L),
+continuous listening, and barge-in — talk over MONDAY and it stops.
 All browser-native. Three things worth knowing:
 
 1. **Interim results are the whole trick.** They arrive while the user is still

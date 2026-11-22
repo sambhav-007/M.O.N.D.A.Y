@@ -60,16 +60,10 @@ _OPTIONAL = re.compile(r"\[([^\[\]]*)\]")
 _WHITESPACE = re.compile(r"\s+")
 _SLOT = re.compile(r"\{[^{}]*\}")
 
-#: The wake word, which the browser UI already listens for ("Hey Monday") and
-#: which people then repeat in the typed box. A bare name is only treated as a
-#: wake word when a greeting introduces it or a comma follows it — otherwise
-#: "monday morning meeting" would lose its day. `olly` is MASSIVE's assistant
-#: name and appears in front of ~1 in 20 utterances there.
-#
-#: The greeting can appear in the natural forms "hi monday", "hello monday",
-#: and "hi to monday" / "hello to monday". Taking the `to` between the
-#: greeting and the name is intentional: that variant shows up in real speech,
-#: and it should not be mistaken for a command that starts with the word "to".
+#: The browser wake phrase is the assistant's name alone. In typed commands,
+#: only strip it when followed by a comma so "monday morning meeting" keeps its
+#: day. `olly` is MASSIVE's assistant name and appears in front of ~1 in 20
+#: utterances there.
 _WAKE_WORD = re.compile(
     r"^(?:(?:hey|hi|hello|ok|okay)[\s,]+(?:to[\s,]+)?(?:monday|olly)|(?:monday|olly)\s*,)[\s,]*",
     re.IGNORECASE,

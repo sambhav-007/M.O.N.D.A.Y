@@ -121,7 +121,7 @@ Optional / setup required
 
 🗣️  VOICE
    speak hello world        say it out loud, offline
-   "Hey Monday, ..."        wake word — turn Live on first
+   "Monday, ..."            wake word — turn Live on first
    Live button / Ctrl+L     always-on listening
    Spacebar (in the app)    push-to-talk
    just talk over me        I stop speaking and listen
