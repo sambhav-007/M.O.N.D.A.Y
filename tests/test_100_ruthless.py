@@ -149,7 +149,13 @@ class TestRuthlessAdversarialSuite:
         """Verifies ComputerAgent handles negative volume input safely."""
         comp = self.planner.computer_agent
         res = comp.set_system_volume(-50)
-        assert "success" in res
+        if sys.platform != "win32":
+            assert res.get("success") is False
+            assert res.get("error") == "NOT_IMPLEMENTED"
+            assert fake_powershell.last_command == ""
+            return
+
+        assert res.get("success") is True
         # Clamped to 0 before it reached the shell, not passed through negative.
         assert "1..0 " in fake_powershell.last_command or "1..0}" in fake_powershell.last_command \
             or "1..0 |" in fake_powershell.last_command
@@ -781,9 +787,15 @@ class TestRuthlessAdversarialSuite:
         assert res.get("success") is False
 
     def test_computer_agent_set_volume_valid(self, fake_powershell):
-        """Verifies valid volume setting."""
+        """Verifies volume setting or its explicit unsupported-platform result."""
         comp = self.planner.computer_agent
         res = comp.set_system_volume(50)
+        if sys.platform != "win32":
+            assert res.get("success") is False
+            assert res.get("error") == "NOT_IMPLEMENTED"
+            assert fake_powershell.last_command == ""
+            return
+
         assert res.get("success") is True
         assert res["evidence"]["kind"] == "process_exit"
         assert res["evidence"]["returncode"] == 0

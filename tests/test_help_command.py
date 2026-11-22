@@ -145,7 +145,7 @@ def test_help_documents_the_tier2_contract():
 # ── The examples in the menu must actually work ──────────────────────────────
 @pytest.mark.parametrize(
     "example",
-    ["health", "battery", "what time is it", "what is the date", "volume",
+    ["health", "battery", "what time is it", "what is the date",
      "history", "proactive"],
 )
 def test_offline_help_examples_actually_run(planner, example):
@@ -158,6 +158,15 @@ def test_offline_help_examples_actually_run(planner, example):
     res = planner.process_command(example)["execution_result"]
     assert res.get("success") is True, f"help example failed: {example!r}"
     assert res.get("message"), f"help example returned no message: {example!r}"
+
+
+def test_volume_help_example_reports_a_reading_or_clear_unsupported_result(planner):
+    res = planner.process_command("volume")["execution_result"]
+    if res.get("success"):
+        assert isinstance(res.get("volume"), int)
+    else:
+        assert res.get("error") == "VOLUME_READ_UNSUPPORTED"
+        assert "can't read the current volume" in res.get("message", "").lower()
 
 
 # ── Help is always answerable ────────────────────────────────────────────────

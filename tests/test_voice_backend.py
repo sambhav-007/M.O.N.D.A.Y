@@ -167,17 +167,21 @@ def test_the_cli_turns_it_on_because_a_terminal_has_no_browser():
 def test_voice_status_is_not_part_of_the_spoken_phrase(monkeypatch, tmp_path):
     from voice.tts import Spoken
 
-    monkeypatch.setattr(
-        tts,
-        "synthesize",
-        lambda text, path: Spoken(True, engine="test", path=str(path)),
-    )
+    def fake_synthesize(text, path):
+        output_path = Path(path)
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        output_path.write_bytes(b"test wav")
+        return Spoken(True, engine="test", path=str(output_path))
+
+    monkeypatch.setattr(tts, "synthesize", fake_synthesize)
     monkeypatch.setattr(tts, "play", lambda path: True)
     agent = VoiceAgent(enable_voice=True)
+    agent.root_dir = tmp_path
     result = agent.speak('hi i am monday')
 
     assert result["message"] == '[Voice] M.O.N.D.A.Y. Speaking: "hi i am monday"'
     assert result["speech"] == "hi i am monday"
+    assert result["evidence"]["bytes_written"] == len(b"test wav")
 
 
 def test_say_command_does_not_synthesize_inside_its_handler(monkeypatch):

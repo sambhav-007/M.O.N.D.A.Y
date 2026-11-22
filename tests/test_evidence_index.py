@@ -15,9 +15,10 @@ that had since been replaced twice. Nothing detected that, because nothing was
 checking.
 
 This checks. It deliberately does **not** check that the numbers are current —
-that would mean regenerating every model on every test run. It checks the weaker
-property that turns out to be the one that failed: that every file named as
-evidence is on disk, and that every test file cited actually exists.
+that would mean regenerating every model on every test run. It checks the
+weaker property that turns out to be the one that failed: that every committed
+artefact named as evidence is on disk, and that every test file cited exists.
+Per-machine audit logs are generated at runtime and are not checkout artifacts.
 """
 
 from __future__ import annotations
@@ -57,6 +58,13 @@ def _cited_paths(document: Path) -> list[str]:
 
 INDEX_PATHS = _cited_paths(INDEX)
 CLO01_PATHS = _cited_paths(CLO01)
+# These are per-machine runtime logs, not committed artifacts.
+_RUNTIME_ARTIFACTS = {
+    "data/action_history.json",
+    "data/action_history.jsonl",
+}
+_STATIC_INDEX_PATHS = [path for path in INDEX_PATHS if path not in _RUNTIME_ARTIFACTS]
+_STATIC_CLO01_PATHS = [path for path in CLO01_PATHS if path not in _RUNTIME_ARTIFACTS]
 
 
 def test_the_index_and_the_chapter_exist():
@@ -73,7 +81,7 @@ def test_the_index_cites_a_meaningful_number_of_artefacts():
     )
 
 
-@pytest.mark.parametrize("cited", INDEX_PATHS)
+@pytest.mark.parametrize("cited", _STATIC_INDEX_PATHS)
 def test_every_artefact_named_in_the_index_exists(cited):
     assert (ROOT / cited).exists(), (
         f"reports/EVIDENCE_INDEX.md cites {cited!r}, which is not on disk. "
@@ -82,7 +90,7 @@ def test_every_artefact_named_in_the_index_exists(cited):
     )
 
 
-@pytest.mark.parametrize("cited", CLO01_PATHS)
+@pytest.mark.parametrize("cited", _STATIC_CLO01_PATHS)
 def test_every_artefact_named_in_the_clo01_chapter_exists(cited):
     assert (ROOT / cited).exists(), (
         f"reports/CLO01_ethics_and_safety.md cites {cited!r}, which is not on disk"
