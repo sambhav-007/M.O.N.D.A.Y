@@ -526,6 +526,7 @@
       rec: null,
       supported: false,
       live: false,            // always-on listening armed
+      recognizing: false,     // browser has actually started the microphone
       awake: false,           // wake word heard; next words are a command
       interimWake: false,
       interimWakeText: '',
@@ -607,9 +608,17 @@
         rec.lang = 'en-US';
         rec.maxAlternatives = 1;
 
+        rec.onstart = () => {
+          this.recognizing = true;
+          this.caption('👂 "Listening for \'Hey Monday\'..."');
+          this.paint();
+        };
         rec.onresult = (e) => this.onResult(e);
         rec.onerror = (e) => this.onError(e);
-        rec.onend = () => this.onEnd();
+        rec.onend = () => {
+          this.recognizing = false;
+          this.onEnd();
+        };
         this.rec = rec;
       },
 
@@ -732,7 +741,7 @@
       },
 
       run(command) {
-        const input = document.getElementById('cmd-input');
+        const input = getCommandInput();
         if (input) input.value = command;
         sendCommand();
       },
@@ -743,14 +752,30 @@
       },
 
       onError(event) {
-        // `no-speech` and `aborted` are routine in a continuous session and mean
-        // nothing; `not-allowed` means the user declined the microphone, and
-        // retrying that in a loop would spin forever.
-        if (event.error === 'not-allowed' || event.error === 'service-not-allowed') {
-          this.live = false;
-          this.paint();
-          this.caption('🎙️ "Microphone blocked — allow it to use voice."');
-        }
+        // These are normal in a continuous session. Any other error means the
+        // recognizer cannot reliably hear a wake word; stop rather than showing
+        // VOICE ON and silently restarting a broken recognizer forever.
+        if (event.error === 'no-speech' || event.error === 'aborted') return;
+
+        this.live = false;
+        this.recognizing = false;
+        this.awake = false;
+        this.interimWake = false;
+        this.interimWakeText = '';
+        this.clearWakeTimer();
+        clearTimeout(this.restartTimer);
+        this.paint();
+
+        const messages = {
+          'not-allowed': 'Microphone blocked — allow access, then turn Voice on again.',
+          'service-not-allowed': 'Speech recognition is blocked by the browser.',
+          'audio-capture': 'No microphone is available.',
+          network: 'Speech recognition service is unavailable — check your connection and retry.',
+          'language-not-supported': 'English speech recognition is unavailable in this browser.',
+        };
+        const message = messages[event.error]
+          || `Speech recognition failed (${event.error || 'unknown error'}).`;
+        this.caption(`🎙️ "${message}"`);
       },
 
       onEnd() {
@@ -758,22 +783,37 @@
         // Chrome ends the session by itself; restart it. The delay keeps a
         // permission failure from becoming a busy loop.
         clearTimeout(this.restartTimer);
+        this.paint();
         this.restartTimer = setTimeout(() => this.start(), 350);
       },
 
       start() {
-        if (!this.supported || !this.live) return;
-        try { this.rec.start(); } catch (e) { /* already running */ }
+        if (!this.supported || !this.live || this.recognizing) return;
+        try {
+          this.rec.start();
+        } catch (error) {
+          if (error && error.name === 'InvalidStateError') {
+            this.recognizing = true;
+            this.paint();
+            return;
+          }
+          this.onError({
+            error: error && error.name === 'NotAllowedError'
+              ? 'not-allowed'
+              : 'start-failed'
+          });
+        }
       },
 
       toggleLive() {
         if (!this.supported) return;
         this.live = !this.live;
         if (this.live) {
+          this.caption('🎙️ "Starting voice recognition..."');
           this.start();
-          this.caption('👂 "Listening for \'Hey Monday\'..."');
         } else {
           this.awake = false;
+          this.recognizing = false;
           this.interimWake = false;
           this.interimWakeText = '';
           this.clearWakeTimer();
@@ -789,13 +829,15 @@
         const dot = document.getElementById('live-dot');
         const txt = document.getElementById('live-btn-text');
         const btn = document.getElementById('live-btn');
-        if (!dot || !txt || !btn) return;
-        txt.innerText = this.live ? 'VOICE: ON' : 'VOICE: OFF';
-        btn.dataset.active = String(this.live);
-        dot.style.background = this.live ? '#69c6c4' : '#6f7774';
-        dot.style.boxShadow = this.live ? '0 0 8px rgba(105,198,196,.34)' : 'none';
+        const active = this.live && this.recognizing;
+        if (dot && txt && btn) {
+          txt.innerText = !this.live ? 'VOICE: OFF' : active ? 'VOICE: ON' : 'VOICE: STARTING';
+          btn.dataset.active = String(this.live);
+          dot.style.background = active ? '#69c6c4' : '#6f7774';
+          dot.style.boxShadow = active ? '0 0 8px rgba(105,198,196,.34)' : 'none';
+        }
         const status = document.getElementById('voice-status');
-        if (status) status.innerText = this.live ? 'On' : 'Off';
+        if (status) status.innerText = !this.live ? 'Off' : active ? 'On' : 'Starting';
       },
 
       // ── Speaking ──────────────────────────────────────────────────────────
@@ -1351,13 +1393,17 @@
     }
 
     window.onload = function() {
-      init3D();
       Voice.init();
       Voice.loadVoices();
       if ('speechSynthesis' in window) {
         window.speechSynthesis.onvoiceschanged = () => Voice.loadVoices();
       }
       Voice.paint();
+      try {
+        init3D();
+      } catch (error) {
+        console.error('The 3D entity could not be initialized:', error);
+      }
     };
   </script>
 </body>

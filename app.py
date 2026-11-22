@@ -155,7 +155,7 @@ def launch_native_tkinter_gui(app_url: str) -> None:
             try:
                 req = urllib.request.Request(
                     "http://127.0.0.1:8000/agent/execute",
-                    data=json.dumps({"command": cmd, "user_approved": True}).encode("utf-8"),
+                    data=json.dumps({"command": cmd}).encode("utf-8"),
                     headers={"Content-Type": "application/json"}
                 )
                 with urllib.request.urlopen(req) as resp:
@@ -227,7 +227,7 @@ class DesktopWindowApi:
         """Direct JS-to-Python bridge method for PyWebView native execution."""
         from api.main import get_planner
         planner = get_planner()
-        return planner.process_command(command, user_approved=True)
+        return planner.process_command(command)
 
 
 def main() -> None:

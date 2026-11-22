@@ -49,6 +49,7 @@ global.window = {
   },
 };
 global.document = { getElementById: () => null };
+global.getCommandInput = () => document.getElementById('cmd-input');
 global.setEntityMode = () => {};
 global.sendCommand = () => {};
 """
@@ -174,6 +175,72 @@ def test_interim_wake_and_command_in_one_final_transcript_runs_only_the_command(
         ''') == [['battery'], False]
 
 
+def test_microphone_start_failure_is_visible_and_does_not_claim_voice_is_on():
+    assert _run_js(r'''
+        global.setTimeout = () => 1;
+        global.clearTimeout = () => {};
+        const elements = {
+          'live-btn': { dataset: {}, classList: { add() {} } },
+          'live-dot': { style: {} },
+          'live-btn-text': { innerText: '' },
+          'voice-status': { innerText: '' },
+          'presence-caption': { innerText: '' },
+        };
+        global.document = { getElementById: id => elements[id] || null };
+        window.SpeechRecognition = class {
+          start() { throw Object.assign(new Error('blocked'), { name: 'NotAllowedError' }); }
+        };
+
+        Voice.init();
+        Voice.toggleLive();
+        console.log(JSON.stringify([
+          Voice.live,
+          elements['live-btn-text'].innerText,
+          elements['voice-status'].innerText,
+          elements['presence-caption'].innerText,
+        ]));
+    ''') == [
+        False,
+        'VOICE: OFF',
+        'Off',
+        '🎙️ "Microphone blocked — allow access, then turn Voice on again."',
+    ]
+
+
+def test_voice_is_reported_on_only_after_recognition_starts():
+    assert _run_js(r'''
+        const elements = {
+          'live-btn': { dataset: {}, classList: { add() {} } },
+          'live-dot': { style: {} },
+          'live-btn-text': { innerText: '' },
+          'voice-status': { innerText: '' },
+          'presence-caption': { innerText: '' },
+        };
+        global.document = { getElementById: id => elements[id] || null };
+        window.SpeechRecognition = class {
+          start() { this.onstart(); }
+        };
+
+        Voice.init();
+        Voice.toggleLive();
+        console.log(JSON.stringify([
+          elements['live-btn-text'].innerText,
+          elements['voice-status'].innerText,
+        ]));
+    ''') == ['VOICE: ON', 'On']
+
+
+def test_voice_command_uses_the_currently_selected_input():
+    assert _run_js(r'''
+        const inputs = { console: { value: '' } };
+        const commands = [];
+        global.getCommandInput = () => inputs.console;
+        global.sendCommand = () => commands.push(inputs.console.value);
+        Voice.run('battery');
+        console.log(JSON.stringify(commands));
+    ''') == ['battery']
+
+
 def test_speech_not_addressed_to_monday_is_ignored():
     """
     The point of a wake word. Always-on listening that acts on everything is
@@ -297,3 +364,10 @@ def test_recognition_is_continuous_with_interim_results():
     html = INDEX.read_text(encoding="utf-8")
     assert "rec.continuous = true" in html
     assert "rec.interimResults = true" in html
+
+
+def test_voice_initializes_before_optional_webgl_entity():
+    html = INDEX.read_text(encoding="utf-8")
+    onload = html.split("window.onload = function() {", 1)[1].split("};", 1)[0]
+    assert onload.index("Voice.init()") < onload.index("init3D()")
+    assert "console.error('The 3D entity could not be initialized:'" in onload
