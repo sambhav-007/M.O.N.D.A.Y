@@ -8,7 +8,7 @@
 
 ---
 
-## 1. Five Classical ML Components (Mapped 1:1 to Lab Plan)
+## 1. Five Classical ML Components + One XAI Bonus
 
 | # | ML Component | CLO Mapping | Lab Reference | Production Role |
 |---|--------------|-------------|---------------|-----------------|

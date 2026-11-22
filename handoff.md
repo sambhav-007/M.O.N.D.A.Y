@@ -2,7 +2,7 @@
 
 _Last updated: 2026-08-18. Machine: Windows 11 Home, user `sambh`._
 
-> **Read this first.** `README.md` § *Status & Known Limitations* is the
+> **Read this first.** `MONDAY_TECHNICAL.md` § *Status & Known Limitations* is the
 > authoritative statement of what works and what does not. This file is a running
 > log and parts of it age badly — several items below are struck through because
 > they turned out to be stale or simply wrong.
@@ -809,7 +809,7 @@ Phase 7 ends the accident, so the rule had to be written down and tested.
    code.** Both of the above were inert for weeks purely because a package was
    missing.
 
-**A correction to ROADMAP.md:** it said `voice/tts_bridge.py` "already exists as
+**A correction to ROADMAP_ENGINEERING.md:** it said `voice/tts_bridge.py` "already exists as
 the seam". It does not — that is a standalone CLI script for the abandoned XTTS
 venv, and is the record of that attempt. The seam had to be written.
 
@@ -900,7 +900,7 @@ that is real — `MONDAY_PIPER_VOICE` for a better voice, SAPI5 otherwise, offli
 either way — and `speak` is listed as offline. Still inside the 68-column budget.
 
 The same sentence had spread to three other places, all corrected:
-`README.md`'s voice-cloning bullet, the `voice/tts.py` docstring (which claimed
+`MONDAY_TECHNICAL.md`'s voice-cloning bullet, the `voice/tts.py` docstring (which claimed
 `TTS_UNAVAILABLE` was "the current state of this machine" — `pyttsx3` has been
 installed since it was written), and `tests/test_help_command.py`'s own
 docstring. gTTS now survives only in `ml/voice_cloner.py`, which the `speak`

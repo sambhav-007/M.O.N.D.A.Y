@@ -9,9 +9,10 @@ Executes real web research and page scraping:
 
 from __future__ import annotations
 
+import json
 import re
 from typing import Any, Dict, List, Optional
-from urllib.parse import parse_qs, quote_plus, unquote, urlparse
+from urllib.parse import parse_qs, quote, quote_plus, unquote, urlparse
 
 import httpx
 from bs4 import BeautifulSoup
@@ -35,25 +36,42 @@ class BrowserAgent:
 
     def web_search(self, query: str, num_results: int = 5) -> Dict[str, Any]:
         """
-        Performs a live web search using DuckDuckGo and parses result titles,
-        links, and snippets.
+        Searches DuckDuckGo first, then Wikipedia if DuckDuckGo is unavailable.
 
         Tries the `html.` endpoint first, then falls back to the `lite.` one.
         Under load DuckDuckGo answers the html endpoint with HTTP 202 and an
         anomaly-challenge page instead of results, so a parse that yields
-        nothing is treated as a failed search, not an empty one.
+        nothing is treated as a failed search, not an empty one. Wikipedia's
+        API is a final attributed source, not a fabricated success.
         """
         encoded = quote_plus(query)
         endpoints = (
-            ("https://html.duckduckgo.com/html/?q=" + encoded, self._parse_ddg_html),
-            ("https://lite.duckduckgo.com/lite/?q=" + encoded, self._parse_ddg_lite),
+            (
+                "https://html.duckduckgo.com/html/?q=" + encoded,
+                self._parse_ddg_html,
+                "duckduckgo",
+                HEADERS,
+            ),
+            (
+                "https://lite.duckduckgo.com/lite/?q=" + encoded,
+                self._parse_ddg_lite,
+                "duckduckgo",
+                HEADERS,
+            ),
+            (
+                "https://en.wikipedia.org/w/api.php?action=query&list=search"
+                f"&srsearch={encoded}&format=json&utf8=1&srlimit={num_results}",
+                self._parse_wikipedia_search,
+                "wikipedia",
+                {"User-Agent": "M.O.N.D.A.Y./1.0 (https://github.com/sambhav-007/M.O.N.D.A.Y)"},
+            ),
         )
 
         last_error: Optional[str] = None
 
-        for url, parser in endpoints:
+        for url, parser, provider, headers in endpoints:
             try:
-                with httpx.Client(headers=HEADERS, timeout=8.0, follow_redirects=True) as client:
+                with httpx.Client(headers=headers, timeout=8.0, follow_redirects=True) as client:
                     resp = client.get(url)
             except Exception as e:
                 last_error = f"WEB_SEARCH_ERROR: {e}"
@@ -75,6 +93,8 @@ class BrowserAgent:
                         "query": query,
                         "result_count": len(results),
                         "results": results,
+                        "provider": provider,
+                        "source_url": str(resp.url),
                     },
                 ).as_dict()
 
@@ -84,11 +104,40 @@ class BrowserAgent:
         return AgentResult.failed(
             (
                 f"❌ Web search for '{query}' returned no results "
-                f"({last_error}). DuckDuckGo may be rate-limiting this machine."
+                f"({last_error}). DuckDuckGo and Wikipedia may be unavailable."
             ),
             error=last_error or "WEB_SEARCH_NO_RESULTS",
-            data={"query": query, "result_count": 0, "results": []},
+            data={"query": query, "result_count": 0, "results": [], "provider": ""},
         ).as_dict()
+
+    @staticmethod
+    def _parse_wikipedia_search(response: str, num_results: int) -> List[Dict[str, str]]:
+        """Parses MediaWiki search results, stripping its HTML snippets."""
+        try:
+            payload = json.loads(response)
+        except (TypeError, json.JSONDecodeError):
+            return []
+
+        if not isinstance(payload, dict):
+            return []
+        query = payload.get("query")
+        if not isinstance(query, dict):
+            return []
+        pages = query.get("search")
+        if not isinstance(pages, list):
+            return []
+
+        results: List[Dict[str, str]] = []
+        for page in pages[:num_results]:
+            if not isinstance(page, dict):
+                continue
+            title = str(page.get("title", "")).strip()
+            snippet_html = str(page.get("snippet", ""))
+            snippet = BeautifulSoup(snippet_html, "html.parser").get_text(" ", strip=True)
+            if title and snippet:
+                url = "https://en.wikipedia.org/wiki/" + quote(title.replace(" ", "_"), safe="()")
+                results.append({"title": title, "snippet": snippet, "url": url})
+        return results
 
     @staticmethod
     def _parse_ddg_html(html: str, num_results: int) -> List[Dict[str, str]]:
@@ -230,7 +279,13 @@ class BrowserAgent:
         results = search_res.get("results", [])
 
         if not results:
-            return AgentResult.failed(f"No web information found for '{topic}'.", error="NO_RESEARCH_RESULTS").as_dict()
+            search_error = search_res.get("error", "NO_RESEARCH_RESULTS")
+            search_message = search_res.get("message", "")
+            return AgentResult.failed(
+                f"No web information found for '{topic}'. {search_message}".strip(),
+                error=search_error,
+                data={"topic": topic, "provider": search_res.get("provider", "")},
+            ).as_dict()
 
         summary_points = []
         for idx, r in enumerate(results, 1):
@@ -249,6 +304,7 @@ class BrowserAgent:
                 "topic": topic,
                 "sources_consulted": len(results),
                 "report": report,
+                "search_provider": search_res.get("provider", ""),
             },
         ).as_dict()
 
