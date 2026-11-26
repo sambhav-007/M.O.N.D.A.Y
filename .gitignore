@@ -86,3 +86,11 @@ models/vosk-model-*/
 # regenerates exactly from a corpus that IS committed. The summary it produces,
 # reports/massive_coverage.md, is the artefact worth keeping.
 reports/massive_coverage.csv
+
+# Local report-build intermediates. Final deliverables are saved outside the repo;
+# these generated variants are reproducible and are not project source evidence.
+reports/final_report/
+reports/original_layout_figures/
+reports/final_report_cover.png
+reports/figures/report_confusion_matrix_7class.png
+reports/figures/report_intent_benchmark.png
